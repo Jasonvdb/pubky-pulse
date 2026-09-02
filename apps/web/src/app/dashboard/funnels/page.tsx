@@ -284,7 +284,7 @@ function CreateFunnelDialog({
               placeholder="onboarding-flow"
             />
             {slugError && newSlug && (
-              <p className="text-xs text-red-500">{slugError}</p>
+              <p className="text-xs [color:color-mix(in_oklab,var(--chart-5),white_22%)]">{slugError}</p>
             )}
             <p className="text-xs text-muted-foreground">
               Lowercase letters, numbers, and hyphens only
@@ -360,7 +360,7 @@ function CreateFunnelDialog({
           </div>
         </div>
         {createError && (
-          <p className="text-xs text-red-500">{createError}</p>
+          <p className="text-xs [color:color-mix(in_oklab,var(--chart-5),white_22%)]">{createError}</p>
         )}
         <DialogFooter>
           <Button

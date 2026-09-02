@@ -21,7 +21,7 @@ export function MetricDocsSheet({ open, onOpenChange, name, documentation }: Met
         <SheetHeader>
           <SheetTitle>{name} — Documentation</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+        <div className="mt-4 prose prose-sm prose-invert max-w-none whitespace-pre-wrap">
           {documentation || "No documentation available."}
         </div>
       </SheetContent>

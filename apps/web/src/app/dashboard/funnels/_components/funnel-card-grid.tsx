@@ -24,11 +24,11 @@ export function FunnelCardGrid({
       {funnels.map((f, idx) => (
         <StaggerItem key={f.id} index={startIndex + idx}>
           <Link href={`/dashboard/funnels/${f.id}`}>
-            <Card className="cursor-pointer hover:border-primary/50 transition-colors h-full">
+            <Card className="h-full cursor-pointer transition-colors hover:bg-accent/40">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0">
                   {!hideProjectDot && (
-                    <ProjectDot color={projectColors.get(f.project_id) ?? "#6366f1"} />
+                    <ProjectDot color={projectColors.get(f.project_id)} />
                   )}
                   <span className="truncate">{f.name}</span>
                 </CardTitle>

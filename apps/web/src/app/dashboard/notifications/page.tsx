@@ -119,12 +119,12 @@ function NotificationCard({
   const label = meta?.label ?? notification.type;
 
   const Inner = (
-    <Card className={isUnread ? "border-primary/40" : ""}>
+    <Card className={isUnread ? "ring-1 ring-brand/40" : ""}>
       <CardContent className="flex items-start gap-3 py-4">
         <span
           className={
             isUnread
-              ? "mt-1.5 block size-2 shrink-0 rounded-full bg-red-500"
+              ? "mt-1.5 block size-2 shrink-0 rounded-full bg-brand"
               : "mt-1.5 block size-2 shrink-0 rounded-full bg-muted"
           }
           aria-label={isUnread ? "Unread" : undefined}

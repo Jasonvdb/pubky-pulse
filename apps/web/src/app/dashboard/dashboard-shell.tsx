@@ -68,7 +68,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <TeamProvider>
       <DataModeProvider>
         <BreadcrumbProvider>
-        <div className="dark min-h-screen bg-background text-foreground">
+        <div className="min-h-screen bg-background text-foreground">
           <div className="flex min-h-screen">
             <AppSidebar />
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -78,12 +78,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
             <div className="flex flex-1 flex-col min-w-0">
-              <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
+              <header className="flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md md:px-6">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setSidebarOpen(true)}
-                    className="md:hidden flex items-center justify-center h-10 w-10 rounded-md hover:bg-accent"
+                    aria-label="Open navigation"
+                    className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:hidden"
                   >
                     <Menu className="h-5 w-5" />
                   </button>

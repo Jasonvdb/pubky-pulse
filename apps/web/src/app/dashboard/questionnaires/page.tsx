@@ -333,7 +333,7 @@ function CreateQuestionnaireDialog({
               Set <code>&quot;multiline&quot;: true</code> on a <code>text</code> question to render a tall multi-line text box. Default is single-line.
             </p>
           </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm [color:color-mix(in_oklab,var(--chart-5),white_22%)]">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>

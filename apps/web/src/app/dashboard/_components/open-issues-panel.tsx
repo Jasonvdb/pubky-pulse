@@ -64,7 +64,7 @@ export function OpenIssuesPanel({ projectId }: { projectId?: string } = {}) {
           <Link
             key={issue.id}
             href={`/dashboard/issues?project_id=${issue.project_id}&issue_id=${issue.id}`}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/40"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none">
               {STATUS_EMOJI[issue.status]}

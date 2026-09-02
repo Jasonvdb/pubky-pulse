@@ -11,8 +11,10 @@ import type { Metadata } from "next";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { McpSetupInstructions } from "@/components/mcp-setup-instructions";
+import { GITHUB_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
-const BASE = "https://pulse.pubky.org";
+/** Absolute origin for canonical URLs and JSON-LD; single source of truth. */
+const BASE = SITE_URL;
 
 function buildBreadcrumbItems(slugParts: string[], pageTitle: string) {
   const items: { position: number; name: string; item?: string }[] = [
@@ -57,16 +59,16 @@ export default async function Page(props: {
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
-      headline: `${page.data.title} — Pubky Pulse Docs`,
+      headline: `${page.data.title} — ${SITE_NAME} Docs`,
       description: page.data.description,
       url: `${BASE}/docs${slugParts.length ? `/${slugParts.join("/")}` : ""}`,
       publisher: {
         "@type": "Organization",
         name: "Pubky",
         url: BASE,
-        logo: `${BASE}/pulse-logo.png`,
+        logo: `${BASE}/pulse-mark.svg`,
       },
-      isPartOf: { "@type": "WebSite", name: "PubkyPulse", url: BASE },
+      isPartOf: { "@type": "WebSite", name: SITE_NAME, url: BASE },
       inLanguage: "en",
     },
   ];
@@ -78,23 +80,23 @@ export default async function Page(props: {
         <DocsDescription>{page.data.description}</DocsDescription>
         <DocsBody>
           <MDX components={{ ...defaultMdxComponents, Tab, Tabs, McpSetupInstructions }} />
-          <div className="not-prose mt-12 rounded-lg border border-fd-border bg-fd-card p-6 text-center">
-            <p className="text-sm font-medium text-fd-foreground">
+          <div className="not-prose mt-12 rounded-xl bg-card p-6 text-center shadow-sm">
+            <p className="text-sm font-semibold text-card-foreground">
               Ready to get started?
             </p>
-            <p className="mt-1 text-sm text-fd-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground">
               Connect your agent via MCP and start tracking.
             </p>
-            <div className="mt-4 flex items-center justify-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/docs/getting-started"
-                className="inline-flex h-9 items-center rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground transition-colors hover:bg-fd-primary/90"
+                className="inline-flex h-10 items-center rounded-full border border-brand bg-brand px-4 text-sm font-semibold text-background shadow-xs outline-none transition-colors hover:bg-brand/90 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 Get Started
               </Link>
               <Link
-                href="https://github.com/pubky/pubky-pulse"
-                className="inline-flex h-9 items-center rounded-md border border-fd-border px-4 text-sm font-medium text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground"
+                href={GITHUB_URL}
+                className="inline-flex h-10 items-center rounded-full border border-input bg-input/30 px-4 text-sm font-semibold text-foreground shadow-xs outline-none transition-colors hover:bg-input/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 GitHub
               </Link>
@@ -123,7 +125,7 @@ export async function generateMetadata(props: {
 
   const slug = params.slug?.join("/") ?? "";
   const url = `/docs${slug ? `/${slug}` : ""}`;
-  const title = `${page.data.title} — Pubky Pulse Docs`;
+  const title = `${page.data.title} — ${SITE_NAME} Docs`;
   return {
     title: { absolute: title },
     description: page.data.description,

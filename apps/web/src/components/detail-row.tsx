@@ -43,7 +43,7 @@ export function DetailRow({
                     <Filter className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md">
+                <TooltipContent side="top">
                   Filter by {filterKey ?? label}
                 </TooltipContent>
               </Tooltip>
@@ -56,10 +56,10 @@ export function DetailRow({
                     onClick={handleCopy}
                     className="h-5 w-5 inline-flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   >
-                    {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                    {copied ? <Check className="h-3 w-3 text-chart-2" /> : <Copy className="h-3 w-3" />}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md">
+                <TooltipContent side="top">
                   {copied ? "Copied!" : "Copy"}
                 </TooltipContent>
               </Tooltip>

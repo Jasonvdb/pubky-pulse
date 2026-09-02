@@ -188,7 +188,7 @@ function CreateKeyDialog({
 
         {createdKey ? (
           <div className="space-y-4">
-            <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+            <div className="rounded-md border border-chart-6/30 bg-chart-6/10 p-3 text-sm">
               This key will only be shown once. Copy it now.
             </div>
             <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ function CreateKeyDialog({
                         </label>
                       </div>
                       {warning && granted && (
-                        <p className="ml-6 text-xs text-amber-700 dark:text-amber-400 inline-flex items-start gap-1">
+                        <p className="ml-6 text-xs text-chart-6 inline-flex items-start gap-1">
                           <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                           <span>{warning}</span>
                         </p>
@@ -412,7 +412,7 @@ function EditKeyDialog({
                       </label>
                     </div>
                     {warning && granted && (
-                      <p className="ml-6 text-xs text-amber-700 dark:text-amber-400 inline-flex items-start gap-1">
+                      <p className="ml-6 text-xs text-chart-6 inline-flex items-start gap-1">
                         <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                         <span>{warning}</span>
                       </p>

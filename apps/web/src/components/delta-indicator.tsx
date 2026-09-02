@@ -10,12 +10,16 @@ interface DeltaIndicatorProps {
 export function DeltaIndicator({ delta, tone = "colored", className }: DeltaIndicatorProps) {
   if (delta == null || delta === 0) return null;
   const formatted = delta > 0 ? `+${delta.toLocaleString()}` : delta.toLocaleString();
+  // Up is `--chart-2` (green), down is `--chart-5` (red). chart-5 is a pure red
+  // that falls under the muted-foreground contrast floor as text, so — exactly
+  // as the tinted `red` badge tone does — it is lifted toward white with the
+  // same color-mix Tailwind emits for `/opacity` modifiers.
   const toneClass =
     tone === "muted"
       ? "text-muted-foreground"
       : delta > 0
-        ? "text-emerald-600 dark:text-emerald-400"
-        : "text-red-600 dark:text-red-400";
+        ? "text-chart-2"
+        : "[color:color-mix(in_oklab,var(--chart-5),white_22%)]";
   return (
     <span className={cn("ml-1 tabular-nums", toneClass, className)}>{formatted}</span>
   );

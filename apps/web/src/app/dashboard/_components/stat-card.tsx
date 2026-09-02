@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeltaIndicator } from "@/components/delta-indicator";
 import { Sparkline } from "@/components/charts/sparkline";
@@ -43,7 +44,7 @@ export function StatCard({
   const body = (
     <div
       className={cn(
-        "group relative block min-w-0 px-5 pt-5 transition-colors hover:bg-muted/40 h-full flex flex-col",
+        "group relative flex h-full min-w-0 flex-col px-5 pt-5 transition-colors hover:bg-accent/40",
         // When a sparkline is rendered, drop the bottom padding so the chart
         // can extend to the card's bottom edge (its floor). Without-sparkline
         // cards keep symmetrical py-5.
@@ -57,7 +58,7 @@ export function StatCard({
         <Icon
           className={cn(
             "h-3.5 w-3.5 text-muted-foreground/70 transition-colors",
-            href && "group-hover:text-primary"
+            href && "group-hover:text-brand"
           )}
         />
       </div>
@@ -84,7 +85,7 @@ export function StatCard({
           {sparkline.isLoading ? (
             <Skeleton className="h-full w-full" />
           ) : (
-            <Sparkline values={sparkline.values} className="text-foreground/35" />
+            <Sparkline values={sparkline.values} className="text-brand" />
           )}
         </div>
       )}
@@ -92,7 +93,10 @@ export function StatCard({
   );
 
   return href ? (
-    <Link href={href} className="block">
+    <Link
+      href={href}
+      className="block outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+    >
       {body}
     </Link>
   ) : (
@@ -102,7 +106,7 @@ export function StatCard({
 
 export function StatRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-md border bg-card shadow-sm overflow-hidden">
+    <Card className="overflow-hidden">
       {/* 4-col grid at lg gives a clean 2 rows for the current 8-card layout
           (Issues, Events, Users, Sessions, Metrics, Funnels, Feedback,
           Responses). At smaller breakpoints the count of rows adjusts
@@ -110,6 +114,6 @@ export function StatRow({ children }: { children: React.ReactNode }) {
       <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-4">
         {children}
       </div>
-    </div>
+    </Card>
   );
 }

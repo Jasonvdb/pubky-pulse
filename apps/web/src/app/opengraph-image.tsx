@@ -1,135 +1,106 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { OG_SIZE, OG_TOKENS } from "@/lib/og/og-constants";
+import { getOgFonts } from "@/lib/og/og-fonts";
 
-export const alt = "Pubky Pulse — Agent-first observability. Set up in one prompt.";
-export const size = { width: 1200, height: 630 };
+export const alt =
+  "Pubky Pulse — agent-first observability for web, backend and mobile apps";
+export const size = OG_SIZE;
 export const contentType = "image/png";
 
-export default async function OGImage() {
-	const logoData = await readFile(
-		join(process.cwd(), "public", "pulse-logo.png")
-	);
-	const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
+const PILLS = ["Events", "Metrics", "Funnels", "Issues"];
 
-	return new ImageResponse(
-		(
-			<div
-				style={{
-					width: "100%",
-					height: "100%",
-					display: "flex",
-					flexDirection: "column",
-					alignItems: "center",
-					justifyContent: "center",
-					background: "#1a1510",
-					position: "relative",
-				}}
-			>
-				{/* Subtle radial glow */}
-				<div
-					style={{
-						position: "absolute",
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0,
-						display: "flex",
-						background:
-							"radial-gradient(ellipse at 50% 40%, rgba(190, 120, 20, 0.15) 0%, transparent 60%)",
-					}}
-				/>
+/**
+ * The pulse mark as a self-contained SVG data URI.
+ *
+ * satori cannot rasterise an inline `<svg>` element, so the mark is handed to
+ * it as an `<img>` source. Base64 (rather than a percent-encoded utf8 payload)
+ * keeps the `#` in the colour literals from terminating the URI.
+ */
+const MARK = `data:image/svg+xml;base64,${Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 32 32" fill="none"><path d="M2 16H9.5L13 6L17.5 26L21 16H30" stroke="${OG_TOKENS.brand}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+).toString("base64")}`;
 
-				{/* Top accent line */}
-				<div
-					style={{
-						position: "absolute",
-						top: 0,
-						left: 0,
-						right: 0,
-						height: 4,
-						display: "flex",
-						background:
-							"linear-gradient(90deg, transparent 10%, #c07a14 30%, #e8a020 50%, #c07a14 70%, transparent 90%)",
-					}}
-				/>
+export default function OGImage() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: OG_TOKENS.background,
+          position: "relative",
+        }}
+      >
+        {/*
+          Deliberately flat: satori's rasteriser bands large radial gradients
+          into visible concentric rings, and the design system is flat dark with
+          lime as its only accent anyway — the mark and the footer carry it.
+        */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={MARK} width={140} height={140} alt="" style={{ marginBottom: 28 }} />
 
-				{/* Logo */}
-				<img
-					src={logoSrc}
-					width={120}
-					height={106}
-					style={{ marginBottom: 32 }}
-				/>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 56,
+            fontWeight: 700,
+            color: OG_TOKENS.foreground,
+            letterSpacing: "-1.5px",
+          }}
+        >
+          Pubky Pulse
+        </div>
 
-				{/* Title */}
-				<div
-					style={{
-						fontSize: 56,
-						fontWeight: 700,
-						color: "#ffffff",
-						letterSpacing: "-1px",
-						display: "flex",
-					}}
-				>
-					Pubky Pulse
-				</div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 26,
+            fontWeight: 400,
+            color: OG_TOKENS.mutedForeground,
+            marginTop: 16,
+          }}
+        >
+          Agent-first observability for web, backend and mobile apps
+        </div>
 
-				{/* Tagline */}
-				<div
-					style={{
-						fontSize: 26,
-						color: "rgba(255, 255, 255, 0.55)",
-						marginTop: 16,
-						display: "flex",
-					}}
-				>
-					Agent-first observability for web, backend and mobile
-				</div>
+        <div style={{ display: "flex", gap: 16, marginTop: 44 }}>
+          {PILLS.map((label) => (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                padding: "10px 24px",
+                borderRadius: 100,
+                border: `1px solid ${OG_TOKENS.avatarMuted}`,
+                fontSize: 20,
+                fontWeight: 500,
+                color: OG_TOKENS.secondaryForeground,
+              }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
 
-				{/* Feature pills */}
-				<div
-					style={{
-						display: "flex",
-						gap: 16,
-						marginTop: 40,
-					}}
-				>
-					{["Events", "Metrics", "Funnels", "Issues"].map(
-						(label) => (
-							<div
-								key={label}
-								style={{
-									display: "flex",
-									padding: "8px 20px",
-									borderRadius: 100,
-									border: "1px solid rgba(255, 255, 255, 0.12)",
-									background: "rgba(255, 255, 255, 0.04)",
-									fontSize: 16,
-									color: "rgba(255, 255, 255, 0.45)",
-								}}
-							>
-								{label}
-							</div>
-						)
-					)}
-				</div>
-
-				{/* Bottom domain */}
-				<div
-					style={{
-						position: "absolute",
-						bottom: 32,
-						display: "flex",
-						fontSize: 16,
-						color: "rgba(255, 255, 255, 0.25)",
-						letterSpacing: "1px",
-					}}
-				>
-					pulse.pubky.org
-				</div>
-			</div>
-		),
-		{ ...size }
-	);
+        <div
+          style={{
+            position: "absolute",
+            bottom: 40,
+            display: "flex",
+            fontSize: 20,
+            fontWeight: 500,
+            color: OG_TOKENS.brand,
+            letterSpacing: "0.5px",
+          }}
+        >
+          pulse.pubky.org
+        </div>
+      </div>
+    ),
+    { ...size, fonts: getOgFonts() }
+  );
 }

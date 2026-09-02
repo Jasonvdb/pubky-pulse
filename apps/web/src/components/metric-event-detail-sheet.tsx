@@ -245,7 +245,7 @@ export function MetricEventDetailSheet({
                     <span className="shrink-0 text-xs text-muted-foreground">
                       🛠️ Dev Build
                     </span>
-                    <span className="text-right text-xs font-medium text-yellow-600">
+                    <span className="text-right text-xs font-medium text-chart-6">
                       Yes
                     </span>
                   </div>
@@ -290,7 +290,7 @@ function PhaseBlock({ phase }: { phase: StoredMetricEventResponse }) {
         )}
       </div>
       {phase.error && (
-        <p className="text-xs text-red-500 break-words mb-2">{phase.error}</p>
+        <p className="text-xs [color:color-mix(in_oklab,var(--chart-5),white_22%)] break-words mb-2">{phase.error}</p>
       )}
       {attrs && Object.keys(attrs).length > 0 && (
         <div className="space-y-1">

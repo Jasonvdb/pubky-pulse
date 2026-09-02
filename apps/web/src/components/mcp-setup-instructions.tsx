@@ -10,7 +10,7 @@ import { EDITORS, PLACEHOLDER, MCP_URL, SERVER_NAME, maskKey } from "@/lib/mcp-e
 
 function renderNote(note: string) {
   return (
-    <div className="mb-3 text-sm prose-invert [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs">
+    <div className="mb-3 text-sm [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs">
       {note.split("\n").map((line, i) => {
         if (line.startsWith("```")) return null;
         if (line.startsWith("- **")) {
@@ -77,30 +77,30 @@ export function McpSetupInstructions() {
     <div className="my-6">
       {/* Auth status banner */}
       {!isAuthenticated ? (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3">
-          <LogIn className="h-4 w-4 shrink-0 text-blue-400" />
-          <p className="flex-1 text-sm text-blue-200">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-chart-3/30 bg-chart-3/10 px-4 py-3">
+          <LogIn className="h-4 w-4 shrink-0 text-chart-3" />
+          <p className="flex-1 text-sm text-foreground">
             Sign in to get your API key pre-filled in all editor configs below.
           </p>
           <a
             href="/login?redirect=/docs/mcp/setup"
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand bg-brand px-3 py-1.5 text-xs font-semibold text-background shadow-xs transition-all outline-none hover:bg-brand/90 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             Sign in
           </a>
         </div>
       ) : hasRealKey ? (
-        <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+        <div className="mb-4 rounded-lg border border-chart-2/30 bg-chart-2/10 px-4 py-3">
           <div className="flex items-center gap-3">
-            <KeyRound className="h-4 w-4 shrink-0 text-emerald-400" />
-            <p className="flex-1 text-sm text-emerald-200">
+            <KeyRound className="h-4 w-4 shrink-0 text-chart-2" />
+            <p className="flex-1 text-sm text-foreground">
               Your agent API key is pre-filled in all configs below.
             </p>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setKeyVisible(!keyVisible)}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-emerald-300 transition-colors hover:bg-emerald-500/20"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-chart-2 transition-colors outline-none hover:bg-chart-2/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 title={keyVisible ? "Hide key" : "Show key"}
               >
                 {keyVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -110,7 +110,7 @@ export function McpSetupInstructions() {
             </div>
           </div>
           {/* Key display */}
-          <div className="mt-2 flex items-center gap-2 rounded bg-black/20 px-3 py-1.5 font-mono text-xs text-emerald-300/80">
+          <div className="mt-2 flex items-center gap-2 rounded bg-background/60 px-3 py-1.5 font-mono text-xs text-chart-2/90">
             {displayKey}
           </div>
         </div>

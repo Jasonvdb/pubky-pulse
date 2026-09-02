@@ -5,19 +5,19 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none",
+  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+        default: "bg-brand text-background border-transparent [a&]:hover:bg-brand/90",
         secondary:
-          "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "bg-secondary text-secondary-foreground border-transparent [a&]:hover:bg-accent",
         destructive:
-          "bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
+          "bg-destructive/60 text-white border-transparent focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
         outline:
-          "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "border-border bg-transparent text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 [a&]:hover:underline",
+        link: "text-brand underline-offset-4 [a&]:hover:underline",
       },
       size: {
         xs: "h-5 px-1.5 text-[10px] leading-none [&>svg]:size-2.5",
@@ -37,25 +37,40 @@ const badgeVariants = cva(
         cyan: "",
       },
     },
+    // Tones map onto the six chart tokens so status colour never introduces a
+    // palette outside the design system. `chart-1` (a deep blue) and `chart-5`
+    // (pure red) are too dark to use as text straight from the token, so the
+    // tinted rows lift them toward white — the same `color-mix` Tailwind itself
+    // emits for `/opacity` — to clear the muted-foreground contrast floor.
     compoundVariants: [
-      // Filled tones (variant=default) — solid background, white text.
-      { variant: "default", tone: "red", className: "bg-red-600 text-white" },
-      { variant: "default", tone: "amber", className: "bg-amber-600 text-white" },
-      { variant: "default", tone: "green", className: "bg-green-600 text-white" },
-      { variant: "default", tone: "blue", className: "bg-blue-600 text-white" },
-      { variant: "default", tone: "sky", className: "bg-sky-600 text-white" },
-      { variant: "default", tone: "gray", className: "bg-gray-600 text-white" },
-      { variant: "default", tone: "yellow", className: "bg-yellow-600 text-white" },
-      { variant: "default", tone: "cyan", className: "bg-cyan-600 text-white" },
-      // Tinted outline tones — translucent bg + colored text + colored border.
-      { variant: "outline", tone: "red", className: "border-red-500/30 bg-red-500/10 text-red-500" },
-      { variant: "outline", tone: "amber", className: "border-amber-500/30 bg-amber-500/10 text-amber-500" },
-      { variant: "outline", tone: "green", className: "border-green-500/30 bg-green-500/10 text-green-500" },
-      { variant: "outline", tone: "blue", className: "border-blue-500/30 bg-blue-500/10 text-blue-500" },
-      { variant: "outline", tone: "sky", className: "border-sky-500/30 bg-sky-500/10 text-sky-500" },
-      { variant: "outline", tone: "gray", className: "border-gray-500/30 bg-gray-500/10 text-gray-400" },
-      { variant: "outline", tone: "yellow", className: "border-yellow-500/30 bg-yellow-500/10 text-yellow-500" },
-      { variant: "outline", tone: "cyan", className: "border-cyan-500/30 bg-cyan-500/10 text-cyan-500" },
+      // Filled tones (variant=default) — solid background, contrasting text.
+      { variant: "default", tone: "red", className: "bg-chart-5 text-white" },
+      { variant: "default", tone: "amber", className: "bg-chart-6 text-background" },
+      { variant: "default", tone: "green", className: "bg-chart-2 text-background" },
+      { variant: "default", tone: "blue", className: "bg-chart-1 text-white" },
+      { variant: "default", tone: "sky", className: "bg-chart-3 text-background" },
+      { variant: "default", tone: "gray", className: "bg-muted-foreground text-background" },
+      { variant: "default", tone: "yellow", className: "bg-chart-6 text-background" },
+      { variant: "default", tone: "cyan", className: "bg-chart-3 text-background" },
+      // Tinted outline tones — translucent bg + coloured text + coloured border.
+      {
+        variant: "outline",
+        tone: "red",
+        className:
+          "border-chart-5/30 bg-chart-5/10 [color:color-mix(in_oklab,var(--chart-5),white_22%)]",
+      },
+      { variant: "outline", tone: "amber", className: "border-chart-6/30 bg-chart-6/10 text-chart-6" },
+      { variant: "outline", tone: "green", className: "border-chart-2/30 bg-chart-2/10 text-chart-2" },
+      {
+        variant: "outline",
+        tone: "blue",
+        className:
+          "border-chart-1/40 bg-chart-1/15 [color:color-mix(in_oklab,var(--chart-1),white_40%)]",
+      },
+      { variant: "outline", tone: "sky", className: "border-chart-3/30 bg-chart-3/10 text-chart-3" },
+      { variant: "outline", tone: "gray", className: "border-border bg-muted/40 text-muted-foreground" },
+      { variant: "outline", tone: "yellow", className: "border-chart-6/30 bg-chart-6/10 text-chart-6" },
+      { variant: "outline", tone: "cyan", className: "border-chart-3/30 bg-chart-3/10 text-chart-3" },
     ],
     defaultVariants: {
       variant: "default",

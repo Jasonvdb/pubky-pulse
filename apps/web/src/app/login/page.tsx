@@ -60,39 +60,22 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Branded panel */}
-      <div
-        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center"
-        style={{ background: "oklch(0.12 0.015 55)" }}
-      >
-        {/* Grid pattern */}
+      <div className="relative hidden items-center justify-center overflow-hidden bg-card lg:flex lg:w-[45%]">
+        {/* Decorative brand glow — the only ornament on the panel. */}
         <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: `linear-gradient(oklch(0.555 0.163 48.998) 1px, transparent 1px),
-              linear-gradient(90deg, oklch(0.555 0.163 48.998) 1px, transparent 1px)`,
-            backgroundSize: "40px 40px",
-          }}
-        />
-        {/* Radial glow */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 45%, oklch(0.555 0.163 48.998 / 0.12) 0%, transparent 65%)",
-          }}
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/10 blur-3xl"
         />
 
-        <div className="relative z-10 text-center space-y-6 px-12 animate-fade-in">
-          <div className="text-primary mx-auto">
-            <PulseLogo className="h-36 w-36 mx-auto" />
-          </div>
+        <div className="relative z-10 animate-fade-in space-y-6 px-12 text-center">
+          <PulseLogo className="mx-auto h-12 w-12 text-brand" alt="Pubky Pulse" />
           <div>
-            <h1 className="text-3xl font-bold text-white/90 tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Pubky Pulse
             </h1>
-            <p className="text-white/40 mt-2 text-sm">
+            <p className="mt-2 text-sm text-muted-foreground">
               Self-hosted observability for web, backend and mobile apps
             </p>
           </div>
@@ -103,7 +86,7 @@ function LoginForm() {
       <div className="flex flex-1 items-center justify-center px-6">
         <div className="w-full max-w-sm animate-fade-in-up">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <PulseLogo className="h-7 w-7 text-primary" />
+            <PulseLogo className="h-7 w-7 text-brand" />
             <span className="text-xl font-bold tracking-tight">Pubky Pulse</span>
           </div>
 
@@ -121,7 +104,10 @@ function LoginForm() {
           {step === "email" ? (
             <form onSubmit={handleSendCode} className="space-y-4">
               {error && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive">
+                <div
+                  role="alert"
+                  className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                >
                   {error}
                 </div>
               )}
@@ -137,14 +123,17 @@ function LoginForm() {
                   autoFocus
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" variant="brand" className="w-full" disabled={loading}>
                 {loading ? "Sending code..." : "Send code"}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleVerifyCode} className="space-y-4">
               {error && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive">
+                <div
+                  role="alert"
+                  className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                >
                   {error}
                 </div>
               )}
@@ -164,7 +153,12 @@ function LoginForm() {
                   className="text-center text-lg tracking-[0.3em] font-mono"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+              <Button
+                type="submit"
+                variant="brand"
+                className="w-full"
+                disabled={loading || code.length !== 6}
+              >
                 {loading ? "Verifying..." : "Verify"}
               </Button>
               <button
@@ -174,7 +168,7 @@ function LoginForm() {
                   setCode("");
                   setError("");
                 }}
-                className="block w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="block w-full rounded-md py-1 text-center text-sm text-brand outline-none transition-colors hover:text-brand/80 focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 Use a different email
               </button>

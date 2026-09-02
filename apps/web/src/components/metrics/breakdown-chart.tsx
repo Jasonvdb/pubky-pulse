@@ -1,14 +1,17 @@
 "use client";
 
+// The six chart tokens, in order, cycled with `i % length`. Categorical series
+// get their colour from the design system's chart ramp rather than from raw
+// Tailwind palette classes, so a token change in globals.css moves every chart
+// at once. `data` is sliced to 8 rows below, so rows 7 and 8 reuse chart-1/2 —
+// acceptable because the label sits directly beside its own bar.
 const BAR_COLORS = [
-  "bg-blue-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-violet-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-orange-500",
-  "bg-pink-500",
+  "bg-chart-1",
+  "bg-chart-2",
+  "bg-chart-3",
+  "bg-chart-4",
+  "bg-chart-5",
+  "bg-chart-6",
 ];
 
 interface BreakdownChartProps {

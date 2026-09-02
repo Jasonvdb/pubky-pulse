@@ -64,7 +64,7 @@ export function RecentEventsPanel({ projectId }: { projectId?: string } = {}) {
             <Link
               key={event.id}
               href={`/dashboard/events?event_id=${event.id}`}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/40"
             >
               <div className="shrink-0 w-16 flex justify-start">
                 <EventLevelBadge level={event.level as LogLevel} />

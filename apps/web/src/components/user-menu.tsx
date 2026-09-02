@@ -43,11 +43,11 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2.5 cursor-pointer outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full">
-          <span className="text-sm text-muted-foreground">
+        <button className="group flex cursor-pointer items-center gap-2.5 rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <span className="text-sm text-muted-foreground transition-colors group-hover:text-foreground">
             {user?.name || user?.email}
           </span>
-          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary transition-opacity hover:opacity-80">
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-brand/10 text-xs font-medium text-brand transition-colors group-hover:bg-brand/20">
             {initials}
             {unread > 0 && (
               <Badge

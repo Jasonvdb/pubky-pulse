@@ -29,19 +29,19 @@ export function QuestionnaireCardGrid({
       {questionnaires.map((q, idx) => (
         <StaggerItem key={q.id} index={startIndex + idx}>
           <Link href={`/dashboard/questionnaires/${q.id}?project_id=${q.project_id}`}>
-            <Card className="hover:border-primary/30 transition-colors h-full">
+            <Card className="h-full transition-colors hover:bg-accent/40">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between gap-2 text-base">
                   <span className="flex items-center gap-2 min-w-0">
                     {!hideProjectDot && (
-                      <ProjectDot color={projectColors.get(q.project_id) ?? "#6366f1"} />
+                      <ProjectDot color={projectColors.get(q.project_id)} />
                     )}
                     <span className="truncate">{q.name}</span>
                   </span>
                   <span
                     className={
                       q.is_active
-                        ? "text-xs font-normal text-emerald-600 dark:text-emerald-400"
+                        ? "text-xs font-normal text-chart-2"
                         : "text-xs font-normal text-muted-foreground"
                     }
                   >

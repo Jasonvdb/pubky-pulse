@@ -195,7 +195,7 @@ export default function ProjectDetailPage() {
       <IssueAlertSettings project={project} onSaved={mutate} />
 
       {newClientSecret && (
-        <Card className="border-primary">
+        <Card className="ring-2 ring-brand">
           <CardContent className="flex items-center gap-3 pt-6">
             <p className="text-sm">
               <span className="font-medium">New app client secret:</span>{" "}
@@ -379,7 +379,7 @@ function RetentionSettings({ project, onSaved }: { project: ProjectDetailRespons
             <Button type="submit" size="sm" disabled={saving}>
               {saving ? "Saving..." : "Save Retention"}
             </Button>
-            {success && <span className="text-sm text-green-600">Saved</span>}
+            {success && <span className="text-sm text-chart-2">Saved</span>}
           </div>
         </form>
       </CardContent>
@@ -438,7 +438,7 @@ function IssueAlertSettings({ project, onSaved }: { project: ProjectDetailRespon
           <Button size="sm" onClick={handleSave} disabled={saving || frequency === project.effective_issue_alert_frequency}>
             {saving ? "Saving..." : "Save"}
           </Button>
-          {success && <span className="text-sm text-green-600">Saved</span>}
+          {success && <span className="text-sm text-chart-2">Saved</span>}
         </div>
         <p className="text-xs text-muted-foreground">
           Controls how often new or regressed issues batch into a notification for this project.
@@ -531,7 +531,7 @@ function ColorSettings({ project, onSaved }: { project: ProjectDetailResponse; o
             disabled={saving}
           />
           <ProjectDot color={color} size={20} />
-          {success && <span className="text-xs text-green-600">Saved</span>}
+          {success && <span className="text-xs text-chart-2">Saved</span>}
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
       </CardContent>

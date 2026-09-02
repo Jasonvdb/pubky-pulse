@@ -1,10 +1,11 @@
 import { docsSource } from "@/lib/docs-source";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export function GET() {
   const pages = docsSource.getPages();
 
   const lines = [
-    "# Pubky Pulse",
+    `# ${SITE_NAME}`,
     "",
     "> Self-hosted observability platform for web, backend and mobile apps. Structured events, performance metrics, and conversion funnels — purpose-built for AI coding agents.",
     "",
@@ -12,7 +13,7 @@ export function GET() {
     "",
     ...pages.map(
       (page) =>
-        `- [${page.data.title}](https://pulse.pubky.org${page.url})${page.data.description ? `: ${page.data.description}` : ""}`
+        `- [${page.data.title}](${SITE_URL}${page.url})${page.data.description ? `: ${page.data.description}` : ""}`
     ),
   ];
 

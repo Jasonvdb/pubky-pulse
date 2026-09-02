@@ -11,7 +11,7 @@ const components: Components = {
   ul: ({ className, ...p }) => <ul className={cn("list-disc pl-5 my-1.5 space-y-0.5", className)} {...p} />,
   ol: ({ className, ...p }) => <ol className={cn("list-decimal pl-5 my-1.5 space-y-0.5", className)} {...p} />,
   li: ({ className, ...p }) => <li className={cn("[&>p]:my-0", className)} {...p} />,
-  a: ({ className, ...p }) => <a className={cn("text-primary underline underline-offset-2 hover:no-underline", className)} target="_blank" rel="noreferrer noopener" {...p} />,
+  a: ({ className, ...p }) => <a className={cn("text-brand underline underline-offset-2 hover:no-underline", className)} target="_blank" rel="noreferrer noopener" {...p} />,
   code: ({ className, children, ...p }) => {
     const isBlock = className?.includes("language-");
     if (isBlock) {

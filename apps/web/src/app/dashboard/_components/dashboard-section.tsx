@@ -21,8 +21,8 @@ export function DashboardSection({
   className,
 }: DashboardSectionProps) {
   return (
-    <Card className={cn("overflow-hidden rounded-md", className)}>
-      <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5 border-b">
+    <Card className={cn("overflow-hidden", className)}>
+      <div className="flex items-baseline justify-between border-b border-border px-4 pt-3.5 pb-2.5">
         <div className="flex items-baseline gap-2">
           {eyebrow && (
             <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -34,7 +34,7 @@ export function DashboardSection({
         {viewAllHref && (
           <Link
             href={viewAllHref}
-            className="group flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors"
+            className="group flex items-center gap-1 rounded-sm text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           >
             View all
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />

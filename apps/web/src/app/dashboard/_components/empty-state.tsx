@@ -20,7 +20,7 @@ export function EmptyState({ icon: Icon, title, subtitle, ctaLabel, ctaHref }: E
       {ctaLabel && ctaHref && (
         <Link
           href={ctaHref}
-          className="mt-2 text-xs font-medium text-primary hover:underline"
+          className="mt-2 rounded-sm text-xs font-medium text-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
           {ctaLabel} →
         </Link>

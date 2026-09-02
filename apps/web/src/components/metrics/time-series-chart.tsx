@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { formatShortDate } from "@/lib/format-date";
 
 interface TimeSeriesChartProps {
@@ -26,7 +25,7 @@ export function TimeSeriesChart({ data }: TimeSeriesChartProps) {
               <span className="text-[10px] text-muted-foreground">{item.count}</span>
               <div className="w-full flex flex-col justify-end" style={{ height: "120px" }}>
                 <div
-                  className="w-full bg-blue-500 rounded-t"
+                  className="w-full rounded-t bg-chart-1 transition-colors hover:bg-chart-1/80"
                   style={{ height: `${Math.max(height, 2)}%` }}
                   title={`${label}: ${item.count} events`}
                 />

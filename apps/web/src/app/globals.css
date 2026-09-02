@@ -3,6 +3,8 @@
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
 
+/* Pubky Pulse is permanently dark. `<html>` still carries `.dark` (see layout.tsx)
+   so any existing `dark:` utility keeps resolving against the same palette. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -25,11 +27,13 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -42,79 +46,60 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --shadow-2xs: 0 1px 0 0 rgba(5, 5, 10, 0.2);
+  --shadow-xs: 0 1px 2px 0 rgba(5, 5, 10, 0.2);
+  --shadow-sm: 0 1px 3px 0 rgba(5, 5, 10, 0.25), 0 1px 2px 0 rgba(5, 5, 10, 0.25);
+  --shadow-md: 0 4px 6px 0 rgba(5, 5, 10, 0.25), 0 2px 4px 0 rgba(5, 5, 10, 0.25);
+  --shadow-lg: 0 10px 15px 0 rgba(5, 5, 10, 0.25), 0 4px 6px 0 rgba(5, 5, 10, 0.25);
+  --shadow-xl: 0 20px 25px 0 rgba(5, 5, 10, 0.25), 0 8px 10px 0 rgba(5, 5, 10, 0.25);
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Single, dark palette — there is no light mode, so :root carries it. */
 :root {
-  --radius: 0.5rem;
-  --background: oklch(0.985 0.002 247.839);
-  --foreground: oklch(0.141 0.005 247.839);
-  --card: oklch(0.985 0.002 247.839);
-  --card-foreground: oklch(0.141 0.005 247.839);
-  --popover: oklch(0.985 0.002 247.839);
-  --popover-foreground: oklch(0.141 0.005 247.839);
-  --primary: oklch(0.555 0.163 48.998);
-  --primary-foreground: oklch(0.985 0.002 247.839);
-  --secondary: oklch(0.929 0.006 247.839);
-  --secondary-foreground: oklch(0.141 0.005 247.839);
-  --muted: oklch(0.929 0.006 247.839);
-  --muted-foreground: oklch(0.551 0.016 247.839);
-  --accent: oklch(0.929 0.006 247.839);
-  --accent-foreground: oklch(0.141 0.005 247.839);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0.002 247.839);
-  --border: oklch(0.869 0.01 247.839);
-  --input: oklch(0.869 0.01 247.839);
-  --ring: oklch(0.555 0.163 48.998);
-  --chart-1: oklch(0.555 0.163 48.998);
-  --chart-2: oklch(0.646 0.222 41.116);
-  --chart-3: oklch(0.398 0.07 247.839);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.968 0.003 247.839);
-  --sidebar-foreground: oklch(0.141 0.005 247.839);
-  --sidebar-primary: oklch(0.555 0.163 48.998);
-  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.929 0.006 247.839);
-  --sidebar-accent-foreground: oklch(0.141 0.005 247.839);
-  --sidebar-border: oklch(0.869 0.01 247.839);
-  --sidebar-ring: oklch(0.555 0.163 48.998);
-}
+  --radius: 0.625rem;
 
-.dark {
-  --background: oklch(0.141 0.005 247.839);
-  --foreground: oklch(0.985 0.002 247.839);
-  --card: oklch(0.141 0.005 247.839);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.141 0.005 247.839);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.555 0.163 48.998);
-  --primary-foreground: oklch(0.985 0.002 247.839);
-  --secondary: oklch(0.218 0.009 247.839);
-  --secondary-foreground: oklch(0.985 0.002 247.839);
-  --muted: oklch(0.218 0.009 247.839);
-  --muted-foreground: oklch(0.716 0.013 247.839);
-  --accent: oklch(0.218 0.009 247.839);
-  --accent-foreground: oklch(0.985 0.002 247.839);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0.002 247.839);
-  --border: oklch(0.284 0.011 247.839);
-  --input: oklch(0.284 0.011 247.839);
-  --ring: oklch(0.555 0.163 48.998);
-  --chart-1: oklch(0.555 0.163 48.998);
-  --chart-2: oklch(0.646 0.222 41.116);
-  --chart-3: oklch(0.716 0.013 247.839);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.18 0.007 247.839);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-primary: oklch(0.555 0.163 48.998);
-  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.218 0.009 247.839);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-border: oklch(0.284 0.011 247.839);
-  --sidebar-ring: oklch(0.555 0.163 48.998);
+  /* Acid-lime brand accent. The ONLY accent colour in the product. */
+  --brand: oklch(0.928 0.23 123.978); /* #C8FF00 */
+
+  --background: oklch(0.118 0.014 284.115); /* #05050A */
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.232 0.006 285.946); /* #1D1D20 */
+  --card-foreground: oklch(0.951 0.011 286.195);
+  --popover: oklch(0.232 0.006 285.946);
+  --popover-foreground: oklch(0.951 0.011 286.195);
+
+  /* `primary` is aliased to the brand so pre-existing primary utilities go lime. */
+  --primary: var(--brand);
+  --primary-foreground: var(--background);
+
+  --secondary: #303034;
+  --secondary-foreground: #d4d4db;
+  --muted: oklch(0.311 0.007 285.98);
+  --muted-foreground: #89898f;
+  --accent: oklch(0.392 0.007 286.088);
+  --accent-foreground: oklch(0.951 0.011 286.195);
+  --destructive: oklch(0.628 0.258 29.234);
+  --destructive-foreground: oklch(0.971 0.013 17.38);
+  --border: oklch(0.311 0.007 285.98);
+  --input: #525252;
+  --ring: var(--brand);
+
+  --chart-1: oklch(0.517 0.27 263.327); /* blue */
+  --chart-2: oklch(0.871 0.261 146.685); /* green */
+  --chart-3: oklch(0.87 0.148 202.875); /* cyan */
+  --chart-4: oklch(0.697 0.321 327.72); /* magenta */
+  --chart-5: oklch(0.628 0.258 29.234); /* red */
+  --chart-6: oklch(0.772 0.174 64.552); /* orange */
+
+  --sidebar: oklch(0.232 0.006 285.946);
+  --sidebar-foreground: oklch(0.951 0.011 286.195);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: oklch(0.311 0.007 285.98);
+  --sidebar-accent-foreground: oklch(0.951 0.011 286.195);
+  --sidebar-border: oklch(0.311 0.007 285.98);
+  --sidebar-ring: oklch(0.472 0.007 274.863);
 }
 
 /* Docs sidebar — match dashboard sidebar styling */
@@ -128,24 +113,35 @@
   }
 }
 
-.dark #nd-docs-layout {
-  --color-fd-background: oklch(0.141 0.005 247.839);
+/* Map Fumadocs' own tokens onto the app palette. No `.dark` prefix: the app has
+   exactly one theme, so these apply unconditionally. */
+#nd-docs-layout {
+  --color-fd-background: var(--background);
+  --color-fd-card: var(--sidebar);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--brand);
+  --color-fd-primary-foreground: var(--background);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-secondary: var(--secondary);
+  --color-fd-accent: var(--accent);
+  --color-fd-accent-foreground: var(--accent-foreground);
 }
 
-.dark #nd-sidebar {
-  --color-fd-card: oklch(0.18 0.007 247.839);
-  --color-fd-border: oklch(0.284 0.011 247.839);
-  --color-fd-primary: oklch(0.555 0.163 48.998);
-  --color-fd-primary-foreground: oklch(0.985 0.002 247.839);
-  --color-fd-muted-foreground: oklch(0.716 0.013 247.839);
-  --color-fd-accent: oklch(0.218 0.009 247.839);
-  --color-fd-accent-foreground: oklch(0.985 0.002 247.839);
-  --color-fd-muted: oklch(0.218 0.009 247.839);
-  --color-fd-secondary: oklch(0.218 0.009 247.839);
+#nd-sidebar {
+  --color-fd-card: var(--sidebar);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--brand);
+  --color-fd-primary-foreground: var(--background);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-secondary: var(--secondary);
+  --color-fd-accent: var(--accent);
+  --color-fd-accent-foreground: var(--accent-foreground);
 }
 
 #nd-sidebar > div:first-child {
-  border-bottom: 1px solid oklch(0.284 0.011 247.839);
+  border-bottom: 1px solid var(--border);
 }
 
 @layer base {
@@ -154,6 +150,23 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Tailwind v4 already generates bg-brand/16, text-brand, etc. from
+     --color-brand; these mirror pubky-app so shared markup drops in unchanged. */
+  .bg-brand {
+    background-color: var(--brand);
+  }
+  .text-brand {
+    color: var(--brand);
+  }
+  .border-brand {
+    border-color: var(--brand);
+  }
+  .hover\:bg-brand\/90:hover {
+    background-color: oklch(from var(--brand) calc(l * 0.9) c h);
   }
 }
 
@@ -227,36 +240,6 @@ div[id^="__lpform"],
     opacity: 0;
     transform: scale(0.75);
   }
-}
-
-/* Landing page animations */
-@keyframes landing-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-.landing-float {
-  animation: landing-float 5s ease-in-out infinite;
-}
-
-.landing-stagger-1 {
-  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 0.1s;
-}
-
-.landing-stagger-2 {
-  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 0.25s;
-}
-
-.landing-stagger-3 {
-  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 0.4s;
-}
-
-.landing-stagger-4 {
-  animation: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: 0.55s;
 }
 
 /* Hide scrollbar but keep scroll functionality */

@@ -322,10 +322,10 @@ export default function AuditLogPage() {
                         <span className="font-medium">{field}</span>
                         <div className="ml-2 mt-0.5 font-mono">
                           {change.before !== undefined && (
-                            <div className="text-red-400">- {JSON.stringify(change.before)}</div>
+                            <div className="[color:color-mix(in_oklab,var(--chart-5),white_22%)]">- {JSON.stringify(change.before)}</div>
                           )}
                           {change.after !== undefined && (
-                            <div className="text-green-400">+ {JSON.stringify(change.after)}</div>
+                            <div className="text-chart-2">+ {JSON.stringify(change.after)}</div>
                           )}
                         </div>
                       </div>

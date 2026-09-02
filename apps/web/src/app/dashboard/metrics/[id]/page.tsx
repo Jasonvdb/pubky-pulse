@@ -448,7 +448,7 @@ export default function MetricDetailPage() {
                       <TableCell className="text-xs py-1.5">
                         <CountryCell code={event.country_code} />
                       </TableCell>
-                      <TableCell className="text-xs py-1.5 text-red-500 truncate max-w-[200px]">
+                      <TableCell className="text-xs py-1.5 [color:color-mix(in_oklab,var(--chart-5),white_22%)] truncate max-w-[200px]">
                         {event.error ?? "—"}
                       </TableCell>
                       <TableCell className="text-xs py-1.5 text-muted-foreground truncate max-w-[200px]">
@@ -505,7 +505,7 @@ function StatCard({
     <Card>
       <CardContent className="pt-4 pb-3 px-4">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-lg font-semibold mt-0.5 ${variant === "danger" ? "text-red-500" : ""}`}>
+        <p className={`text-lg font-semibold mt-0.5 ${variant === "danger" ? "[color:color-mix(in_oklab,var(--chart-5),white_22%)]" : ""}`}>
           {value}
         </p>
         {subtitle && <p className="text-[10px] text-muted-foreground">{subtitle}</p>}

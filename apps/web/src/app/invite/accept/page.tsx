@@ -101,36 +101,22 @@ function AcceptInvitationContent() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Branded panel — matches login page */}
-      <div
-        className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center"
-        style={{ background: "oklch(0.12 0.015 55)" }}
-      >
+      <div className="relative hidden items-center justify-center overflow-hidden bg-card lg:flex lg:w-[45%]">
+        {/* Decorative brand glow — the only ornament on the panel. */}
         <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: `linear-gradient(oklch(0.555 0.163 48.998) 1px, transparent 1px),
-              linear-gradient(90deg, oklch(0.555 0.163 48.998) 1px, transparent 1px)`,
-            backgroundSize: "40px 40px",
-          }}
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/10 blur-3xl"
         />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 45%, oklch(0.555 0.163 48.998 / 0.12) 0%, transparent 65%)",
-          }}
-        />
-        <div className="relative z-10 text-center space-y-6 px-12 animate-fade-in">
-          <div className="text-primary mx-auto">
-            <PulseLogo className="h-36 w-36 mx-auto" />
-          </div>
+
+        <div className="relative z-10 animate-fade-in space-y-6 px-12 text-center">
+          <PulseLogo className="mx-auto h-12 w-12 text-brand" alt="Pubky Pulse" />
           <div>
-            <h1 className="text-3xl font-bold text-white/90 tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Pubky Pulse
             </h1>
-            <p className="text-white/40 mt-2 text-sm">
+            <p className="mt-2 text-sm text-muted-foreground">
               Self-hosted observability for web, backend and mobile apps
             </p>
           </div>
@@ -141,7 +127,7 @@ function AcceptInvitationContent() {
       <div className="flex flex-1 items-center justify-center px-6">
         <div className="w-full max-w-md animate-fade-in-up">
           <div className="lg:hidden flex items-center gap-2.5 justify-center mb-8">
-            <PulseLogo className="h-7 w-7 text-primary" />
+            <PulseLogo className="h-7 w-7 text-brand" />
             <span className="text-xl font-bold tracking-tight">Pubky Pulse</span>
           </div>
 
@@ -162,8 +148,8 @@ function AcceptInvitationContent() {
           ) : accepted ? (
             <Card>
               <CardContent className="pt-8 pb-8 text-center space-y-4">
-                <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Check className="h-6 w-6 text-primary" />
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
+                  <Check className="h-6 w-6 text-brand" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-lg font-medium">
@@ -195,7 +181,10 @@ function AcceptInvitationContent() {
                   </div>
 
                   {acceptError && (
-                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive text-center">
+                    <div
+                      role="alert"
+                      className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-center text-sm text-destructive"
+                    >
                       {acceptError}
                     </div>
                   )}
@@ -221,12 +210,13 @@ function AcceptInvitationContent() {
                           Signed in as {authUser.user.email}
                         </p>
                         {authUser.user.email !== invite.email && (
-                          <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 px-3 py-2.5 text-sm text-yellow-600 dark:text-yellow-400 text-center">
+                          <div className="rounded-lg border border-chart-6/30 bg-chart-6/10 px-3 py-2.5 text-center text-sm text-chart-6">
                             This invitation was sent to {invite.email}. You&apos;re
                             signed in as {authUser.user.email}.
                           </div>
                         )}
                         <Button
+                          variant="brand"
                           className="w-full"
                           onClick={handleAccept}
                           disabled={accepting || authUser.user.email !== invite.email}
@@ -245,12 +235,12 @@ function AcceptInvitationContent() {
                       </div>
                     )
                   ) : (
-                    <Button className="w-full" onClick={handleSignIn}>
+                    <Button variant="brand" className="w-full" onClick={handleSignIn}>
                       Sign in to accept
                     </Button>
                   )}
 
-                  <p className="text-xs text-muted-foreground text-center border-t pt-4">
+                  <p className="border-t border-border pt-4 text-center text-xs text-muted-foreground">
                     Expires{" "}
                     {formatFullDate(invite.expires_at)}
                   </p>

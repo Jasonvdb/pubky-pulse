@@ -42,11 +42,11 @@ export function MetricCardGrid({
         return (
           <StaggerItem key={m.id} index={startIndex + idx}>
             <Link href={`/dashboard/metrics/${m.id}`}>
-              <Card className="cursor-pointer hover:border-primary/50 transition-colors h-full">
+              <Card className="h-full cursor-pointer transition-colors hover:bg-accent/40">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0">
                     {!hideProjectDot && (
-                      <ProjectDot color={projectColors.get(m.project_id) ?? "#6366f1"} />
+                      <ProjectDot color={projectColors.get(m.project_id)} />
                     )}
                     <span className="truncate">{m.name}</span>
                   </CardTitle>

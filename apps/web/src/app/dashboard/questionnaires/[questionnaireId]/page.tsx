@@ -113,7 +113,7 @@ export default function QuestionnaireDetailPage() {
             <span
               className={
                 questionnaire.is_active
-                  ? "text-emerald-600 dark:text-emerald-400"
+                  ? "text-chart-2"
                   : "text-muted-foreground"
               }
             >
@@ -286,7 +286,7 @@ export default function QuestionnaireDetailPage() {
                               key={i}
                               className={
                                 i < answer
-                                  ? "h-4 w-4 fill-amber-500 text-amber-500"
+                                  ? "h-4 w-4 fill-chart-6 text-chart-6"
                                   : "h-4 w-4 text-muted-foreground"
                               }
                             />
@@ -411,7 +411,7 @@ function QuestionAnalytics({
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-500"
+                    className="h-full bg-brand"
                     style={{ width: `${(c.count / max) * 100}%` }}
                   />
                 </div>
@@ -435,13 +435,13 @@ function QuestionAnalytics({
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="flex items-center gap-1">
                   {Array.from({ length: b.value }).map((_, i) => (
-                    <Star key={i} className="h-3 w-3 fill-amber-500 text-amber-500" />
+                    <Star key={i} className="h-3 w-3 fill-chart-6 text-chart-6" />
                   ))}
                 </span>
                 <span className="text-muted-foreground">{b.count}</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500" style={{ width: `${(b.count / max) * 100}%` }} />
+                <div className="h-full bg-chart-6" style={{ width: `${(b.count / max) * 100}%` }} />
               </div>
             </div>
           ))}
@@ -461,13 +461,13 @@ function QuestionAnalytics({
         </span>
       </h3>
       <div className="flex items-center gap-2 text-xs mb-3">
-        <span className="text-red-600 dark:text-red-400">
+        <span className="[color:color-mix(in_oklab,var(--chart-5),white_22%)]">
           Detractors: {analytics.detractors}
         </span>
-        <span className="text-amber-600 dark:text-amber-400">
+        <span className="text-chart-6">
           Passives: {analytics.passives}
         </span>
-        <span className="text-emerald-600 dark:text-emerald-400">
+        <span className="text-chart-2">
           Promoters: {analytics.promoters}
         </span>
       </div>
@@ -475,10 +475,10 @@ function QuestionAnalytics({
         {analytics.buckets.map((b) => {
           const color =
             b.value <= 6
-              ? "bg-red-500"
+              ? "bg-chart-5"
               : b.value <= 8
-                ? "bg-amber-500"
-                : "bg-emerald-500";
+                ? "bg-chart-6"
+                : "bg-chart-2";
           return (
             <div key={b.value} className="flex flex-col items-center gap-1">
               <div

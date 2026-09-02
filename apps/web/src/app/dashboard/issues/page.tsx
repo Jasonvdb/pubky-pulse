@@ -74,7 +74,7 @@ function timeAgo(dateStr: string): string {
 function IssueCard({ issue, projectColor, latestAppVersion, onClick }: { issue: IssueResponse; projectColor: string | undefined; latestAppVersion: string | null | undefined; onClick: () => void }) {
   return (
     <Card
-      className="cursor-pointer hover:border-primary/30 transition-colors"
+      className="cursor-pointer transition-colors hover:bg-accent/40"
       onClick={onClick}
     >
       <CardContent className="p-3 space-y-2">

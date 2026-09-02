@@ -67,7 +67,7 @@ function FeedbackCard({
     feedback.submitter_email ??
     (feedback.user_id ? feedback.user_id.slice(0, 10) + "…" : null);
   return (
-    <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={onClick}>
+    <Card className="cursor-pointer transition-colors hover:bg-accent/40" onClick={onClick}>
       <CardContent className="p-3 space-y-2">
         <p className="text-sm leading-snug line-clamp-3">{feedback.message}</p>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -243,10 +243,7 @@ function FeedbackDetailModal({
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-600 focus:text-red-600"
-                    onClick={handleDelete}
-                  >
+                  <DropdownMenuItem variant="destructive" onClick={handleDelete}>
                     🗑️ Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>

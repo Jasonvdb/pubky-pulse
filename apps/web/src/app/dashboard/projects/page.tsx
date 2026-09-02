@@ -135,7 +135,7 @@ export default function ProjectsPage() {
             return (
               <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="block h-full">
                 <Card
-                  className="h-full border-l-4 transition-colors hover:border-primary/50"
+                  className="h-full border-l-4 transition-colors hover:bg-accent/40"
                   style={{ borderLeftColor: project.color }}
                 >
                   <CardHeader>

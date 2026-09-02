@@ -125,7 +125,7 @@ export function EventDetailSheet({ event, open, onOpenChange, onEventSelect, onF
             {event.is_dev && (
               <div className="flex justify-between gap-4 py-1.5">
                 <span className="shrink-0 text-xs text-muted-foreground">🛠️ Dev Build</span>
-                <span className="text-right text-xs font-medium text-yellow-600">Yes</span>
+                <span className="text-right text-xs font-medium text-chart-6">Yes</span>
               </div>
             )}
           </div>

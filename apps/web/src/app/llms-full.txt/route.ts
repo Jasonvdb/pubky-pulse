@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { docsSource } from "@/lib/docs-source";
+import { GITHUB_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
 function stripFrontmatter(content: string): string {
   const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
@@ -12,13 +13,13 @@ export function GET() {
   const docsDir = path.join(process.cwd(), "content/docs");
 
   const header = [
-    "# Pubky Pulse",
+    `# ${SITE_NAME}`,
     "",
     "> Self-hosted observability platform for web, backend and mobile apps. Structured events, performance metrics, and conversion funnels — purpose-built for AI coding agents.",
     "",
-    "## About Pubky Pulse",
+    `## About ${SITE_NAME}`,
     "",
-    "Pubky Pulse is an agent-first, open-source observability platform for web, backend and mobile apps.",
+    `${SITE_NAME} is an agent-first, open-source observability platform for web, backend and mobile apps.`,
     "It provides structured events, performance metrics, and conversion funnels.",
     "",
     "Key capabilities:",
@@ -33,17 +34,17 @@ export function GET() {
     "- **MCP server**: Agent-native MCP interface for setup, querying, and management — coding agents create projects, query events, and triage issues directly",
     "- **Self-hosted**: Single Postgres database, deploy on your own infrastructure",
     "",
-    "- Docs: https://pulse.pubky.org/docs",
-    "- GitHub: https://github.com/pubky/pubky-pulse",
-    "- Dashboard: https://pulse.pubky.org/dashboard",
+    `- Docs: ${SITE_URL}/docs`,
+    `- GitHub: ${GITHUB_URL}`,
+    `- Dashboard: ${SITE_URL}/dashboard`,
     "",
     "## License and Hosting",
     "",
-    "Pubky Pulse is self-hosted and MIT licensed. There is no hosted service and no paid plans — you run it on your own infrastructure.",
+    `${SITE_NAME} is self-hosted and MIT licensed. There is no hosted service and no paid plans — you run it on your own infrastructure.`,
     "",
     "## Alternatives",
     "",
-    "Pubky Pulse is an open-source alternative to Mixpanel, Amplitude, PostHog, and Firebase Analytics,",
+    `${SITE_NAME} is an open-source alternative to Mixpanel, Amplitude, PostHog, and Firebase Analytics,`,
     "differentiated by its agent-first API design and single-database self-hosted architecture.",
     "",
     "## Docs",
@@ -65,7 +66,7 @@ export function GET() {
       "",
       page.data.description ? `${page.data.description}` : "",
       "",
-      `URL: https://pulse.pubky.org${page.url}`,
+      `URL: ${SITE_URL}${page.url}`,
       "",
       body,
       "",

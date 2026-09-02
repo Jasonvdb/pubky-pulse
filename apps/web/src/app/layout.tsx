@@ -1,38 +1,47 @@
-import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter_Tight } from "next/font/google";
 import "./globals.css";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { SWRProvider } from "@/lib/swr";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const dmSans = DM_Sans({ subsets: ["latin"] });
+const interTight = Inter_Tight({ subsets: ["latin"] });
+
+const TITLE = "Pubky Pulse — Agent-First Observability";
+const DESCRIPTION =
+  "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, in-app questionnaires and error tracking, driven by your coding agent over MCP.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://pulse.pubky.org"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Pubky Pulse — Agent-First Observability",
-    template: "%s | Pubky Pulse",
+    default: TITLE,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, in-app questionnaires, and error tracking — purpose-built for AI coding agents.",
+  description: DESCRIPTION,
   openGraph: {
     type: "website",
-    siteName: "Pubky Pulse",
-    title: "Pubky Pulse — Agent-First Observability",
-    description:
-      "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, questionnaires, and error tracking.",
+    siteName: SITE_NAME,
+    title: TITLE,
+    description: DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pubky Pulse — Agent-First Observability",
-    description:
-      "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, and questionnaires — driven by your coding agent.",
+    title: TITLE,
+    description: DESCRIPTION,
   },
+};
+
+// The product has a single, permanently dark theme. Declaring it here keeps the
+// browser chrome and form controls dark instead of flashing a light default.
+export const viewport: Viewport = {
+  themeColor: "#05050A",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={dmSans.className}>
+    <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
+      <body className={interTight.className}>
         <SWRProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </SWRProvider>

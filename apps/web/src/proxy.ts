@@ -19,5 +19,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|pulse-logo.png).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|icon\\.svg|apple-icon|pulse-mark\\.svg|pulse-logo\\.svg).*)",
+  ],
 };

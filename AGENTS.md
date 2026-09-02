@@ -9,6 +9,10 @@
 
 Keep domain logic in its owning workspace; use `shared` only for cross-workspace code.
 
+## Cross-Surface Changes
+
+Treat the REST API, MCP tools/resources, dashboard, and documentation as linked surfaces. A change to any one must trigger a review of the other three and updates wherever affected, including shared types, tests, and examples. Record this cross-surface check in pull request descriptions.
+
 ## Build, Test, and Development Commands
 
 Use Node.js 20+, PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).
@@ -23,11 +27,11 @@ Use Node.js 20+, PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).
 
 ## Coding Style & Naming Conventions
 
-TypeScript is strict and ESM-based. Use two-space indentation, double quotes, semicolons, trailing commas in multiline constructs, and `import type` for type-only imports. Use kebab-case filenames (`attachment-cleanup.ts`), camelCase functions/variables, and PascalCase React components/types. Server relative imports include `.js`. No repository-wide formatter or linter is configured; match neighboring files and use `pnpm build` as the type-checking gate.
+TypeScript is strict and ESM-based. Use two-space indentation, double quotes, semicolons, trailing commas in multiline constructs, and `import type` for type-only imports. Use kebab-case filenames (`attachment-cleanup.ts`), camelCase functions/variables, and PascalCase React components/types. Server relative imports include `.js`. No repository-wide formatter or linter is configured; match neighboring files.
 
 ## Testing Guidelines
 
-Name tests `*.test.ts` and use Vitest `describe`/`it` blocks with behavioral descriptions. Server tests require `postgres://localhost:5432/pubky_pulse_test`; create it with `createdb pubky_pulse_test`. Add regression tests for route, job, schema, and permission changes. No coverage percentage is enforced; run coverage for substantial server work.
+Name tests `*.test.ts` and use Vitest `describe`/`it` blocks with behavioral descriptions. Server tests require `postgres://localhost:5432/pubky_pulse_test`; create it with `createdb pubky_pulse_test`. Add regression tests for route, job, schema, and permission changes.
 
 ## Commit & Pull Request Guidelines
 

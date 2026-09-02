@@ -175,7 +175,7 @@ Two rows are written for each (project, is_dev, bucket, kind-specific dimensions
 
 Read with \`query-stats-bucketed\`. The endpoint reads the per-app row when an \`app_id\` is supplied, otherwise the rollup row — single-row reads, no SUM at query time. \`excluding_current=true\` (default) drops the in-progress bucket so a partial day or hour can't show as a misleading dip.
 
-Aggregation runs every hour at \`:05\` UTC (re-aggregates the trailing 3 hours) and every day at \`00:30\` UTC (re-aggregates the trailing 3 days). Historical backfills are an operator action with no MCP / API surface — the trigger-job route blocks \`stats_aggregate_*\` jobs by design. Owners run \`pnpm backfill\` on the production VPS to refresh the trailing 365 days when needed.
+Aggregation runs every hour at \`:05\` UTC (re-aggregates the trailing 3 hours) and every day at \`00:30\` UTC (re-aggregates the trailing 3 days). Historical backfills run through \`trigger-job\`: pass \`job_type: "stats_aggregate_daily"\` (or \`stats_aggregate_hourly\`) with a \`project_id\` and \`start\`/\`end\` params — both types are project-scoped, so they are triggerable via MCP and the API. Owners can alternatively run \`pnpm backfill\` on the production VPS to refresh the trailing 365 days.
 
 **Retention**: these tables are **not** subject to retention pruning or soft-delete cleanup. The counts are anonymous (no user / session IDs, only COUNT DISTINCT values) and kept indefinitely so historical sparklines and year-views survive even after raw events have aged out.
 
@@ -217,7 +217,7 @@ Every mutation (create, update, delete) on resources is recorded in audit logs w
 - \`list-user-locales\` — Locale demand for deciding where to localize next. Returns \`by_locale\` (users grouped by their **wanted** language — device \`Locale.preferredLanguages.first\`, e.g. \`fr-FR\`, \`pt-BR\` — each with a \`shipped\` flag) and \`by_country\` (works for every user today, no SDK upgrade needed). Narrow with \`project_id\` and/or \`app_id\` to populate the \`shipped\`/gap flags (\`shipped: false\` = demand for a language the app doesn't ship yet); \`team_id\` ⊥ \`project_id\` ⊥ \`app_id\`. \`shipped\` is \`null\` (no flag) across multiple apps. The language signal fills in as users upgrade to the SDK that reports preferred language; until then lean on the country breakdown.
 
 #### Latest version detection
-Every app response includes \`latest_app_version\` and \`latest_app_version_updated_at\`. The value is computed from ingested data: the highest \`app_version\` seen across the app's production events in the last 90 days. Refreshed hourly by the \`app_version_sync\` system job. To compare a user/event/issue version against the latest, use string equality with the app's \`latest_app_version\` (semver-aware comparison only matters for ordering — equality is enough to flag "on latest"). Trigger \`app_version_sync\` with \`{ app_id }\` to refresh a single app on demand.
+Every app response includes \`latest_app_version\` and \`latest_app_version_updated_at\`. The value is computed from ingested data: the highest \`app_version\` seen across the app's production events in the last 90 days. Refreshed hourly by the \`app_version_sync\` system job. To compare a user/event/issue version against the latest, use string equality with the app's \`latest_app_version\` (semver-aware comparison only matters for ordering — equality is enough to flag "on latest"). \`app_version_sync\` is a **system** job and cannot be triggered via MCP or the API (the trigger route rejects system-scoped types) — the hourly run picks up new versions on its own.
 
 ### Events
 - \`query-events\` — Filter by project, app, level, user, session, environment, screen, time, data mode. Cursor pagination. Pass \`order: "asc"\` to walk events chronologically (default \`desc\`/newest-first). Pass \`compact: true\` to drop verbose fields. **Not the right tool for issue investigation** — use \`investigate-event\` for that, which builds a richer breadcrumb (full session + cross-app events) directly from an occurrence's \`event_id\`. Reach for \`query-events\` for ad-hoc filter-driven searches.
@@ -355,7 +355,7 @@ Pubky Pulse instruments web, backend and mobile apps. Three SDKs ship today and 
 
 ## Key Notes
 
-- \`bundle_id\` is **immutable after creation** — to change it, delete and recreate the app. Backend apps have no bundle_id.
+- \`bundle_id\` is **immutable after creation** — to change it, an owner must delete and recreate the app from the dashboard; there is no \`delete-app\` MCP tool. Backend apps have no bundle_id.
 - Agent keys are for reading/managing. Client keys are for SDK event ingestion.
 - Metric and funnel definitions must exist on the server before the SDK emits events for that slug.
 - Cursor-based pagination: use the \`cursor\` from the response to fetch the next page. \`has_more\` indicates more results.

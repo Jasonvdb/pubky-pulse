@@ -1,9 +1,9 @@
 ---
 title: API Reference
-description: Complete REST API reference for Pubky Pulse. Base URL, authentication, and endpoint documentation.
+description: REST API reference for Pubky Pulse. Base URL, authentication, and endpoint documentation.
 ---
 
-Complete REST API reference for Pubky Pulse. Every operation the dashboard and the [MCP endpoint](/docs/mcp) perform is available here, authenticated with the same `pulse_agent_` keys.
+REST reference for the core Pubky Pulse API, authenticated with the same `pulse_agent_` keys the [MCP endpoint](/docs/mcp) uses.
 
 ## Sections
 
@@ -23,6 +23,18 @@ Complete REST API reference for Pubky Pulse. Every operation the dashboard and t
 | [Identity](/docs/api-reference/identity) | Claim anonymous events for a known user ID and set user properties |
 | [Jobs](/docs/api-reference/jobs) | List, trigger, inspect, and cancel background job runs |
 | [Notifications](/docs/api-reference/notifications) | Per-user inbox: list, mark read, mark all read, soft-delete |
+
+### Not yet written up
+
+Three route families the dashboard and the MCP tools use have no page in this section yet:
+
+| Family | Routes | Documented instead in |
+|--------|--------|-----------------------|
+| Feedback | `GET/PATCH/DELETE /v1/projects/:projectId/feedback[/:feedbackId]`, comment CRUD under it, `POST /v1/feedback` (SDK ingest), `GET /v1/feedback`, `GET /v1/feedback/count` | [Feedback concept](/docs/concepts/feedback), [Feedback MCP tools](/docs/mcp/feedback) |
+| Questionnaires | `/v1/projects/:projectId/questionnaires…` (definitions, responses, comments, analytics), `GET /v1/questionnaires`, plus the SDK ingest routes under `/v1` | [Questionnaires concept](/docs/concepts/questionnaires), [Questionnaire MCP tools](/docs/mcp/questionnaires) |
+| Stats | `GET /v1/projects/:projectId/stats/:kind/:grain`, `GET /v1/stats/:kind/:grain` | [Aggregations concept](/docs/concepts/aggregations), [Stats MCP tools](/docs/mcp/stats) |
+
+The MCP pages describe the same operations with the same parameters, so they are the reference to reach for until these pages exist.
 
 ## Base URL
 

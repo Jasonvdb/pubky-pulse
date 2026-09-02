@@ -280,8 +280,7 @@ export async function cleanupSoftDeletedResources(client: postgres.Sql): Promise
 const isMainModule = import.meta.url === `file://${process.argv[1]}`;
 
 if (isMainModule) {
-  const { default: dotenv } = await import("dotenv");
-  dotenv.config({ path: "../../.env" });
+  await import("./load-root-env.js");
 
   const pg = await import("postgres");
   const databaseUrl = process.env.DATABASE_URL;

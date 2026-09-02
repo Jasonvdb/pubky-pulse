@@ -24,11 +24,11 @@
  *
  * Usage: `pnpm dev:seed-locale-users` (run after `pnpm dev:seed`).
  */
+import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { apps, appUsers, appUserApps } from "./schema.js";
 import { ANONYMOUS_ID_PREFIX, baseLanguage } from "@pubky-pulse/shared";
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
-import "dotenv/config";
 
 if (process.env.NODE_ENV === "production") {
   console.error("seed-locale-users is for development only. Aborting.");

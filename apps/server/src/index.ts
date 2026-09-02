@@ -125,6 +125,12 @@ jobRunner.schedule({
   params: () => ({}),
 });
 jobRunner.schedule({
+  jobType: "questionnaire_draft_cleanup",
+  cron: isDev ? "*/10 * * * *" : "30 6 * * *",
+  enabled: () => true,
+  params: () => ({}),
+});
+jobRunner.schedule({
   jobType: "stats_aggregate_daily",
   // Daily 00:30 UTC in prod — 30 min past midnight so the previous UTC day
   // has settled past most SDK late-arrivals. Dev runs every 10 min so the

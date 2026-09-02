@@ -35,6 +35,10 @@ The build compiles all packages in dependency order: `shared` then `db` then `se
 On a ~1 GB VPS the Next.js build can run out of heap. If `pnpm build` is killed, raise the heap limit: `NODE_OPTIONS='--max-old-space-size=1024' pnpm build`.
 </Callout>
 
+<Callout type="warn">
+`pnpm build` bakes `NEXT_PUBLIC_API_URL` into the dashboard's client bundle. Write `apps/web/.env` (step 3) **before** building, or the dashboard will call `http://localhost:4000` from your visitors' browsers and every request will fail. If you have already built, just run `pnpm build` again after writing it.
+</Callout>
+
 ## 3. Configure environment
 
 ```bash
@@ -62,6 +66,14 @@ PULSE_ATTACHMENTS_PATH=/opt/pubky-pulse-attachments
 PULSE_ATTACHMENTS_SIGNING_SECRET=<random-hex-string, must differ from JWT_SECRET>
 PULSE_ATTACHMENTS_INTERNAL_URI=/_attachments/
 ```
+
+The dashboard reads its own env file — Next.js resolves `.env` relative to `apps/web`, not the repo root — so write that one too:
+
+```bash
+echo 'NEXT_PUBLIC_API_URL=https://api.yourdomain.com' > apps/web/.env
+```
+
+That is the API base URL as reached from the *browser*. It is inlined at build time, so re-run `pnpm build` if you change it later.
 
 Generate the secrets:
 

@@ -1,8 +1,8 @@
+import "./load-root-env.js";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "./partitions.js";
-import "dotenv/config";
 
 const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 

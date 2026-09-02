@@ -19,6 +19,7 @@
  * Idempotency: ON CONFLICT DO UPDATE on the rollup row keys, so re-running
  * just replaces existing rows with new fake values.
  */
+import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import {
   projects,
@@ -29,7 +30,6 @@ import {
 } from "./schema.js";
 import { eq, and, isNull } from "drizzle-orm";
 import postgres from "postgres";
-import "dotenv/config";
 
 if (process.env.NODE_ENV === "production") {
   console.error("seed-aggregates is for development only. Aborting.");

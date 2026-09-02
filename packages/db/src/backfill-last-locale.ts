@@ -12,8 +12,8 @@
  *
  * Usage: `pnpm dev:backfill-locale` (or with an explicit DATABASE_URL prefix).
  */
+import "./load-root-env.js";
 import postgres from "postgres";
-import "dotenv/config";
 
 const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 

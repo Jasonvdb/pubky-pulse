@@ -80,7 +80,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   },
   "job.completed": {
     label: "Job completion",
-    description: "When a manual job you triggered with --notify finishes. Only the triggering user is notified.",
+    description: "When a manual job you triggered with notify: true finishes. Only the triggering user is notified.",
     channels: ["in_app", "email"],
     defaults: { in_app: true, email: true },
   },

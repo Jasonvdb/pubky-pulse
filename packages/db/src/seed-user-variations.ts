@@ -1,7 +1,7 @@
+import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { projects, apps, appUsers, appUserApps, users, teamMembers, teams } from "./schema.js";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import "dotenv/config";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Seed script is for development only. Aborting.");
@@ -168,9 +168,10 @@ const USERS: SeededUser[] = [
 ];
 
 async function resolveTarget(db: ReturnType<typeof createDatabaseConnection>) {
-  // Optional command-line arg: project slug. Default: jayvdb1@gmail.com's first project.
+  // Optional command-line arg: project slug. Default: the first project owned by the
+  // seeded admin account (see seed.ts).
   const slugArg = process.argv[2];
-  const emailDefault = "jayvdb1@gmail.com";
+  const emailDefault = "admin@pulse.pubky.org";
 
   if (slugArg) {
     const [project] = await db.select().from(projects).where(eq(projects.slug, slugArg));

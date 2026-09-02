@@ -12,6 +12,7 @@
     "dev:seed-issues": "pnpm --filter @pubky-pulse/db dev:seed-issues",
     "dev:seed-aggregates": "pnpm --filter @pubky-pulse/db dev:seed-aggregates",
     "dev:seed-locale-users": "pnpm --filter @pubky-pulse/db dev:seed-locale-users",
+    "dev:seed-user-variations": "pnpm --filter @pubky-pulse/db dev:seed-user-variations",
     "dev:backfill-locale": "pnpm --filter @pubky-pulse/db dev:backfill-locale",
     "dev:unsafe-reset": "pnpm --filter @pubky-pulse/db dev:unsafe-reset",
     "db:cleanup": "pnpm --filter @pubky-pulse/db cleanup",

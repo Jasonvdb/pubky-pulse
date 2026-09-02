@@ -1,9 +1,9 @@
+import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { apps, events, appUsers, appUserApps, metricEvents, funnelEvents } from "./schema.js";
 import { eq, isNull, and } from "drizzle-orm";
 import { parseMetricMessage, parseStepMessage } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
-import "dotenv/config";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Seed script is for development only. Aborting.");

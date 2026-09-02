@@ -3,9 +3,9 @@ title: Configuration
 description: Environment variables, database connection, email (Resend), cookie domain, and optional settings.
 ---
 
-Environment variables and configuration options. All values are set in the `.env` file at the repository root.
+Environment variables and configuration options. Every server-side value is set in the `.env` file at the repository root.
 
-The API server auto-loads `.env` via dotenv on startup. The web dashboard reads environment variables at build time (Next.js) and runtime (standalone mode).
+The API server auto-loads that root `.env` via dotenv on startup. The web dashboard is the one exception: Next.js resolves `.env` files relative to `apps/web`, and its single variable (`NEXT_PUBLIC_API_URL`) is inlined into the client bundle at build time, so it goes in `apps/web/.env` and takes effect only on the next `pnpm build`.
 
 ## Required variables
 
@@ -15,6 +15,7 @@ The API server auto-loads `.env` via dotenv on startup. The web dashboard reads 
 | `JWT_SECRET` | Random string used to sign JWT tokens. Generate with `openssl rand -base64 48`. Must be kept secret. Changing this value invalidates all existing sessions. |
 | `CORS_ORIGINS` | Allowed origin for cross-origin requests from the web dashboard. Set to your dashboard URL (e.g., `https://yourdomain.com`). |
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain authentication. Set to `.yourdomain.com` (note the leading dot) so the auth cookie is shared between `yourdomain.com` and `api.yourdomain.com`. Required when the API and dashboard are on different subdomains. |
+| `NEXT_PUBLIC_API_URL` | Base URL of the API server **as reached from the browser** (e.g. `https://api.yourdomain.com`). The only variable the web dashboard reads. Set it in `apps/web/.env`, not the root `.env` — Next.js inlines it at build time, so it must be in place before `pnpm build` and a change only lands after a rebuild. Unset, the dashboard calls `http://localhost:4000`. |
 | `PULSE_ATTACHMENTS_SIGNING_SECRET` | **Required in production.** Random string used to sign attachment download URLs. Generate with `openssl rand -hex 32`. Must differ from `JWT_SECRET`. Outside production, falls back to `JWT_SECRET` so local dev just works. |
 
 ## Optional variables
@@ -23,7 +24,7 @@ The API server auto-loads `.env` via dotenv on startup. The web dashboard reads 
 |----------|---------|-------------|
 | `PORT` | `4000` | Port the API server listens on. |
 | `HOST` | `0.0.0.0` | Bind address for the API server. |
-| `MAX_DATABASE_SIZE_GB` | `0` (disabled) | When set to a positive number, enables automatic pruning. An hourly check (plus one on startup) drops the oldest monthly event partitions when the database exceeds this size. |
+| `MAX_DATABASE_SIZE_GB` | `0` (disabled) | When set to a positive number, enables automatic pruning. An hourly check drops the oldest monthly event partitions when the database exceeds this size. |
 | `RESEND_API_KEY` | (empty) | API key from [Resend](https://resend.com) for sending verification emails. If not set, verification codes are printed to the server console (useful for single-user or development setups). |
 | `EMAIL_FROM` | `noreply@pulse.pubky.org` | The "from" address used when sending verification and invitation emails via Resend. Replace the default with an address on your own domain. |
 | `NODE_ENV` | `development` | Set to `production` for production deployments. Affects cookie security (`secure` flag) and Next.js behavior. |
@@ -56,6 +57,16 @@ PULSE_ATTACHMENTS_SIGNING_SECRET=your-random-hex-string-32-bytes
 PULSE_ATTACHMENTS_INTERNAL_URI=/_attachments/
 ```
 
+## Example `apps/web/.env` file
+
+The dashboard reads its own env file, not the root one:
+
+```bash
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+```
+
+Write this before building. Because Next.js inlines `NEXT_PUBLIC_*` values into the client bundle, editing it later requires `pnpm build` again — restarting pm2 is not enough.
+
 ## Migration note
 
 Database migrations (`pnpm db:migrate`) run from the `packages/db` directory and do not auto-load the `.env` file. When running migrations over SSH, prefix the command with the `DATABASE_URL`:
@@ -79,9 +90,8 @@ The auth cookie is always `httpOnly`, `sameSite: lax`, and `secure` in productio
 
 When `MAX_DATABASE_SIZE_GB` is set to a positive value:
 
-1. On server startup, a size check runs (fire-and-forget, does not block startup).
-2. An hourly interval checks the database size.
-3. If the database exceeds the threshold, the oldest monthly partitions are dropped from `events`, `metric_events`, and `funnel_events` tables.
-4. If only the current month's partition remains and the database is still over the limit, row-level deletion is used as a fallback.
+1. An hourly `db_pruning` cron job checks the database size. There is no check on startup, so enabling this on a full disk takes effect at the top of the next hour.
+2. If the database exceeds the threshold, the oldest monthly partitions are dropped from `events`, `metric_events`, and `funnel_events` tables.
+3. If only the current month's partition remains and the database is still over the limit, row-level deletion is used as a fallback.
 
 Set this to a value safely below your disk capacity (e.g., `8` for a 25 GB disk) to prevent the server from running out of storage.

@@ -123,7 +123,7 @@ CI pins pnpm 10.33.0 through corepack. Match it locally (`corepack prepare pnpm@
 
 The full walkthrough — system dependencies, PostgreSQL, nginx, SSL, environment variables, maintenance — is at [pulse.pubky.org/docs/self-hosting](https://pulse.pubky.org/docs/self-hosting).
 
-Configuration is environment variables only. Beyond `DATABASE_URL`, `JWT_SECRET`, `PORT`, `HOST` and `CORS_ORIGINS`, a production instance wants `PULSE_ATTACHMENTS_PATH` and `PULSE_ATTACHMENTS_SIGNING_SECRET` (the server refuses to start without the latter, and it must differ from `JWT_SECRET`), `API_PUBLIC_URL` and `WEB_APP_URL`, `COOKIE_DOMAIN`, `MAX_DATABASE_SIZE_GB` for the pruning safety net, and `RESEND_API_KEY` plus `EMAIL_FROM` if you want email out. `.env.example` documents each one.
+Configuration is environment variables only. Beyond `DATABASE_URL`, `JWT_SECRET`, `PORT`, `HOST` and `CORS_ORIGINS`, a production instance wants `PULSE_ATTACHMENTS_PATH` and `PULSE_ATTACHMENTS_SIGNING_SECRET` (the server refuses to start without the latter, and it must differ from `JWT_SECRET`), `API_PUBLIC_URL` and `WEB_APP_URL`, `COOKIE_DOMAIN`, `MAX_DATABASE_SIZE_GB` for the pruning safety net, and `RESEND_API_KEY` plus `EMAIL_FROM` if you want email out. `.env.example` documents each one. The dashboard is separate: its only variable, `NEXT_PUBLIC_API_URL`, goes in `apps/web/.env` (Next.js resolves env files relative to `apps/web`) and is inlined at build time, so set it before `pnpm build`.
 
 The short version: `deploy/setup-ubuntu-vps.sh` provisions a fresh Ubuntu host (Node, PostgreSQL, nginx, pm2). The application lives in `/opt/pubky-pulse` and runs as two pm2 processes, `pulse-api` and `pulse-web`. Event attachments are written to `/opt/pubky-pulse-attachments`, outside the database — back that directory up alongside `pg_dump`, and exclude it from the dump itself.
 
@@ -134,7 +134,7 @@ Documentation is served by the dashboard app and published at [pulse.pubky.org/d
 - [Getting started](https://pulse.pubky.org/docs/getting-started) — from empty database to first event
 - [Concepts](https://pulse.pubky.org/docs/concepts) — events, issues, feedback, attachments, metrics, funnels, jobs and more
 - [MCP](https://pulse.pubky.org/docs/mcp) — endpoint, tool reference and editor setup
-- [API reference](https://pulse.pubky.org/docs/api-reference) — every REST route with request and response examples
+- [API reference](https://pulse.pubky.org/docs/api-reference) — the core REST routes with request and response examples (feedback, questionnaires and stats are covered by the MCP and concept pages)
 - [SDKs](https://pulse.pubky.org/docs/sdks) — web, Node.js, Swift and Android
 - [Self-hosting](https://pulse.pubky.org/docs/self-hosting) — VPS setup, nginx, pm2, SSL, configuration
 - [FAQ](https://pulse.pubky.org/docs/faq) — platforms, licensing, and how this differs from hosted analytics tools

@@ -1,8 +1,9 @@
+import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { users, teams, teamMembers, projects, apps, apiKeys, events, appUsers, appUserApps, metricDefinitions, funnelDefinitions, questionnaires } from "./schema.js";
 import { eq, and } from "drizzle-orm";
+import { DEFAULT_API_KEY_PERMISSIONS } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
-import "dotenv/config";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Seed script is for development only. Aborting.");
@@ -94,7 +95,9 @@ async function main() {
   await ensureApiKey(db, agentKey, {
     key_type: "agent", app_id: null, team_id: team.id,
     name: "Demo Agent Key", created_by: user.id,
-    permissions: ["events:read", "funnels:read", "apps:read", "projects:read", "metrics:read"],
+    // Match what a real signup gets (apps/server/src/routes/auth.ts), so the
+    // demo key can reach the whole MCP tool surface.
+    permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
   });
 
   // --- Demo server app (backend) ---

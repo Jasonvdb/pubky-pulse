@@ -33,7 +33,7 @@ Each notification has a `type` that determines its formatters and which channels
 | `issue.digest` | Per-project periodic digest of new and regressed issues, sent by the `issue_notify` job at the project's configured frequency. | `in_app`, `email` | `email` only (in_app off so the digest doesn't double up with the instant `issue.new` alert) |
 | `feedback.new` | A user submitted feedback in one of the team's apps. | `in_app`, `email` | Both |
 | `questionnaire.response_new` | A user submitted a questionnaire response in one of the team's apps. Defaults skew to in-app only because responses can be high-volume — email is opt-in. | `in_app`, `email` | `in_app` only (email off by default) |
-| `job.completed` | A manual job run with `--notify` finished — only the triggering user is notified, never the whole team. | `in_app`, `email` | Both |
+| `job.completed` | A manual job run triggered with `notify: true` finished — only the triggering user is notified, never the whole team. | `in_app`, `email` | Both |
 | `team.invitation` | Listed for documentation but **not** routed through the dispatcher. Sent transactionally via `EmailService` directly because the recipient may not yet be a user. | — | — |
 
 Adding a new type is three steps: append to `NOTIFICATION_TYPES`, add an entry to `NOTIFICATION_TYPE_META` with default channel state, and wire a producer call site to `dispatcher.enqueue(...)`.
@@ -88,4 +88,4 @@ Notifications are **user-scoped, not team-scoped**. The REST routes accept JWT c
 - [Issues](/docs/concepts/issues) — `issue.digest` producer + per-project alert frequency
 - [Feedback](/docs/concepts/feedback) — `feedback.new` producer
 - [Questionnaires](/docs/concepts/questionnaires) — `questionnaire.response_new` producer
-- [Background Jobs](/docs/concepts/background-jobs) — `job.completed` producer when triggered with `--notify`
+- [Background Jobs](/docs/concepts/background-jobs) — `job.completed` producer when triggered with `notify: true`

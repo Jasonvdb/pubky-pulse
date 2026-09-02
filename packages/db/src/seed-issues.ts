@@ -1,9 +1,9 @@
+import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { apps, projects, users, issues, issueFingerprints, issueOccurrences, issueComments } from "./schema.js";
 import { eq, and, isNull } from "drizzle-orm";
 import { generateIssueFingerprint } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
-import "dotenv/config";
 
 if (process.env.NODE_ENV === "production") {
   console.error("Seed script is for development only. Aborting.");

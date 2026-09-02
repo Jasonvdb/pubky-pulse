@@ -60,7 +60,7 @@ The 3-bucket re-aggregation window absorbs late-arriving events from offline mob
 
 ## Backfill
 
-Backfilling the rollup tables is an **operator action** with no public API, CLI, or MCP surface — by design. The trigger-job route rejects `stats_aggregate_*` system jobs to keep a team-scoped agent key from kicking off system-wide work.
+Backfilling the rollup tables is an **operator action** with no public API or MCP surface — by design. The trigger-job route rejects `stats_aggregate_*` system jobs to keep a team-scoped agent key from kicking off system-wide work.
 
 To run a backfill, SSH into the production VPS and invoke the npm script directly against the database:
 

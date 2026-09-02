@@ -3,7 +3,7 @@ title: Attachments
 description: Upload files alongside error events so engineers can reproduce bugs from the original bytes. A limited resource — use sparingly.
 ---
 
-When an error cannot be reproduced without the original input file — a failed media conversion, a 3D model that won't parse, a PDF that fails to decode — SDKs can upload the file alongside the error event. The attachment is stored on the server, linked to the event, and automatically linked to the resulting issue. Engineers download it from the dashboard, CLI, or MCP to reproduce locally.
+When an error cannot be reproduced without the original input file — a failed media conversion, a 3D model that won't parse, a PDF that fails to decode — SDKs can upload the file alongside the error event. The attachment is stored on the server, linked to the event, and automatically linked to the resulting issue. Engineers download it from the dashboard or MCP to reproduce locally.
 
 > **Attachments are a limited resource.** Each project has a storage quota (default **5 GB**) and each end-user has their own bucket within that project (default **250 MB per user**). Only attach files when the raw bytes are *essential* to reproduce the bug.
 
@@ -83,14 +83,6 @@ try {
 
 **Dashboard:** The **Issue** detail page shows an "📎 Attachments" card listing every file attached to any occurrence of that issue, with a Download button per file.
 
-**CLI:**
-
-```bash
-owlmetry attachments list --issue <issue-id>
-owlmetry attachments download <attachment-id> --out ./debug-input.heic
-owlmetry attachments usage --project <project-id>
-```
-
 **MCP (agents):**
 
 - `list-attachments` — filter by event, issue, or project.
@@ -104,7 +96,7 @@ Downloads use short-lived (60s) HMAC-signed URLs. In production the server uses 
 
 - **Linked to events**: attachments point at the event via `client_event_id` (dedup key) and `event_id` (resolved once the event lands).
 - **Linked to issues**: the issue-scan job sets `issue_id` on attachments whose events are in an issue. This way attachments survive event retention pruning as long as the issue is still open.
-- **Soft delete + grace**: `DELETE /v1/attachments/:id` (or the dashboard / CLI) sets `deleted_at`. The `attachment_cleanup` daily job hard-deletes rows after 7 days.
+- **Soft delete + grace**: `DELETE /v1/attachments/:id` (or the dashboard, or the `delete-attachment` MCP tool) sets `deleted_at`. The `attachment_cleanup` daily job hard-deletes rows after 7 days.
 - **Orphan sweeps**: reservations that never receive bytes within 24 hours are removed. Files on disk with no matching row (interrupted uploads, manual deletions) are swept daily.
 
 ## Self-hosting notes

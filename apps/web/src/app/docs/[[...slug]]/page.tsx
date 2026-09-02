@@ -83,7 +83,7 @@ export default async function Page(props: {
               Ready to get started?
             </p>
             <p className="mt-1 text-sm text-fd-muted-foreground">
-              Connect your agent via MCP or CLI and start tracking.
+              Connect your agent via MCP and start tracking.
             </p>
             <div className="mt-4 flex items-center justify-center gap-3">
               <Link

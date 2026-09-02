@@ -97,7 +97,7 @@ const operatorFeatures = [
   {
     icon: History,
     title: "Audit Trail",
-    description: "Auto-logged create, update, and delete across every resource. Queryable via dashboard, CLI, and API.",
+    description: "Auto-logged create, update, and delete across every resource. Queryable via dashboard, MCP, and API.",
   },
   {
     icon: Database,
@@ -427,7 +427,7 @@ export default function LandingPage() {
               Ask your agent. Get answers.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Your agent uses the Owlmetry CLI to query events, trace sessions, analyze funnels, and monitor performance &mdash; all from natural language.
+              Your agent uses the Owlmetry MCP server to query events, trace sessions, analyze funnels, and monitor performance &mdash; all from natural language.
             </p>
           </div>
 
@@ -583,7 +583,7 @@ export default function LandingPage() {
                   "1 app",
                   "10,000 events per month",
                   "Events, metrics & funnels",
-                  "Agent API keys + CLI",
+                  "Agent API keys + MCP",
                   "Web dashboard",
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3 text-sm">
@@ -620,7 +620,7 @@ export default function LandingPage() {
                   "Unlimited apps",
                   "Unlimited events",
                   "Events, metrics & funnels",
-                  "Agent API keys + CLI",
+                  "Agent API keys + MCP",
                   "Web dashboard",
                   "Priority support",
                 ].map((item) => (
@@ -765,7 +765,7 @@ export default function LandingPage() {
                 "Swift SDK for iOS/iPadOS/macOS",
                 "Android SDK for Kotlin / Jetpack Compose",
                 "Node.js SDK for backends",
-                "CLI for agents and humans",
+                "MCP server for coding agents",
                 "Self-hosted with single PostgreSQL",
               ],
               isAccessibleForFree: true,

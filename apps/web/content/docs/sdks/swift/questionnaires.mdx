@@ -9,7 +9,7 @@ import Concept from '../../../_snippets/questionnaires.mdx';
 
 ## Prerequisite
 
-Create a questionnaire with a slug first — via the [dashboard](/dashboard/questionnaires), [CLI](/docs/cli/questionnaires) (`owlmetry questionnaires create`), or [MCP](/docs/mcp/questionnaires). The SDK only reads and saves — it doesn't define questionnaires.
+Create a questionnaire with a slug first — via the [dashboard](/dashboard/questionnaires) or [MCP](/docs/mcp/questionnaires) (`create-questionnaire`). The SDK only reads and saves — it doesn't define questionnaires.
 
 ## How the sheet behaves
 
@@ -45,7 +45,7 @@ Once accepted, questions render **one per page** with a top progress bar and Bac
 }
 ```
 
-The flag is set at authoring time on the server (dashboard / CLI / MCP); the SDK simply honours whatever the schema says.
+The flag is set at authoring time on the server (dashboard or MCP); the SDK simply honours whatever the schema says.
 
 ## Auto-trigger view modifier
 

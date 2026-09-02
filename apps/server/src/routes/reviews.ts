@@ -186,7 +186,7 @@ export async function reviewsRoutes(app: FastifyInstance) {
 
   // Apple has no PATCH for review responses, so editing an existing reply is
   // DELETE-then-POST against ASC. Agent keys with reviews:write are intentionally
-  // allowed — the surface (CLI/MCP/iOS/web) handles destructive-action UX.
+  // allowed — the surface (MCP/iOS/web) handles destructive-action UX.
   app.put<{
     Params: { projectId: string; reviewId: string };
     Body: UpdateReviewResponseRequest;
@@ -322,7 +322,7 @@ export async function reviewsRoutes(app: FastifyInstance) {
   );
 
   // Delete the developer response on an App Store review. Real ASC mutation —
-  // the public reply disappears from the listing. Calling surfaces (CLI/iOS/
+  // the public reply disappears from the listing. Calling surfaces (iOS/
   // dashboard/MCP) are expected to confirm with the user before invoking.
   app.delete<{ Params: { projectId: string; reviewId: string } }>(
     "/reviews/:reviewId/response",

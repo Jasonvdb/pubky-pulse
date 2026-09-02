@@ -1,17 +1,17 @@
 ---
 title: MCP
-description: Connect AI agents directly to Owlmetry via the Model Context Protocol — the recommended path for coding agents. No CLI installation needed.
+description: Connect AI agents directly to Owlmetry via the Model Context Protocol — the interface for coding agents. Nothing to install.
 ---
 
-The Owlmetry MCP endpoint lets AI agents connect directly to your Owlmetry server over HTTP. Instead of installing the CLI and keeping it up to date, agents configure a URL once and always get the latest tools — every deploy is instantly live.
+The Owlmetry MCP endpoint lets AI agents connect directly to your Owlmetry server over HTTP. There is nothing to install or keep up to date — agents configure a URL once and always get the latest tools, so every deploy is instantly live.
 
 <Callout>
-**Recommended for AI agents.** If your coding agent supports MCP (Claude Code, Cursor, VS Code Copilot, Windsurf, Zed, JetBrains, Cline, Roo Code), use the MCP endpoint instead of the CLI. No installation, no updates, 69 tools available instantly.
+**MCP is the agent interface.** Point your coding agent (Claude Code, Cursor, VS Code Copilot, Windsurf, Zed, JetBrains, Cline, Roo Code) at the endpoint. No installation, no updates, 81 tools available instantly.
 </Callout>
 
 Ready to connect? Jump to [Setup](/docs/mcp/setup) for editor-specific configuration.
 
-The endpoint exposes 69 tools covering the same capabilities as the [CLI](/docs/cli): managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, and attachments; running integrations and background jobs; ranking ad campaigns by revenue; tracking App Store ratings + reviews; and viewing audit logs.
+The endpoint exposes 81 tools covering every operation Owlmetry supports: managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, questionnaires, and attachments; running integrations and background jobs; ranking ad campaigns by revenue; tracking App Store ratings + reviews; and viewing audit logs.
 
 ## How it works
 
@@ -19,7 +19,7 @@ The MCP endpoint lives at `/mcp` on your Owlmetry API server. It uses the [Strea
 
 Agents authenticate with an `owl_agent_*` API key passed as a Bearer token. The endpoint forwards each tool call to the corresponding REST route internally, so all existing permission checks and validation apply.
 
-Unlike the CLI (which requires `npm install`, periodic updates, and an interactive login flow), the MCP endpoint needs only a URL and an API key pasted into your editor's config file once.
+The endpoint needs only a URL and an API key pasted into your editor's config file once — no package to install, no periodic updates, and no interactive login flow.
 
 ## Available tools
 
@@ -27,12 +27,13 @@ Unlike the CLI (which requires `npm install`, periodic updates, and an interacti
 |--------|-------|-------|
 | Auth | `whoami`, `create-import-key` | 2 |
 | Projects | `list-projects`, `get-project`, `create-project`, `update-project` | 4 |
-| Apps | `list-apps`, `get-app`, `create-app`, `update-app`, `list-app-users` | 5 |
+| Apps | `list-apps`, `get-app`, `create-app`, `update-app`, `list-app-users`, `list-user-locales` | 6 |
 | Events | `query-events`, `get-event`, `investigate-event` | 3 |
 | Metrics | `list-metrics`, `get-metric`, `create-metric`, `update-metric`, `delete-metric`, `query-metric`, `list-metric-events` | 7 |
 | Funnels | `list-funnels`, `get-funnel`, `create-funnel`, `update-funnel`, `delete-funnel`, `query-funnel` | 6 |
 | Issues | `list-issues`, `get-issue`, `resolve-issue`, `silence-issue`, `snooze-issue`, `reopen-issue`, `claim-issue`, `merge-issues`, `list-issue-comments`, `add-issue-comment` | 10 |
 | Feedback | `list-feedback`, `get-feedback`, `update-feedback-status`, `add-feedback-comment` | 4 |
+| Questionnaires | `list-questionnaires`, `get-questionnaire`, `create-questionnaire`, `update-questionnaire`, `delete-questionnaire`, `list-questionnaire-responses`, `get-questionnaire-response`, `update-questionnaire-response-status`, `add-questionnaire-response-comment`, `get-questionnaire-analytics` | 10 |
 | Attachments | `list-attachments`, `get-attachment`, `delete-attachment`, `get-project-attachment-usage` | 4 |
 | Integrations | `list-providers`, `list-integrations`, `add-integration`, `update-integration`, `remove-integration`, `sync-integration`, `copy-integration`, `get-revenuecat-webhook-setup` | 8 |
 | Jobs | `list-jobs`, `get-job`, `trigger-job`, `cancel-job` | 4 |
@@ -40,6 +41,7 @@ Unlike the CLI (which requires `npm install`, periodic updates, and an interacti
 | Ads | `list-ad-campaigns`, `list-ad-groups`, `list-ad-leaves`, `sync-ads` | 4 |
 | Ratings | `list-app-ratings`, `list-ratings-by-country`, `sync-app-ratings` | 3 |
 | Reviews | `list-reviews`, `get-review`, `respond-to-review`, `delete-review-response` | 4 |
+| Stats | `query-stats-bucketed` | 1 |
 
 ## Agent resources
 
@@ -49,4 +51,4 @@ The server also exposes MCP resources that clients can read on connection:
 |-----|-------------|
 | `owlmetry://guide` | Operational guide — concepts, resource hierarchy, workflows, and conventions |
 
-SDK integration guides (Swift, Android, Node.js, CLI) are distributed as a separate [Claude Code plugin marketplace](https://github.com/owlmetry/owlmetry-skills). Install inside Claude Code with `/plugin marketplace add owlmetry/owlmetry-skills`.
+Supported clients read `owlmetry://guide` automatically on connection, so an agent picks up the concepts, resource hierarchy, and conventions without any extra setup. The full SDK and platform documentation lives at [/docs](/docs).

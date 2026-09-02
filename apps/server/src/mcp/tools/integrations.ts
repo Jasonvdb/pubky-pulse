@@ -99,7 +99,7 @@ export function registerIntegrationsTools(server: McpServer, app: FastifyInstanc
           "── App Store Connect: integration created ──",
           "Credentials are stored. The .p8 contents have been redacted from this response and will not be returned again.",
           "",
-          `Next: call sync-integration with { project_id: '${project_id}', provider: 'app-store-connect' } to ingest reviews. Or test-connection via the dashboard / 'integrations test' CLI command first to confirm Apple accepts the credentials.`,
+          `Next: call sync-integration with { project_id: '${project_id}', provider: 'app-store-connect' } to ingest reviews. Or test the connection from the dashboard first to confirm Apple accepts the credentials.`,
         ].join("\n"),
       });
     }

@@ -1,6 +1,6 @@
 ---
 title: Data Mode
-description: Filter between production and development data across the dashboard, CLI, and API.
+description: Filter between production and development data across the dashboard, MCP, and API.
 ---
 
 Owlmetry separates production and development data so you can analyze real user behavior without noise from test builds. Every event, metric event, and funnel event carries an `is_dev` boolean that indicates whether it came from a development build.
@@ -38,14 +38,12 @@ Advertising Insights (`/dashboard/ads`) is the one exception: it is **always pro
 
 The selection is persisted to `localStorage`, so it survives page reloads and browser restarts.
 
-## CLI Flag
+## MCP Argument
 
-The CLI accepts a `--data-mode` flag on commands that query data:
+MCP tools that query data accept a `data_mode` argument (`production`, `development`, or `all`) — `query-events`, `query-metric`, `query-funnel`, `list-app-users`, and `list-user-locales` among them:
 
-```bash
-owlmetry events list --data-mode development
-owlmetry metrics query photo-upload --data-mode all
-owlmetry funnels query onboarding --data-mode production
+```json
+{ "project_id": "<id>", "data_mode": "development" }
 ```
 
 If omitted, the default is `production`.

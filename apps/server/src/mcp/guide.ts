@@ -52,8 +52,6 @@ The pattern (iOS → Node):
 
 Result: one logical user interaction (tap → API call → DB query → response → UI update) lands under a single \`session_id\`. \`investigate-event\` and \`query-events\` with \`session_id\` filters then return the full cross-app timeline automatically. Wire this up on any project that has both a Swift app and a Node backend in the same project — it is the whole point of grouping them under one project.
 
-Full setup snippets (Fastify/Express hook + Swift \`URLSession\` interceptor) live in the \`owlmetry-node\` Claude Code skill — install via \`/plugin marketplace add owlmetry/owlmetry-skills\` → \`/plugin install owlmetry@owlmetry-skills\`, then open the "Per-Request Session Scoping" section of \`owlmetry-node\`.
-
 ### Structured Metrics
 Metrics are project-scoped definitions that tell Owlmetry what structured data to expect. Two kinds:
 
@@ -132,7 +130,7 @@ User properties written:
 - On successful ASA attribution, additional ASA-specific IDs are written: \`asa_campaign_id\`, \`asa_ad_group_id\`, \`asa_keyword_id\`, \`asa_claim_type\`, \`asa_ad_id\`, \`asa_creative_set_id\`. Human-readable names (campaign name, keyword text, etc.) are resolved into extra properties when the Apple Search Ads integration is configured for the project (see **Integrations** above).
 - \`attribution_source = "apple_test_install"\` is set with **no** \`asa_*\` fields when Apple's AdServices API returns its deliberate non-production fixture (same numeric ID across campaign, ad group, and ad — structurally impossible from real Apple data). This fires for TestFlight builds, Xcode-deployed dev builds, and the simulator. Filter these out of acquisition reporting alongside organic installs by excluding \`attribution_source IN ('none', 'apple_test_install')\`, or include them with a separate badge to spot a developer's own install showing up.
 
-**Opt out**: pass \`attributionEnabled: false\` to \`Owl.configure()\` on the Swift SDK. Full setup, opt-out, and manual-submit APIs live in the \`owlmetry-swift\` Claude Code skill under "Apple Search Ads Attribution" (install via the \`owlmetry-skills\` plugin marketplace).
+**Opt out**: pass \`attributionEnabled: false\` to \`Owl.configure()\` on the Swift SDK.
 
 **RevenueCat backfill**: when the RevenueCat integration is enabled, \`sync-integration\` (or per-user sync on webhook events) also pulls ASA attribution out of RevenueCat's subscriber attributes and writes the same properties. This is how users who onboarded **before** the app shipped SDK-side attribution capture get attributed — no extra setup, happens automatically during any RevenueCat sync.
 
@@ -244,7 +242,7 @@ Aggregation runs every hour at \`:05\` UTC (re-aggregates the trailing 3 hours) 
 Asynchronous server-side tasks with progress tracking and optional email notifications. Used for long-running operations like bulk syncs. Only one instance of each job type (per project) can run at a time — duplicates return an error.
 
 ### Notifications
-Owlmetry has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app, email (Resend), and mobile push (APNs today, FCM later). The mobile_push adapter routes per device by \`user_devices.platform\`. New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`) or the iOS Profile screen, or via \`owlmetry notifications list\` from a CLI signed in as a user.
+Owlmetry has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app, email (Resend), and mobile push (APNs today, FCM later). The mobile_push adapter routes per device by \`user_devices.platform\`. New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`) or the iOS Profile screen.
 
 **Issue notification types** — there are two:
 - \`issue.new\` fires from \`issue_scan\` at the end of every hourly run, with one push per team summarizing all production issues that were just created or regressed. Defaults: in_app + mobile_push on, email off. Bypasses any cadence throttle, so push lands within ~5 min of detection.
@@ -430,27 +428,12 @@ If a tool returns a permissions error, the agent key is missing the required per
 
 ## SDK Integration Guides
 
-SDK integration guides live in the **\`owlmetry-skills\` Claude Code plugin marketplace** — a separate repository at [github.com/owlmetry/owlmetry-skills](https://github.com/owlmetry/owlmetry-skills). Install once per workstation:
+This guide is served as the MCP resource \`owlmetry://guide\` — fetch it whenever you need the concepts, conventions, or SDK detail behind a tool. MCP is the agent interface: create projects and apps, define metrics and funnels, and query events with the tools (\`create-project\`, \`create-app\`, \`create-metric\`, \`create-funnel\`, \`query-events\`).
 
-\`\`\`
-/plugin marketplace add owlmetry/owlmetry-skills
-/plugin install owlmetry@owlmetry-skills
-\`\`\`
-
-That exposes three skills Claude Code can load on demand:
-
-| Skill | SDK | Use when |
-|---|---|---|
-| \`owlmetry-swift\` | Swift SDK | Instrumenting iOS, iPadOS, or macOS apps (SwiftUI or UIKit) |
-| \`owlmetry-node\` | Node.js SDK | Instrumenting backend services (Express, Fastify, serverless, etc.) |
-| \`owlmetry-cli\` | CLI | Signing up, creating projects/apps, defining metrics and funnels, querying events |
-
-Each skill covers the full surface. Summary:
+Two SDKs instrument apps. What each covers:
 
 - **Swift** — package installation, \`Owl.configure()\`, event logging, automatic screen tracking, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (drop-in \`OwlFeedbackView\` or programmatic \`Owl.sendFeedback\`), **Apple Search Ads attribution** (auto-capture, opt-out, manual submission), and reading \`Owl.sessionId\` to forward to a backend for session correlation.
 - **Node** — package installation, \`Owl.configure()\`, event logging, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback forwarding** (when the team collects feedback through their own frontend and wants it pushed to Owlmetry with \`Owl.sendFeedback\`), and **per-request session/user scoping** (\`Owl.withSession(...)\` / \`Owl.withUser(...)\` / per-call \`options.sessionId\`) for linking backend events to a client session via the \`X-Owl-Session-Id\` header.
-
-**Note:** The guides reference CLI commands for creating metrics and funnels. You can use the equivalent MCP tools instead (\`create-metric\`, \`create-funnel\`).
 
 ## Key Notes
 

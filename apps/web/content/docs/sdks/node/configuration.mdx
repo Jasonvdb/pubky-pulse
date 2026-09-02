@@ -49,7 +49,7 @@ If you call `configure()` again (for example during hot reload), the previous tr
 
 ## isDev and Data Mode
 
-The `isDev` option controls whether events are tagged as development or production data. The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and CLI lets you separate the two.
+The `isDev` option controls whether events are tagged as development or production data. The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and the `data_mode` argument on MCP query tools let you separate the two.
 
 By default, `isDev` is `true` when `NODE_ENV` is anything other than `"production"`. This means:
 

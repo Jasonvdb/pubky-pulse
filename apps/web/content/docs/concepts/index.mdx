@@ -5,7 +5,7 @@ description: Core building blocks of Owlmetry — events, metrics, funnels, issu
 
 Owlmetry's data model is built around a small set of composable primitives. Events capture what happened, metrics measure how long things take, and funnels track multi-step conversions. Error events cluster into trackable issues, optional file attachments let you ship bytes alongside errors, and integrations sync external signals into per-user properties. Everything is scoped to projects and apps, secured by API keys, and filterable by data mode.
 
-Understanding these concepts will help you instrument your app effectively and get the most out of the dashboard and CLI.
+Understanding these concepts will help you instrument your app effectively and get the most out of the dashboard and MCP tools.
 
 - **[Events](/docs/concepts/events)** — The core data unit. Every interaction, error, and state change becomes a structured event with log levels, session tracking, timestamps, deduplication, and custom attributes. Events are the foundation that metrics and funnels build on.
 - **[Structured Metrics](/docs/concepts/metrics)** — Lifecycle operations (start/complete/fail/cancel), single-shot measurements, duration tracking, and aggregation queries. Use metrics to track performance-critical operations like API calls, image uploads, or checkout flows.
@@ -18,4 +18,4 @@ Understanding these concepts will help you instrument your app effectively and g
 - **[Latest Version Detection](/docs/concepts/latest-version-detection)** — Per-app `latest_app_version` resolved hourly from the App Store (Apple) or computed from production events. Powers the green/amber version badges shown across events, users, and issues.
 - **[Projects & Apps](/docs/concepts/projects-and-apps)** — How projects group apps across platforms, bundle ID validation, project color, retention policies, and auto-created client keys. A single project can have iOS, Android, web, and backend apps — all sharing the same dashboard.
 - **[Authentication & API Keys](/docs/concepts/authentication)** — Passwordless email auth, client vs agent vs import keys, permissions, team roles (owner > admin > member), and invitations.
-- **[Data Mode](/docs/concepts/data-mode)** — Filtering between production and development data across the dashboard, CLI, and API. Keep debug noise out of production views without losing visibility into dev builds.
+- **[Data Mode](/docs/concepts/data-mode)** — Filtering between production and development data across the dashboard, MCP, and API. Keep debug noise out of production views without losing visibility into dev builds.

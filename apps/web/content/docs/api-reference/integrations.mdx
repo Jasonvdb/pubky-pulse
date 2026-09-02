@@ -104,7 +104,7 @@ The `webhook_setup` object is only returned for providers that use webhooks (cur
 
 ## GET /v1/projects/:projectId/integrations/revenuecat/webhook-setup
 
-Re-reveal the webhook setup block for an existing RevenueCat integration. Useful when the caller lost the original POST response (CLI/MCP/dashboard all surface the secret only once at creation time). The returned `authorization_header` is the same `Bearer <webhook_secret>` already configured on RevenueCat's side, so revealing does not invalidate any existing webhook deliveries — to actually rotate the secret, remove and re-add the integration.
+Re-reveal the webhook setup block for an existing RevenueCat integration. Useful when the caller lost the original POST response (MCP and the dashboard both surface the secret only once at creation time). The returned `authorization_header` is the same `Bearer <webhook_secret>` already configured on RevenueCat's side, so revealing does not invalidate any existing webhook deliveries — to actually rotate the secret, remove and re-add the integration.
 
 **Auth required:** Yes (`integrations:read` permission; admin role required)
 
@@ -181,7 +181,7 @@ Use the returned `job_run_id` with `GET /v1/teams/:teamId/jobs/:jobRunId` to pol
 
 Returns 404 if RevenueCat is not configured or has been disabled for the project.
 
-`revenuecat_sync` only refreshes users who already exist in `app_users`. To retrofit historical RevenueCat customers from before the Owl SDK was installed, trigger the [`revenuecat_user_backfill`](/docs/concepts/background-jobs) job — it pages through every customer in the linked RC project and creates the missing `app_users` rows so [Advertising Insights](/docs/concepts/advertising-insights) can attribute their lifetime revenue. Trigger via `POST /v1/teams/:teamId/jobs/trigger` with `job_type: "revenuecat_user_backfill"` + `project_id`, `owlmetry jobs trigger revenuecat_user_backfill --project-id <id>`, or the `trigger-job` MCP tool.
+`revenuecat_sync` only refreshes users who already exist in `app_users`. To retrofit historical RevenueCat customers from before the Owl SDK was installed, trigger the [`revenuecat_user_backfill`](/docs/concepts/background-jobs) job — it pages through every customer in the linked RC project and creates the missing `app_users` rows so [Advertising Insights](/docs/concepts/advertising-insights) can attribute their lifetime revenue. Trigger via `POST /v1/teams/:teamId/jobs/trigger` with `job_type: "revenuecat_user_backfill"` + `project_id`, or the `trigger-job` MCP tool.
 
 ## POST /v1/projects/:projectId/integrations/revenuecat/sync/:userId
 

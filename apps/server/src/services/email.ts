@@ -145,7 +145,7 @@ export class ResendEmailService implements EmailService {
     await this.sendEmail(email, "Your Owlmetry verification code", [
       `<p>Your verification code is:</p>`,
       `<p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0;">${code}</p>`,
-      `<p>Pass this code to your AI agent to authenticate the Owlmetry CLI, or enter it in the dashboard to sign in.</p>`,
+      `<p>Pass this code to your AI agent to authenticate it, or enter it in the dashboard to sign in.</p>`,
       `<p style="color:#888;font-size:13px;">This code expires in 10 minutes.</p>`,
     ].join(""));
   }

@@ -464,7 +464,7 @@ export interface IngestQuestionnaireDismissResponse {
   dismissed_at: string;
 }
 
-// ---------- Dashboard / CLI / MCP ----------
+// ---------- Dashboard / MCP ----------
 
 export interface QuestionnaireSpec {
   id: string;
@@ -564,7 +564,7 @@ export interface QuestionnaireResponseRecord {
   // null while the user is mid-flow; ISO timestamp once they tap Submit on the
   // last page (or any save call with is_complete=true).
   submitted_at: string | null;
-  // Derived: `submitted_at !== null`. Convenience field for dashboards / CLI
+  // Derived: `submitted_at !== null`. Convenience field for dashboards / MCP
   // that want a boolean without re-deriving on every row.
   is_complete: boolean;
   status: QuestionnaireResponseStatus;

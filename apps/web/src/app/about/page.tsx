@@ -42,15 +42,14 @@ export default function AboutPage() {
 						<p>
 							Most observability tools assume a human staring at a
 							dashboard. Owlmetry is built for the agents that write
-							your code. Install the CLI, point your agent at the
-							skill files, and let it monitor for errors, track
-							regressions, find where users drop off, and improve
-							conversions &mdash; using real production data, not
-							guesses.
+							your code. Point your agent at the MCP endpoint
+							and let it monitor for errors, track regressions,
+							find where users drop off, and improve conversions
+							&mdash; using real production data, not guesses.
 						</p>
 						<p>
-							The dashboard is there when you want it. The CLI is
-							there when your agent needs it.
+							The dashboard is there when you want it. The MCP
+							server is there when your agent needs it.
 						</p>
 
 						<h2>Open source, self-hosted</h2>

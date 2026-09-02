@@ -18,12 +18,12 @@ The JWT is identity-only (contains `sub` and `email`), has **no expiry** (web se
 
 ## API Keys
 
-API keys are used by SDKs, the CLI, and automated systems to interact with the Owlmetry API. There are three types:
+API keys are used by SDKs, MCP clients, and automated systems to interact with the Owlmetry API. There are three types:
 
 | Type | Prefix | Used By | Purpose |
 |---|---|---|---|
 | Client | `owl_client_` | SDKs | Event ingestion from apps |
-| Agent | `owl_agent_` | CLI, automation | Querying data and managing resources |
+| Agent | `owl_agent_` | MCP clients, automation | Querying data and managing resources |
 | Import | `owl_import_` | Bulk import scripts | Historical data import via `POST /v1/import` (app-scoped) |
 
 ### Storage
@@ -87,7 +87,7 @@ Users belong to teams with one of three roles:
 
 Role hierarchy is strictly enforced: you can only manage users with a lower role than your own. The last owner of a team cannot be demoted or removed.
 
-Users can belong to multiple teams. The dashboard includes a team switcher when you have more than one team, and the CLI supports [multi-team profiles](/docs/cli/authentication).
+Users can belong to multiple teams. The dashboard includes a team switcher when you have more than one team; agent keys are scoped to a single team, so an agent working across teams needs one key per team.
 
 ## Team Invitations
 
@@ -107,7 +107,7 @@ When a member is removed from a team, their agent API keys for that team are aut
 |---|---|---|
 | Dashboard user | JWT (email verification) | Team role (owner > admin > member) |
 | SDK (client) | `owl_client_` API key | `permissions` array on the key |
-| CLI / automation (agent) | `owl_agent_` API key | `permissions` array on the key |
+| MCP client / automation (agent) | `owl_agent_` API key | `permissions` array on the key |
 | Bulk import script | `owl_import_` API key | `permissions` array on the key (app-scoped) |
 
-For CLI authentication details, see the [CLI authentication guide](/docs/cli/authentication). For API details, see the [authentication API reference](/docs/api-reference/authentication).
+For agent authentication details, see the [MCP setup guide](/docs/mcp/setup). For API details, see the [authentication API reference](/docs/api-reference/authentication).

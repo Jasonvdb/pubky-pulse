@@ -220,7 +220,7 @@ describe("Issues API", () => {
       });
       expect(JSON.parse(allRes.body).issues).toHaveLength(2);
 
-      // Absent data_mode keeps the legacy "all" behavior (MCP/CLI rely on it)
+      // Absent data_mode keeps the legacy "all" behavior (MCP relies on it)
       const noParamRes = await app.inject({
         method: "GET",
         url: `/v1/projects/${projectId}/issues`,

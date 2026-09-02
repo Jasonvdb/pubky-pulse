@@ -35,7 +35,7 @@ Cookie: token=eyJhbGciOiJIUzI1NiIs...
 
 ### Bearer Token (API Keys)
 
-Used by SDKs, the CLI, and programmatic access. Pass the API key in the `Authorization` header:
+Used by SDKs, MCP clients, and programmatic access. Pass the API key in the `Authorization` header:
 
 ```
 Authorization: Bearer owl_agent_abc123...
@@ -46,7 +46,7 @@ There are three key types:
 | Type | Prefix | Purpose |
 |------|--------|---------|
 | Client | `owl_client_` | SDK event ingestion (scoped to an app) |
-| Agent | `owl_agent_` | CLI and programmatic read/write access (scoped to a team) |
+| Agent | `owl_agent_` | MCP and programmatic read/write access (scoped to a team) |
 | Import | `owl_import_` | Bulk historical data import via [`POST /v1/import`](/docs/api-reference/import) (scoped to an app) |
 
 ## Error Responses

@@ -10,10 +10,10 @@ Verify these tools are available:
 node --version          # v18+
 pnpm --version          # v8+
 psql --version          # PostgreSQL 15+
-xcodebuildmcp --help    # XcodeBuildMCP CLI (required for iOS build/run/UI automation)
+xcodebuildmcp --help    # XcodeBuildMCP command-line tool (required for iOS build/run/UI automation)
 ```
 
-If `xcodebuildmcp` is not installed, see https://github.com/getsentry/XcodeBuildMCP for setup instructions. All iOS simulator operations (build, run, screenshot, tap) use this CLI — do not use raw `xcrun simctl` or `xcodebuild` directly.
+If `xcodebuildmcp` is not installed, see https://github.com/getsentry/XcodeBuildMCP for setup instructions. All iOS simulator operations (build, run, screenshot, tap) use this tool — do not use raw `xcrun simctl` or `xcodebuild` directly.
 
 ## Phase 2: Database & Build Setup
 
@@ -67,21 +67,20 @@ curl -s http://localhost:4000/health | jq .   # {"status":"ok"}
 curl -s http://localhost:4007/health | jq .   # {"status":"ok"}
 ```
 
-## Phase 4: Configure CLI
+## Phase 4: Connect the MCP Server
+
+Point your agent at the local MCP endpoint (`http://localhost:4000/mcp`) using the seeded agent key. For Claude Code:
 
 ```bash
-npx @owlmetry/cli setup \
-  --endpoint http://localhost:4000 \
-  --api-key owl_agent_demo_000000000000000000000000000000000000000000
+claude mcp add --transport http owlmetry http://localhost:4000/mcp \
+  --header "Authorization: Bearer owl_agent_demo_000000000000000000000000000000000000000000"
 ```
 
-Verify it works:
+Config for every other supported MCP client (Codex, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code) is at [/docs/mcp](/docs/mcp/setup).
 
-```bash
-npx @owlmetry/cli projects
-```
+Verify it works — call the `whoami` tool, then the `list-projects` tool.
 
-Expected: a table showing "Demo Project".
+Expected: `whoami` reports an `agent` key, and `list-projects` returns "Demo Project".
 
 ## Phase 5: Build & Launch iOS App
 
@@ -138,8 +137,10 @@ xcodebuildmcp ui-automation screenshot --simulator-id <UDID> --return-format pat
 
 ### List all recent events
 
-```bash
-npx @owlmetry/cli events --since 5m --format log
+Call the `query-events` tool:
+
+```json
+{ "since": "5m", "compact": true }
 ```
 
 **Expected: 8 events** across 2 apps:
@@ -159,8 +160,10 @@ Note: iOS events may take up to 5 seconds to appear (SDK flush interval). Backen
 
 ### Filter for errors only
 
-```bash
-npx @owlmetry/cli events --level error --since 5m --format json
+Call `query-events` with a level filter:
+
+```json
+{ "level": ["error"], "since": "5m" }
 ```
 
 Expected: 2 error events — "Checkout failed: payment provider unreachable" and "Simulated client crash".
@@ -171,25 +174,30 @@ This simulates how you'd investigate errors in production.
 
 ### Step 1: Find the errors
 
-```bash
-npx @owlmetry/cli events --level error --since 5m --format json
+Call `query-events`:
+
+```json
+{ "level": ["error"], "since": "5m" }
 ```
 
-Note the event IDs from the output.
+Note the `id` of each error event in the output.
 
 ### Step 2: Inspect the checkout error
 
-```bash
-# View full event details
-npx @owlmetry/cli events view <CHECKOUT_ERROR_ID> --format json
+Call `get-event` for the full event details:
+
+```json
+{ "event_id": "<CHECKOUT_ERROR_ID>" }
 ```
 
 Look at the custom attributes — you'll see `item: "Premium Plan"`.
 
 ### Step 3: Investigate the error's breadcrumb trail
 
-```bash
-npx @owlmetry/cli investigate <CHECKOUT_ERROR_ID> --window 5
+Call `investigate-event`:
+
+```json
+{ "event_id": "<CHECKOUT_ERROR_ID>", "window_minutes": 5 }
 ```
 
 This builds a breadcrumb trail around the error: the full session from the same app (or a ±5 min window when the target has no `session_id`), enriched with cross-app events for the same user. You should see the **warn → error chain**:
@@ -202,8 +210,10 @@ This pattern is typical: a warning precedes the error, giving you context about 
 
 ### Step 4: Investigate the iOS error
 
-```bash
-npx @owlmetry/cli investigate <IOS_ERROR_ID> --window 5
+Call `investigate-event` again:
+
+```json
+{ "event_id": "<IOS_ERROR_ID>", "window_minutes": 5 }
 ```
 
 You should see the full demo sequence from the iOS app's perspective:
@@ -237,8 +247,8 @@ xcodebuildmcp simulator stop --simulator-id <UDID> --bundle-id dev.owlmetry.demo
 - If missing backend events (5): check the Node demo server logs for connection errors to port 4000
 - The `demo_app_opened` tracking event fires on app launch — this is separate from the full demo and not counted in the 8
 
-### CLI shows no results
+### MCP tools return no results
 
-- Verify CLI is configured: `cat ~/.owlmetry/config.json`
-- Verify the agent key works: `npx @owlmetry/cli projects`
-- Try a wider time range: `--since 30m`
+- Verify the MCP server is connected: run `/mcp` in Claude Code, or call the `whoami` tool
+- Verify the agent key works: call `list-projects` — it should return "Demo Project"
+- Try a wider time range: `"since": "30m"`

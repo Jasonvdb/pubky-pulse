@@ -6,7 +6,7 @@ icon: CircleHelp
 
 ## What is Owlmetry?
 
-Owlmetry is a self-hosted observability platform for mobile and backend apps. It provides structured event logging, performance metrics with p50/p95 tracking, multi-step conversion funnels, automatic error clustering via the issue tracker, and event attachments for logs and screenshots. It is designed to be driven by AI coding agents through its MCP endpoint, CLI, and REST API, though it includes a full web dashboard for human use.
+Owlmetry is a self-hosted observability platform for mobile and backend apps. It provides structured event logging, performance metrics with p50/p95 tracking, multi-step conversion funnels, automatic error clustering via the issue tracker, and event attachments for logs and screenshots. It is designed to be driven by AI coding agents through its MCP endpoint and REST API, though it includes a full web dashboard for human use.
 
 ## Is Owlmetry free?
 
@@ -32,37 +32,27 @@ Yes. Owlmetry is designed to run on a single VPS. You get the same platform as t
 
 ## How is Owlmetry different from PostHog, Mixpanel, or Amplitude?
 
-Owlmetry is purpose-built for the agent-first development workflow. Where other tools are designed around manual dashboard interaction, Owlmetry's CLI and REST API let AI coding agents handle setup, instrumentation, querying, and debugging autonomously. It is also fully self-hostable on a single Postgres database with no external dependencies, making it simpler to operate than alternatives that require multi-service architectures.
+Owlmetry is purpose-built for the agent-first development workflow. Where other tools are designed around manual dashboard interaction, Owlmetry's MCP endpoint and REST API let AI coding agents handle setup, instrumentation, querying, and debugging autonomously. It is also fully self-hostable on a single Postgres database with no external dependencies, making it simpler to operate than alternatives that require multi-service architectures.
 
 ## What does "agent-first" mean?
 
-Agent-first means Owlmetry is designed so that AI coding agents (Claude Code, Codex, Cursor, etc.) can handle the entire observability workflow — from installing SDKs and configuring API keys to querying events and diagnosing production issues. Dedicated skill files for the CLI, Swift SDK, Android SDK, and Node SDK are distributed as a [Claude Code plugin marketplace](https://github.com/owlmetry/owlmetry-skills) so agents know the correct command syntax and SDK APIs. You still get a full web dashboard, but the API is the primary interface.
+Agent-first means Owlmetry is designed so that AI coding agents (Claude Code, Codex, Cursor, etc.) can handle the entire observability workflow — from installing SDKs and configuring API keys to querying events and diagnosing production issues. The MCP server exposes its integration guide as the `owlmetry://guide` resource, which supported clients read automatically on connection, so agents pick up the concepts, conventions, and tool surface without any extra setup; the full SDK documentation lives at [/docs](/docs). You still get a full web dashboard, but the API is the primary interface.
 
 ## Is Owlmetry open source?
 
 Yes. The entire codebase is open source and spread across a few repos under the [owlmetry GitHub org](https://github.com/owlmetry):
 
-- [owlmetry/owlmetry](https://github.com/owlmetry/owlmetry) — server, web dashboard, CLI, and deploy scripts
+- [owlmetry/owlmetry](https://github.com/owlmetry/owlmetry) — server, web dashboard, and deploy scripts
 - [owlmetry/owlmetry-swift](https://github.com/owlmetry/owlmetry-swift) — Swift SDK for iOS, iPadOS, and macOS
 - [owlmetry/owlmetry-android](https://github.com/owlmetry/owlmetry-android) — Android SDK (Kotlin / Jetpack Compose)
 - [owlmetry/owlmetry-node](https://github.com/owlmetry/owlmetry-node) — Node.js Server SDK
-- [owlmetry/owlmetry-skills](https://github.com/owlmetry/owlmetry-skills) — Claude Code plugin marketplace with agent skills
 
 You can inspect, modify, and self-host it freely.
 
 ## How do I get started?
 
-The fastest path is to install the CLI and let your coding agent handle the rest:
+The fastest path is to point your coding agent at the MCP endpoint and let it handle the rest. Create an agent API key in the dashboard, add the endpoint to your editor's MCP config, and ask the agent to call the `whoami` tool to confirm the connection. See the [MCP setup guide](/docs/mcp/setup) for editor-specific configuration.
 
-```bash
-npm install -g @owlmetry/cli
-```
-
-Then install the [Owlmetry skills plugin](https://github.com/owlmetry/owlmetry-skills) inside Claude Code so your agent knows how to drive the CLI and SDKs:
-
-```text
-/plugin marketplace add owlmetry/owlmetry-skills
-/plugin install owlmetry@owlmetry-skills
-```
+Your agent doesn't need any extra instructions: the MCP server exposes its integration guide as the `owlmetry://guide` resource, which supported clients read automatically on connection.
 
 See the [getting started guide](/docs/getting-started) for both agent-driven and manual setup paths.

@@ -7,7 +7,7 @@ Questionnaires are short, structured surveys you build once on the server and pr
 
 ## How It Works
 
-1. Create a questionnaire via the dashboard, CLI (`owlmetry questionnaires create`), or MCP. Pick an immutable slug like `post-onboarding`. The schema is JSON: up to 30 questions, mix of `text`, `single_choice`, `multi_choice`, `rating` (1–5), `nps` (0–10).
+1. Create a questionnaire via the dashboard or the `create-questionnaire` MCP tool. Pick an immutable slug like `post-onboarding`. The schema is JSON: up to 30 questions, mix of `text`, `single_choice`, `multi_choice`, `rating` (1–5), `nps` (0–10).
 2. In your iOS app, add a SwiftUI view modifier referencing the slug — e.g. `.owlQuestionnaire(slug: "post-onboarding", trigger: .afterLaunches(3))`.
 3. When the trigger fires, the SDK calls `GET /v1/questionnaires/:slug` to fetch the latest schema and check eligibility for the current user (not already responded, not globally dismissed). If the user has an unsubmitted draft from an earlier session, the response also includes `in_progress: { response_id, answers }` so the SDK can resume.
 4. If eligible, the SDK presents `OwlQuestionnaireView` in a sheet. **Each Next tap saves the current answer set as a draft** (`POST /v1/questionnaires/:slug/responses` with `is_complete: false`). When the user taps Submit on the last question, the final call goes out with `is_complete: true`, which flips `submitted_at` to non-null and fires the team notification exactly once.
@@ -139,6 +139,5 @@ Each response gets a comment thread mirroring [feedback comments](./feedback#com
 ## Related Resources
 
 - [`/dashboard/questionnaires`](/dashboard/questionnaires) — list + analytics UI
-- [`owlmetry questionnaires`](/docs/cli/questionnaires) — CLI reference
 - [`list-questionnaires` (MCP)](/docs/mcp/questionnaires) — agent tooling
 - [Swift SDK questionnaires](/docs/sdks/swift/questionnaires) — view modifier + manual presentation

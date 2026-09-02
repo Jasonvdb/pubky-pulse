@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   test:
-    name: Workspace + CLI
+    name: Workspace
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -65,7 +65,7 @@ jobs:
 
       - name: Run tests
         env:
-          # setup.ts + test-cli.sh hardcode `postgres://localhost:5432/owlmetry_test`
+          # setup.ts hardcodes `postgres://localhost:5432/owlmetry_test`
           # with no user in the URL. PGUSER=postgres lets postgres-js fall back
           # to the default postgres superuser (created by the service container).
           # PGHOST=localhost steers psql off the Unix-socket default path.
@@ -76,71 +76,3 @@ jobs:
           JWT_SECRET: test-secret
           HOST: 127.0.0.1
         run: pnpm test
-
-  notify-swift-sdk:
-    name: Trigger owlmetry-swift CI
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch monorepo-updated event
-        env:
-          GH_TOKEN: ${{ secrets.SWIFT_REPO_DISPATCH_TOKEN }}
-        run: |
-          gh api /repos/owlmetry/owlmetry-swift/dispatches \
-            -X POST \
-            -f event_type=monorepo-updated \
-            -f client_payload[sha]=${{ github.sha }}
-
-  notify-android-sdk:
-    name: Trigger owlmetry-android CI
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch monorepo-updated event
-        env:
-          GH_TOKEN: ${{ secrets.ANDROID_REPO_DISPATCH_TOKEN }}
-        run: |
-          # ANDROID_REPO_DISPATCH_TOKEN is a one-time human setup (fine-grained
-          # PAT with Contents:R+W on owlmetry/owlmetry-android). Until it's set,
-          # skip cleanly rather than fail the workflow; once present this fires
-          # exactly like the swift/node/cli notifies.
-          if [ -z "$GH_TOKEN" ]; then
-            echo "ANDROID_REPO_DISPATCH_TOKEN not set — skipping android dispatch (pending one-time setup)."
-            exit 0
-          fi
-          gh api /repos/owlmetry/owlmetry-android/dispatches \
-            -X POST \
-            -f event_type=monorepo-updated \
-            -f client_payload[sha]=${{ github.sha }}
-
-  notify-node-sdk:
-    name: Trigger owlmetry-node CI
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch monorepo-updated event
-        env:
-          GH_TOKEN: ${{ secrets.NODE_REPO_DISPATCH_TOKEN }}
-        run: |
-          gh api /repos/owlmetry/owlmetry-node/dispatches \
-            -X POST \
-            -f event_type=monorepo-updated \
-            -f client_payload[sha]=${{ github.sha }}
-
-  notify-cli-sdk:
-    name: Trigger owlmetry-cli CI
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch monorepo-updated event
-        env:
-          GH_TOKEN: ${{ secrets.CLI_REPO_DISPATCH_TOKEN }}
-        run: |
-          gh api /repos/owlmetry/owlmetry-cli/dispatches \
-            -X POST \
-            -f event_type=monorepo-updated \
-            -f client_payload[sha]=${{ github.sha }}

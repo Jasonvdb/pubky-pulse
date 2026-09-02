@@ -37,9 +37,9 @@ export default function TermsPage() {
               Owlmetry is an analytics platform for mobile and backend
               applications. It includes a hosted service at owlmetry.com,
               self-hosted open-source software, client SDKs (Swift, Android,
-              Node.js), a
-              command-line interface (CLI), and an API. These terms govern your
-              use of all Owlmetry products and services.
+              Node.js), a Model Context Protocol (MCP) server, and an API.
+              These terms govern your use of all Owlmetry products and
+              services.
             </p>
 
             <h2>Accounts</h2>
@@ -98,10 +98,10 @@ export default function TermsPage() {
 
             <h2>Open Source Software</h2>
             <p>
-              The Owlmetry platform (server, web dashboard, database layer) is
-              released under the GNU Affero General Public License v3.0
-              (AGPL-3.0). The Owlmetry SDKs and CLI are released under the MIT
-              License. Your use of the self-hosted software is governed by those
+              The Owlmetry platform (server, MCP server, web dashboard,
+              database layer) is released under the GNU Affero General Public
+              License v3.0 (AGPL-3.0). The Owlmetry SDKs are released under the
+              MIT License. Your use of the self-hosted software is governed by those
               licenses. Your use of the hosted service at owlmetry.com is
               governed by these Terms of Service.
             </p>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Rocket, Smartphone, Server, Terminal, Plug } from "lucide-react";
+import { ArrowUpRight, Rocket, Smartphone, Server, Plug } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface DocLink {
@@ -31,12 +31,6 @@ const LINKS: DocLink[] = [
     icon: Server,
   },
   {
-    label: "CLI",
-    description: "Query from terminal",
-    href: "/docs/cli",
-    icon: Terminal,
-  },
-  {
     label: "MCP",
     description: "Connect AI agents",
     href: "/docs/mcp/setup",
@@ -55,7 +49,7 @@ export function QuickLinks() {
           <h3 className="text-sm font-semibold tracking-tight">Documentation</h3>
         </div>
       </div>
-      <div className="grid divide-y divide-border/60 md:grid-cols-5 md:divide-y-0 md:divide-x">
+      <div className="grid divide-y divide-border/60 md:grid-cols-4 md:divide-y-0 md:divide-x">
         {LINKS.map((link) => (
           <Link
             key={link.href}

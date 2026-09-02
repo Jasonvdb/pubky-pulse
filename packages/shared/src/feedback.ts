@@ -29,7 +29,7 @@ export interface IngestFeedbackResponse {
   created_at: string;
 }
 
-// --- Dashboard / CLI / MCP ---
+// --- Dashboard / MCP ---
 
 export type FeedbackCommentAuthorType = "user" | "agent";
 

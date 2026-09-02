@@ -115,7 +115,7 @@ export async function issuesRoutes(app: FastifyInstance) {
         conditions.push(eq(issues.is_dev, is_dev === "true"));
       } else if (data_mode !== undefined) {
         // Only filter when data_mode is explicitly sent — absent means "all" here
-        // (MCP/CLI callers rely on that), unlike the team route's production default.
+        // (MCP callers rely on that), unlike the team route's production default.
         const devCondition = dataModeToDrizzle(issues.is_dev, data_mode as DataMode);
         if (devCondition) conditions.push(devCondition);
       }

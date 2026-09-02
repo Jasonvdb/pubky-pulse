@@ -158,7 +158,7 @@ export const ASA_MAX_PENDING_ATTEMPTS = 5;
 
 // --- Advertising insights types ---
 //
-// Shared between the dashboard, CLI, and MCP. The hierarchy `campaign →
+// Shared between the dashboard and MCP. The hierarchy `campaign →
 // ad_group → keyword|ad` is generic over `attribution_source` — see
 // `ATTRIBUTION_NETWORK_DIMENSIONS`.
 
@@ -173,7 +173,7 @@ export type AdsLeafType = "keyword" | "ad";
  * would inflate ROAS — their revenue would count but the campaign spend that
  * acquired them would have already aged out of the spend rollups.
  *
- * The web/CLI/MCP surfaces echo `window_days` back in every ads response so
+ * The web/MCP surfaces echo `window_days` back in every ads response so
  * UIs can label the time range without hard-coding it.
  */
 export const ADS_INSIGHTS_WINDOW_DAYS = 360;
@@ -215,7 +215,7 @@ export interface AdsRow {
 }
 
 /**
- * Classify a ROAS number into a render tone. Each surface (web, CLI, iOS,
+ * Classify a ROAS number into a render tone. Each surface (web, MCP, iOS,
  * docs) maps the tone to its own color/style — keeps the green/amber/red
  * thresholds consistent without exporting Tailwind classes from shared.
  *

@@ -831,7 +831,7 @@ export async function authRoutes(app: FastifyInstance) {
       key_type: "agent",
       app_id: null,
       team_id: targetTeam.id,
-      name: "CLI Agent Key",
+      name: "Agent Key",
       created_by: agentUser.id,
       permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
     }).returning({ id: apiKeys.id });
@@ -841,7 +841,7 @@ export async function authRoutes(app: FastifyInstance) {
       action: "create",
       resource_type: "api_key",
       resource_id: agentApiKey.id,
-      metadata: { key_type: "agent", name: "CLI Agent Key" },
+      metadata: { key_type: "agent", name: "Agent Key" },
     });
 
     return reply.code(201).send({

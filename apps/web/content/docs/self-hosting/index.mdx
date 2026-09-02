@@ -46,7 +46,7 @@ You need three DNS records pointing to your VPS, all on the same IP address:
 | Domain | Service | Purpose |
 |--------|---------|---------|
 | `yourdomain.com` | Web dashboard (port 3000) | User-facing dashboard |
-| `api.yourdomain.com` | API server (port 4000) | Dashboard API, CLI, agent keys |
+| `api.yourdomain.com` | API server (port 4000) | Dashboard API, MCP endpoint, agent keys |
 | `ingest.yourdomain.com` | API server (port 4000) | SDK event ingestion |
 
 The `api` and `ingest` subdomains both route to the same Fastify server. They are separated at the DNS level for operational clarity -- you can apply different Cloudflare rules, rate limits, or monitoring to each.

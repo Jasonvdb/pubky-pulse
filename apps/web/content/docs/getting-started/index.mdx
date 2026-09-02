@@ -3,12 +3,9 @@ title: Getting Started
 description: Get up and running with Owlmetry in minutes. Your coding agent handles the setup.
 ---
 
-Owlmetry is designed to be set up by your coding agent. There are two ways to connect your agent:
+Owlmetry is designed to be set up by your coding agent. The [MCP endpoint](/docs/mcp/setup) is the agent interface: configure a URL once in your editor and your agent gets 81 tools instantly, with no installation and no updates to keep on top of.
 
-- **[MCP](/docs/mcp/setup)** (recommended) — Configure a URL once in your editor. No installation, automatic updates, 52 tools available instantly.
-- **[CLI](/docs/cli/installation)** — Install the `@owlmetry/cli` npm package. Best for CI/CD, scripts, and human terminal use.
-
-Both paths give your agent the same capabilities. Choose MCP if your editor supports it (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code); choose the CLI for automation pipelines or if you prefer terminal workflows.
+Any MCP-capable editor works (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code). For CI/CD pipelines and shell scripts that can't speak MCP, the [REST API](/docs/api-reference) covers the same operations.
 
 You can also [set everything up manually](#manual-setup) if you prefer.
 
@@ -26,43 +23,27 @@ That's it. Your agent now has access to all Owlmetry operations — creating pro
 **Self-hosting?** Use your own server URL (e.g., `https://your-server.example.com/mcp`) instead of `api.owlmetry.com`. See [Self-hosted setup](/docs/getting-started/self-hosting).
 </Callout>
 
-## Connect via CLI
-
-If your editor doesn't support MCP, or if you need Owlmetry in CI/CD pipelines and shell scripts, install the CLI:
-
-```bash
-npm install -g @owlmetry/cli
-```
-
-Requires Node.js 20+. Pair the CLI with the companion [owlmetry-skills](https://github.com/owlmetry/owlmetry-skills) Claude Code plugin marketplace so your agent has the full command reference and SDK integration patterns.
-
 ### Tell Your Agent to Set Up Owlmetry
 
-Install the Owlmetry skills in Claude Code:
-
-```text
-/plugin marketplace add owlmetry/owlmetry-skills
-/plugin install owlmetry@owlmetry-skills
-```
-
-Then give your coding agent a prompt like this:
+With the endpoint configured, give your coding agent a prompt like this:
 
 ```
-Set up Owlmetry in this project. Load `/owlmetry-cli` to authenticate
-and create a project/app, then load `/owlmetry-swift`, `/owlmetry-android`,
-or `/owlmetry-node` (depending on the platform) to instrument the code.
+Set up Owlmetry in this project. Use the Owlmetry MCP tools to create a
+project and an app, then instrument the code with the SDK for this
+platform.
 ```
 
-That's it. Your agent reads the skills and takes it from there. The only thing you'll need to do is provide a **6-digit verification code** — the agent will ask for your email, Owlmetry sends you a code, and you paste it back. This creates your account, generates an API key, and the agent handles the rest: creating a project, setting up an app, installing the SDK, and wiring up event tracking.
+Supported clients read the `owlmetry://guide` resource automatically on connection, so your agent already knows the concepts, resource hierarchy, and conventions — it takes it from there: `create-project`, `create-app`, then installing the SDK and wiring up event tracking. The SDK integration guides live at [/docs/sdks](/docs/sdks).
 
 **Tip:** Add this line to your project's `CLAUDE.md`, `AGENTS.md`, or whatever default instructions file your coding agent uses:
 
 ```markdown
 ### Owlmetry
-Load `/owlmetry-cli` before running any `owlmetry` CLI commands or doing analytics work — it links to the appropriate SDK skill for your platform.
+Use the Owlmetry MCP tools for any analytics work — read the `owlmetry://guide`
+resource first, and see https://owlmetry.com/docs/sdks for SDK integration.
 ```
 
-This ensures every future session knows Owlmetry is integrated and loads the right skill files automatically — including the full API reference, funnel design rules, and lifecycle metric patterns.
+This ensures every future session knows Owlmetry is integrated and picks up the right context automatically — including the full tool surface, funnel design rules, and lifecycle metric patterns.
 
 ## Choose Your Deployment
 
@@ -241,5 +222,4 @@ Once events are flowing, explore these areas:
 - [Events](/docs/concepts/events) -- Understand log levels, sessions, and timestamps
 - [Metrics](/docs/concepts/metrics) -- Track operation durations and success rates
 - [Funnels](/docs/concepts/funnels) -- Measure conversion across multi-step flows
-- [CLI](/docs/cli) -- Query and manage everything from the terminal
 - [API Reference](/docs/api-reference) -- Full REST API documentation

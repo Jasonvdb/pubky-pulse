@@ -9,7 +9,7 @@ The Compose UI (`OwlQuestionnaireGate` / `OwlQuestionnaireView`) lives in the `o
 
 ## Prerequisite
 
-Create a questionnaire with a slug first — via the [dashboard](/dashboard/questionnaires), [CLI](/docs/cli/questionnaires) (`owlmetry questionnaires create`), or [MCP](/docs/mcp/questionnaires). The SDK only reads and saves — it doesn't define questionnaires. The slug is immutable after creation.
+Create a questionnaire with a slug first — via the [dashboard](/dashboard/questionnaires) or [MCP](/docs/mcp/questionnaires) (`create-questionnaire`). The SDK only reads and saves — it doesn't define questionnaires. The slug is immutable after creation.
 
 ## How the sheet behaves
 
@@ -240,4 +240,4 @@ Every save sends the full accumulated answer set; the server merges, so going Ba
 
 ## Where responses land
 
-Responses show up on **Dashboard → Questionnaires → &lt;questionnaire&gt;** with pre-aggregated per-question analytics (bar charts for choices, average for ratings, NPS score for NPS). Drafts are first-class responses and appear by default so abandonment shows as a drop-off curve. CLI: `owlmetry questionnaires …`. MCP: `list-questionnaires` / `list-questionnaire-responses` / `get-questionnaire-analytics`.
+Responses show up on **Dashboard → Questionnaires → &lt;questionnaire&gt;** with pre-aggregated per-question analytics (bar charts for choices, average for ratings, NPS score for NPS). Drafts are first-class responses and appear by default so abandonment shows as a drop-off curve. MCP: `list-questionnaires` / `list-questionnaire-responses` / `get-questionnaire-analytics`.

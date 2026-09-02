@@ -6,15 +6,16 @@ description: Define multi-step funnels to measure user conversion and drop-off a
 Funnels let you define an ordered sequence of steps that users should complete, then measure how many users reach each step and where they drop off. They are useful for tracking conversion flows like onboarding, checkout, or signup.
 
 ```text title="Add funnel tracking with your coding agent"
-Add Owlmetry funnel tracking to this project.
-Load `/owlmetry-cli` plus `/owlmetry-swift`, `/owlmetry-android`, or `/owlmetry-node`
-(install the owlmetry-skills Claude Code plugin if missing).
+Add Owlmetry funnel tracking to this project. Connect the Owlmetry MCP
+server first (https://owlmetry.com/docs/mcp) — it exposes its integration
+guide as the owlmetry://guide resource, and the SDK docs are at
+https://owlmetry.com/docs/sdks.
 
 - Identify 2-3 key user journeys worth measuring conversion on
   (e.g., onboarding, checkout, activation).
-- For each journey, define the funnel on the server via CLI with
-  3-6 ordered steps, then add Owl.step("step-name") calls at
-  each progression point in the code.
+- For each journey, define the funnel on the server with the
+  create-funnel MCP tool using 3-6 ordered steps, then add
+  Owl.step("step-name") calls at each progression point in the code.
 - Each step must be a point every user passes through — don't
   include optional side-paths or engagement actions as steps.
 - Split alternative paths into separate funnels (e.g., screenshot
@@ -32,7 +33,7 @@ A funnel definition is a project-scoped record with an ordered list of steps. Ea
 | `description` | Optional explanation of what this funnel measures |
 | `steps` | Ordered array of step definitions (max 20) |
 
-Funnels are managed through the [dashboard](/docs/concepts/projects-and-apps), the [CLI](/docs/cli/funnels), or the [API](/docs/api-reference/funnels).
+Funnels are managed through the [dashboard](/docs/concepts/projects-and-apps), [MCP](/docs/mcp/funnels), or the [API](/docs/api-reference/funnels).
 
 ## Steps
 

@@ -46,7 +46,7 @@ export interface AuthResponse {
   teams: AuthTeamMembership[];
 }
 
-// Agent login (CLI auth flow — no JWT, returns agent API key directly)
+// Agent login (agent bootstrap flow — no JWT, returns an agent API key directly)
 export interface AgentLoginRequest {
   email: string;
   code: string;

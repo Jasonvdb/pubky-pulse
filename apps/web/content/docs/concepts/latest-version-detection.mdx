@@ -1,6 +1,6 @@
 ---
 title: Latest Version Detection
-description: How Owlmetry knows which version of your app is the current release, and how that powers the green/amber version badges shown across the dashboard, CLI, and MCP.
+description: How Owlmetry knows which version of your app is the current release, and how that powers the green/amber version badges shown across the dashboard and MCP.
 ---
 
 Every event, user, and issue in Owlmetry carries an `app_version` string captured by the SDK at the moment the data was recorded. To make those versions actionable -- "is this user on the current release?", "is this issue still happening on the latest build?" -- Owlmetry tracks a single source of truth per app and renders coloured badges:
@@ -24,14 +24,14 @@ The provenance is exposed on every app response as `latest_app_version_source` (
 
 - **Hourly**, at `:15` past the hour, by the `app_version_sync` system job. Iterates every active app.
 - **Immediately on Apple app create** -- a fire-and-forget sync runs as soon as a new app is added so the badge appears without waiting for the next scheduled run.
-- **On demand** -- trigger the job manually via the dashboard Jobs page, the CLI, or MCP. Pass an `app_id` parameter to refresh just one app instead of the whole system.
+- **On demand** -- trigger the job manually via the dashboard Jobs page or the `trigger-job` MCP tool. Pass an `app_id` parameter to refresh just one app instead of the whole system.
 
-```bash
-# Refresh every app
-owlmetry jobs trigger app_version_sync --team-id <id>
+```json
+// Refresh every app
+{ "team_id": "<id>", "job_type": "app_version_sync" }
 
-# Refresh just one app
-owlmetry jobs trigger app_version_sync --team-id <id> --param app_id=<appId>
+// Refresh just one app
+{ "team_id": "<id>", "job_type": "app_version_sync", "params": { "app_id": "<appId>" } }
 ```
 
 ## The fields on the app response
@@ -65,7 +65,6 @@ If the issue's most recent occurrence was on the latest release, the badge is gr
 | Surface | Where |
 |---|---|
 | Dashboard | Events table, users list, user/event detail sheets, issue kanban cards, issue detail (occurrences + summary) |
-| CLI | `users list`, `events view`, `issues list`, `issues view`, `apps show` |
 | MCP | All app/event/issue/user responses include the raw fields; agents do their own equality check |
 
 ## Caveats

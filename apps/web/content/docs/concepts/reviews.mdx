@@ -36,9 +36,9 @@ For every Apple app with a `bundle_id`, Owlmetry tracks two things:
 | `app_store_ratings_sync` | daily 04:30 UTC (system) | iTunes Lookup API (no auth) | Fans out across every Apple storefront for each Apple app with a `bundle_id` and snapshots per-country average rating + total count to `app_store_ratings`, then recomputes the worldwide cache on `apps`. |
 | `app_store_connect_reviews_sync` | daily 05:30 UTC (system) | App Store Connect API | Fans out across every project with an active App Store Connect integration and pulls individual reviews via `GET /v1/apps/{id}/customerReviews` for every Apple app in those projects that has an `apple_app_store_id`. |
 
-The reviews job runs daily and can also be triggered manually for a single project — manual runs hit the same handler, scoped to one project. Manual triggers from Dashboard → Integrations → Sync reviews, via `owlmetry integrations sync app-store-connect --project-id <id>`, or via the `sync-integration` MCP tool. Each project still requires its own active App Store Connect integration to be included in the daily fan-out.
+The reviews job runs daily and can also be triggered manually for a single project — manual runs hit the same handler, scoped to one project. Manual triggers from Dashboard → Integrations → Sync reviews, or via the `sync-integration` MCP tool. Each project still requires its own active App Store Connect integration to be included in the daily fan-out.
 
-Aggregate ratings keep flowing automatically once an Apple app has a bundle ID — no integration setup needed. ASC is only required for individual review ingestion. You can also manually trigger a ratings sync (e.g. right after creating a new app) via `owlmetry ratings sync --project-id <id>` / Dashboard → project → Sync ratings / `sync-app-ratings` MCP.
+Aggregate ratings keep flowing automatically once an Apple app has a bundle ID — no integration setup needed. ASC is only required for individual review ingestion. You can also manually trigger a ratings sync (e.g. right after creating a new app) via Dashboard → project → Sync ratings or the `sync-app-ratings` MCP tool.
 
 ### Notifications on new ratings & reviews
 
@@ -71,23 +71,21 @@ Schemas + idempotency: the `app_store_reviews` table has a unique index on `(app
 
 **Ratings** (per-country, incl. star-only ratings — not just text reviews):
 - **Web dashboard**: `/dashboard/projects/<id>` — `★ 4.6 (1,234)` badge on each Apple app card showing the worldwide rollup, plus a "Ratings by country" disclosure that lazy-loads the per-country grid. The reviews page has a "By country" panel covering every app in the project. Daily deltas (`+8 since yesterday`) appear next to counts on the dashboard, the Reviews "By country" panel, and the per-country grid wherever a prior snapshot exists.
-- **CLI**: `owlmetry ratings list <appId> --project-id <id>`, `owlmetry ratings by-country --project-id <id>`, `owlmetry ratings sync --project-id <id>` (admin-only manual trigger).
-- **MCP**: `list-app-ratings`, `list-ratings-by-country`, `sync-app-ratings`.
+- **MCP**: `list-app-ratings`, `list-ratings-by-country`, and `sync-app-ratings` (admin-only manual trigger).
 
 **Reviews** (individual customer reviews with text):
 - **Web dashboard**: `/dashboard/reviews` — list view with filters (app, store, rating, country, has-developer-response, full-text search). The detail dialog has the full reply round-trip.
-- **CLI**: `owlmetry reviews list`, `owlmetry reviews view <id>`, `owlmetry reviews respond <id>`, `owlmetry reviews delete-response <id> --yes`.
 - **MCP**: `list-reviews`, `get-review`, `respond-to-review`, `delete-review-response`.
 
 ## Replying to App Store Reviews
 
-You can reply to an Apple review directly from the dashboard, CLI, MCP, or the iOS companion app — Owlmetry calls App Store Connect's `customerReviewResponses` endpoint, persists the resulting reply ID + state, and shows it on every surface so you can see at a glance which reviews you've already responded to.
+You can reply to an Apple review directly from the dashboard, MCP, or the iOS companion app — Owlmetry calls App Store Connect's `customerReviewResponses` endpoint, persists the resulting reply ID + state, and shows it on every surface so you can see at a glance which reviews you've already responded to.
 
 **Where the reply is sent**: directly to App Store Connect. It becomes publicly visible on the App Store listing once Apple publishes it (usually within minutes). Owlmetry shows `PENDING_PUBLISH` until the next sync confirms Apple has published it — that happens on the next daily run or any manual trigger. If Apple deletes the reply on their side (e.g., via the ASC web UI), the next sync clears the local fields too.
 
 **Editing**: Apple has no PATCH endpoint for review responses. Owlmetry implements edit as DELETE-then-POST against ASC. From your perspective it's a single PUT — the existing reply is replaced atomically.
 
-**Deleting**: removes the reply from the public App Store listing. **Irrecoverable** — the only way back is to post a new reply. The dashboard requires you to type `delete` to confirm, the CLI requires `--yes`, the iOS app uses a destructive alert, and the MCP tool description leads with a destructive-action warning.
+**Deleting**: removes the reply from the public App Store listing. **Irrecoverable** — the only way back is to post a new reply. The dashboard requires you to type `delete` to confirm, the iOS app uses a destructive alert, and the MCP `delete-review-response` tool description leads with a destructive-action warning.
 
 **Limits**: 5,970 characters maximum (Apple's `responseBody` limit, surfaced as `MAX_REVIEW_RESPONSE_LENGTH` in `@owlmetry/shared/constants`).
 
@@ -103,7 +101,7 @@ You can reply to an Apple review directly from the dashboard, CLI, MCP, or the i
 
 If multiple projects under the same team contain apps from the same Apple Developer team, you can clone the credentials in one click. Dashboard → Integrations on the target project → "Copy from another project" → pick the source. Owlmetry duplicates the issuer/key/p8 verbatim and runs a live `listAppStoreConnectApps` call to confirm Apple still accepts the credentials. The source project's integration is unchanged.
 
-CLI: `owlmetry integrations copy app-store-connect --from <source-project-id> --to <target-project-id>`. MCP: `copy-integration`.
+MCP: `copy-integration`.
 
 ## Permissions
 
@@ -116,7 +114,7 @@ CLI: `owlmetry integrations copy app-store-connect --from <source-project-id> --
 **Ratings missing**:
 - **App platform isn't `apple`** — Play Store rating ingest is deferred (would need a Google Play Console scrape or paid API).
 - **App has no `bundle_id`** — required for iTunes Lookup.
-- **Daily sync hasn't run yet for a brand-new app** — trigger `owlmetry ratings sync --project-id <id>` to populate immediately.
+- **Daily sync hasn't run yet for a brand-new app** — trigger `sync-app-ratings` to populate immediately.
 - **App not for sale in any storefront iTunes returns data for** — every `(app, country)` lookup returned `resultCount: 0`.
 
 **Reviews missing**:

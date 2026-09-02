@@ -72,6 +72,6 @@ async function processOnboarding(userId: string) {
 
 ## Defining Funnels
 
-Funnel steps recorded by the SDK are matched against funnel definitions on the server. Define your funnels in the dashboard or CLI with the step names you use in `step()` calls. Each step's `event_filter.step_name` should match the string you pass to `step()`.
+Funnel steps recorded by the SDK are matched against funnel definitions on the server. Define your funnels in the dashboard or with the `create-funnel` MCP tool, using the step names you pass to `step()`. Each step's `event_filter.step_name` should match the string you pass to `step()`.
 
 See [Funnels](/docs/concepts/funnels) for details on how funnel definitions, analytics, and query modes work.

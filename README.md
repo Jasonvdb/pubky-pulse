@@ -2,32 +2,23 @@
 
 [![Tests](https://github.com/owlmetry/owlmetry/actions/workflows/test.yml/badge.svg)](https://github.com/owlmetry/owlmetry/actions/workflows/test.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
-[![@owlmetry/cli](https://img.shields.io/npm/v/%40owlmetry%2Fcli?label=%40owlmetry%2Fcli)](https://www.npmjs.com/package/@owlmetry/cli)
 [![@owlmetry/node](https://img.shields.io/npm/v/%40owlmetry%2Fnode?label=%40owlmetry%2Fnode)](https://www.npmjs.com/package/@owlmetry/node)
 
 Agent-first observability. Self-hosted. Built for the way you actually ship now.
 
-Owlmetry is an observability platform designed for the agentic development era. Point your coding agent at the setup instructions, and it handles everything — integration, monitoring, debugging, performance analysis. The developer doesn't need to open a dashboard, configure alerts, or interpret charts. The agent does it all through MCP, an API, or a CLI.
+Owlmetry is an observability platform designed for the agentic development era. Point your coding agent at the setup instructions, and it handles everything — integration, monitoring, debugging, performance analysis. The developer doesn't need to open a dashboard, configure alerts, or interpret charts. The agent does it all through MCP and the REST API.
 
 > **⚠️ Alpha Software** — Owlmetry is in early alpha. APIs, schemas, and configuration may change without notice. Not yet production-ready.
 
 ## Get Started
 
-### Option A — MCP (recommended for AI agents)
+Add the Owlmetry MCP server to your agent's config. It exposes the full product surface as tools, plus its integration guide as the `owlmetry://guide` resource — nothing to install. See the [MCP setup docs](https://owlmetry.com/docs/mcp) for editor-specific instructions, and [owlmetry.com/docs](https://owlmetry.com/docs) for the SDK integration guides.
 
-Add the Owlmetry MCP server to your agent's config. It exposes the full product surface as tools, plus SDK integration guides as resources — no CLI install needed. See the [MCP setup docs](https://owlmetry.com/docs/mcp) for editor-specific instructions.
-
-### Option B — CLI
-
-```bash
-npm install -g @owlmetry/cli
-```
-
-Then tell your agent to run `owlmetry skills` and install the relevant skill files. It handles the rest — account setup, SDK integration, instrumentation, and querying.
+Your agent handles the rest — account setup, SDK integration, instrumentation, and querying.
 
 ## Why agent-first?
 
-Most observability tools are built for humans staring at dashboards. Owlmetry is built for agents making API calls. Every feature is accessible programmatically through agent API keys, a CLI, an MCP server, and a complete REST API. The web dashboard exists as an optional visual layer — not the primary interface.
+Most observability tools are built for humans staring at dashboards. Owlmetry is built for agents making API calls. Every feature is accessible programmatically through agent API keys, an MCP server, and a complete REST API. The web dashboard exists as an optional visual layer — not the primary interface.
 
 With Owlmetry, your agent can:
 
@@ -57,23 +48,23 @@ And it's simple: one Postgres database, one Node.js API server, one optional Nex
 - **SDK console logging** — opt-in via `consoleLogging: true` on `Owl.configure()` (Swift + Node); prints every tracked event, metric, and funnel step to the console so you can verify instrumentation without a dashboard round-trip
 
 ### Debugging and incident response
-- **Issue tracker** — error events automatically clustered into issues by fingerprint, with status lifecycle (`new → in_progress → resolved → silenced → snoozed → regressed`), agent/user comments, merge duplicates, semver-aware regression detection against `resolved_at_version`, first/last-seen app version tracking. `snoozed` is like `silenced` (no notifications, no fix version required) but auto-flips back to `new` and re-fires the `issue.new` push when the issue recurs. Same-session error bursts within 5 seconds auto-alias onto a single issue so a loader throwing + caller logging + `op.fail()` doesn't triple-count. Kanban board in the dashboard, full API, MCP, and CLI surface
+- **Issue tracker** — error events automatically clustered into issues by fingerprint, with status lifecycle (`new → in_progress → resolved → silenced → snoozed → regressed`), agent/user comments, merge duplicates, semver-aware regression detection against `resolved_at_version`, first/last-seen app version tracking. `snoozed` is like `silenced` (no notifications, no fix version required) but auto-flips back to `new` and re-fires the `issue.new` push when the issue recurs. Same-session error bursts within 5 seconds auto-alias onto a single issue so a loader throwing + caller logging + `op.fail()` doesn't triple-count. Kanban board in the dashboard, full API and MCP surface
 - **Notifications** — multi-channel notification system (in-app inbox, email, mobile push) with per-user preferences and pluggable channel adapters. Triggers today: `issue.new` (push as soon as an issue opens or regresses), `issue.digest` (per-project email digest, gated by `issue_alert_frequency`: `none | hourly | 6_hourly | daily | weekly`), `feedback.new`, `questionnaire.response_new`, `job.completed`, `app.rating_changed` (worldwide rating count grows), `app.review_new` (fresh App Store reviews ingested), and `team.invitation`. Users opt channels in or out per type.
 
   The `mobile_push` channel routes per `user_devices.platform` — iOS rows go through APNs (token-based auth, optional `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_P8`, `APNS_BUNDLE_ID`, `APNS_ENV` — without them, iOS push is skipped and email + in-app keep working); Android rows are reserved for the FCM transport that will land later. See [docs/concepts/notifications](https://owlmetry.com/docs/concepts/notifications)
-- **Event attachments** — SDKs can upload files (logs, screenshots, crash dumps) alongside error events; stored on disk, linked to events and issues, downloadable via dashboard, CLI, and MCP. Per-project + per-user quotas. See [docs/concepts/attachments](https://owlmetry.com/docs/concepts/attachments)
+- **Event attachments** — SDKs can upload files (logs, screenshots, crash dumps) alongside error events; stored on disk, linked to events and issues, downloadable via dashboard and MCP. Per-project + per-user quotas. See [docs/concepts/attachments](https://owlmetry.com/docs/concepts/attachments)
 - **Cross-app session investigation** — one endpoint reconstructs the full timeline across all apps a user touched during an incident window
 - **User feedback** — free-text feedback from apps (Swift SDK `OwlFeedbackView` / `Owl.sendFeedback`) or from your own frontend (Node SDK `Owl.sendFeedback`). Kanban board with status lifecycle, comments, and session-linked event replay. See [docs/concepts/feedback](https://owlmetry.com/docs/concepts/feedback)
-- **Store ratings & reviews** — App Store ratings (worldwide average, count, current-version split, plus per-country breakdowns across every storefront) and individual reviews captured per app. Aggregate ratings refresh daily via per-storefront iTunes Lookup (no auth, no setup) through the `app_store_ratings_sync` job; can also be triggered on demand per project. Individual reviews come via the App Store Connect API integration — set up once per project with a Customer Support API key, refresh daily at 05:30 UTC across every project with an active integration through the `app_store_connect_reviews_sync` job; can also be triggered on demand per project. Reply, edit, or delete the developer response from any surface. Schema supports Play Store from day 1 (ingest deferred). Dashboard list with filters + by-country panel, rating badge on app cards, full CLI / MCP surface. See [docs/concepts/reviews](https://owlmetry.com/docs/concepts/reviews)
+- **Store ratings & reviews** — App Store ratings (worldwide average, count, current-version split, plus per-country breakdowns across every storefront) and individual reviews captured per app. Aggregate ratings refresh daily via per-storefront iTunes Lookup (no auth, no setup) through the `app_store_ratings_sync` job; can also be triggered on demand per project. Individual reviews come via the App Store Connect API integration — set up once per project with a Customer Support API key, refresh daily at 05:30 UTC across every project with an active integration through the `app_store_connect_reviews_sync` job; can also be triggered on demand per project. Reply, edit, or delete the developer response from any surface. Schema supports Play Store from day 1 (ingest deferred). Dashboard list with filters + by-country panel, rating badge on app cards, full MCP surface. See [docs/concepts/reviews](https://owlmetry.com/docs/concepts/reviews)
 
 ### Analytics
 - **Structured metrics** — define metrics, track operations with `startOperation`/`complete`/`fail`, query aggregations (counts, success rates, duration percentiles, error breakdowns) via API
 - **Funnel analytics** — define conversion funnels and let your agent query drop-off rates programmatically
-- **In-app questionnaires** — structured multi-question surveys for product research and NPS. Up to 30 questions per questionnaire across `text` / `single_choice` / `multi_choice` / `rating` (1–5) / `nps` (0–10), with per-question rollups. **Progressive draft saves**: the Swift SDK persists answers on every Next tap so users can resume mid-flow across launches; analytics include drafts by default so abandonment renders as a natural drop-off curve. Identity-aware eligibility (`already_responded` / `globally_dismissed` / `inactive`) and global dismiss via a single user property survive reinstall. Schema edits mid-draft are non-breaking — unknown answer keys prune at submission. Full dashboard, CLI, and MCP surface. See [docs/concepts/questionnaires](https://owlmetry.com/docs/concepts/questionnaires)
+- **In-app questionnaires** — structured multi-question surveys for product research and NPS. Up to 30 questions per questionnaire across `text` / `single_choice` / `multi_choice` / `rating` (1–5) / `nps` (0–10), with per-question rollups. **Progressive draft saves**: the Swift SDK persists answers on every Next tap so users can resume mid-flow across launches; analytics include drafts by default so abandonment renders as a natural drop-off curve. Identity-aware eligibility (`already_responded` / `globally_dismissed` / `inactive`) and global dismiss via a single user property survive reinstall. Schema edits mid-draft are non-breaking — unknown answer keys prune at submission. Full dashboard and MCP surface. See [docs/concepts/questionnaires](https://owlmetry.com/docs/concepts/questionnaires)
 - **User properties** — attach custom key-value metadata to users (subscription status, plan tier, revenue) from SDKs or integrations; filter the Users list by billing tier (paid / trial / free)
-- **Advertising insights** — rank ad campaigns → ad groups → keywords/ads by lifetime USD revenue, **spend, and ROAS**, joining Apple Search Ads attribution with RevenueCat lifetime revenue. Per-row **Conversions** (ever-paid user count) and **Retained** (currently on auto-renewing paid sub) columns. Daily Apple Search Ads Reports API sync pulls campaign spend, impressions, taps, and installs over a rolling 12-month window so the dashboard surfaces ROAS, status, and campaign start dates alongside revenue. Dashboard `/dashboard/ads` with project + team-scoped rollups; full CLI / MCP surface. USD-only for v1 — non-USD orgs surface a `currency_warning` banner. See [docs/concepts/advertising-insights](https://owlmetry.com/docs/concepts/advertising-insights)
-- **Time-series rollups** — daily and hourly pre-aggregated counts for events, users, sessions, metric completions, funnel completions, and questionnaire responses. Power subtle SVG sparklines on dashboard cards and trend queries that survive raw-event retention. Per-user window preference (7 / 14 / 30 / 60 / 90 days), backfill via aggregation jobs, full CLI (`stats`) and MCP (`query-stats-bucketed`) surface. See [docs/concepts/aggregations](https://owlmetry.com/docs/concepts/aggregations)
-- **Locale demand** — rank users by the language they want (device preferred language) and by country, flagging languages with demand the app doesn't ship yet, to decide where to localize next. The Swift SDK reports the user's preferred language (`Locale.preferredLanguages`) plus the app's shipped languages (`Bundle.main.localizations`), so the localization gap is computed automatically. The country breakdown works for every user immediately and bridges until SDK adoption catches up. Dashboard `/dashboard/locales` with project + app scoping; full CLI (`locales`) and MCP (`list-user-locales`) surface.
+- **Advertising insights** — rank ad campaigns → ad groups → keywords/ads by lifetime USD revenue, **spend, and ROAS**, joining Apple Search Ads attribution with RevenueCat lifetime revenue. Per-row **Conversions** (ever-paid user count) and **Retained** (currently on auto-renewing paid sub) columns. Daily Apple Search Ads Reports API sync pulls campaign spend, impressions, taps, and installs over a rolling 12-month window so the dashboard surfaces ROAS, status, and campaign start dates alongside revenue. Dashboard `/dashboard/ads` with project + team-scoped rollups; full MCP surface. USD-only for v1 — non-USD orgs surface a `currency_warning` banner. See [docs/concepts/advertising-insights](https://owlmetry.com/docs/concepts/advertising-insights)
+- **Time-series rollups** — daily and hourly pre-aggregated counts for events, users, sessions, metric completions, funnel completions, and questionnaire responses. Power subtle SVG sparklines on dashboard cards and trend queries that survive raw-event retention. Per-user window preference (7 / 14 / 30 / 60 / 90 days), backfill via aggregation jobs, full MCP (`query-stats-bucketed`) surface. See [docs/concepts/aggregations](https://owlmetry.com/docs/concepts/aggregations)
+- **Locale demand** — rank users by the language they want (device preferred language) and by country, flagging languages with demand the app doesn't ship yet, to decide where to localize next. The Swift SDK reports the user's preferred language (`Locale.preferredLanguages`) plus the app's shipped languages (`Bundle.main.localizations`), so the localization gap is computed automatically. The country breakdown works for every user immediately and bridges until SDK adoption catches up. Dashboard `/dashboard/locales` with project + app scoping; full MCP (`list-user-locales`) surface.
 
 ### Integrations
 - **Third-party integrations** — per-project connections with a provider registry. Supports:
@@ -83,16 +74,14 @@ And it's simple: one Postgres database, one Node.js API server, one optional Nex
 
 ### Agent and human interfaces
 - **Agent-native API** — every operation available through `owl_agent_` keys: query events, investigate sessions, read issues, download attachments, drive integrations
-- **MCP server** — Streamable HTTP endpoint exposing the full product surface as tools (55+), plus SDK integration guides as resources; agents connect directly with an `owl_agent_` key
-- **CLI for agents and humans** — `--format json` for machine consumption, `--format table` for humans. Same tool, both audiences
-- **AI skill files** — bundled with the CLI npm package, teach any coding agent (Claude Code, Codex, etc.) how to set up, instrument, and query Owlmetry
+- **MCP server** — Streamable HTTP endpoint exposing the full product surface as tools (81), plus its integration guide as the `owlmetry://guide` resource; agents connect directly with an `owl_agent_` key
 - **Dashboard optional** — Next.js web UI for when you want a visual overview. Not required for any workflow
 
 ### Platform and operations
-- **Auth model** — `owl_client_` keys for SDKs, `owl_agent_` keys for agents/CLI/MCP, `owl_import_` keys for bulk history, JWT (passwordless email code) for the optional dashboard. Role-based access: **owner** > **admin** > **member**
+- **Auth model** — `owl_client_` keys for SDKs, `owl_agent_` keys for agents (MCP and API), `owl_import_` keys for bulk history, JWT (passwordless email code) for the optional dashboard. Role-based access: **owner** > **admin** > **member**
 - **Team management** — create teams, invite members by email (7-day token expiry), change roles, remove members
-- **Audit trail** — automatic logging of who created, updated, or deleted resources; queryable via API, CLI, and dashboard
-- **Background jobs** — generic job system on pg-boss with cron scheduling, progress tracking, cooperative cancellation, and email alerts. Manages data syncs, issue scanning, issue digests, aggregation rollups, retention cleanup, and database maintenance with full visibility via dashboard, CLI, and API
+- **Audit trail** — automatic logging of who created, updated, or deleted resources; queryable via API, MCP, and dashboard
+- **Background jobs** — generic job system on pg-boss with cron scheduling, progress tracking, cooperative cancellation, and email alerts. Manages data syncs, issue scanning, issue digests, aggregation rollups, retention cleanup, and database maintenance with full visibility via dashboard, MCP, and API
 - **Per-project retention** — configurable `retention_days_events`, `retention_days_metrics`, `retention_days_funnels` columns enforced by a daily job
 - **Database auto-pruning** — optional size limit (`MAX_DATABASE_SIZE_GB`) safety net; drops oldest monthly partitions first
 - **Data mode** — every event is tagged `production` / `development`; dashboard sidebar toggles which you're looking at
@@ -112,10 +101,8 @@ Sibling repos:
 
 - **[owlmetry/owlmetry-swift](https://github.com/owlmetry/owlmetry-swift)** — Swift SDK for iOS, iPadOS, and macOS.
 - **[owlmetry/owlmetry-node](https://github.com/owlmetry/owlmetry-node)** — Node.js server SDK (`@owlmetry/node`).
-- **[owlmetry/owlmetry-cli](https://github.com/owlmetry/owlmetry-cli)** — CLI for agents and humans (`@owlmetry/cli`).
-- **[owlmetry/owlmetry-skills](https://github.com/owlmetry/owlmetry-skills)** — Claude Code plugin marketplace for agent skills.
 
-The API server is the product. Everything else — the dashboard, the CLI, the MCP server, the SDKs — is a client of that API. This means your agent has the same capabilities as the web UI. Nothing is dashboard-only.
+The API server is the product. Everything else — the dashboard, the MCP server, the SDKs — is a client of that API. This means your agent has the same capabilities as the web UI. Nothing is dashboard-only.
 
 ## Local Development
 
@@ -156,7 +143,6 @@ See the [self-hosting guide](https://owlmetry.com/docs/self-hosting) for the ful
 Full documentation is available at [owlmetry.com/docs](https://owlmetry.com/docs):
 
 - **[API Reference](https://owlmetry.com/docs/api-reference)** — complete REST API with request/response examples
-- **[CLI](https://owlmetry.com/docs/cli)** — command reference for agents and humans
 - **[MCP](https://owlmetry.com/docs/mcp)** — setup and tool reference for MCP clients
 - **[Node.js SDK](https://owlmetry.com/docs/sdks/node)** — server-side instrumentation (`npm install @owlmetry/node`)
 - **[Swift SDK](https://owlmetry.com/docs/sdks/swift)** — iOS, iPadOS, and macOS instrumentation (Swift Package)
@@ -168,5 +154,4 @@ Full documentation is available at [owlmetry.com/docs](https://owlmetry.com/docs
 - [Website](https://owlmetry.com)
 - [Documentation](https://owlmetry.com/docs)
 - [Self-Hosting Guide](https://owlmetry.com/docs/self-hosting)
-- [CLI on npm](https://www.npmjs.com/package/@owlmetry/cli)
 - [Node SDK on npm](https://www.npmjs.com/package/@owlmetry/node)

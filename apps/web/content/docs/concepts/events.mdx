@@ -6,9 +6,10 @@ description: Understand how Owlmetry captures, stores, and queries events with l
 Events are the core data unit in Owlmetry. Every interaction your app records -- a screen view, a button tap, a warning, an error -- is captured as an event and sent to the server for storage and analysis.
 
 ```text title="Add event logging with your coding agent"
-Instrument this project with Owlmetry event logging.
-Load the `/owlmetry-swift`, `/owlmetry-android`, or `/owlmetry-node` skill first
-(install the owlmetry-skills Claude Code plugin if missing).
+Instrument this project with Owlmetry event logging. Connect the Owlmetry
+MCP server first (https://owlmetry.com/docs/mcp) — it exposes its integration
+guide as the owlmetry://guide resource, and the SDK docs are at
+https://owlmetry.com/docs/sdks.
 
 - Add Owl.info/warn/error calls at key points: caught exceptions,
   user actions, state transitions, and failure paths.
@@ -57,7 +58,7 @@ Every event has a log level that indicates its severity:
 | `warn` | Something unexpected happened but the app continued normally |
 | `error` | Something failed -- a network request, a parse operation, etc. |
 
-The dashboard and CLI support filtering events by level to help you focus on what matters.
+The dashboard, the `query-events` MCP tool, and the API all support filtering events by level to help you focus on what matters.
 
 ## Sessions
 
@@ -141,7 +142,7 @@ Monthly partitioning allows Postgres to scan only the relevant partitions when q
 
 ## Querying Events
 
-Events can be queried through the [dashboard](/docs/concepts/projects-and-apps), the [CLI](/docs/cli/events), or the [API](/docs/api-reference/events). Common filters include:
+Events can be queried through the [dashboard](/docs/concepts/projects-and-apps), [MCP](/docs/mcp/events) (`query-events`), or the [API](/docs/api-reference/events). Common filters include:
 
 - **Team, project, or app** -- scope events to a specific context
 - **Log level** -- filter by severity

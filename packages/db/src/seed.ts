@@ -190,7 +190,7 @@ async function main() {
   // Exercises every question type, including both short-form (single-line)
   // and long-form (multiline TextEditor) text. Pointing the Swift demo at
   // this slug means `pnpm dev:seed` is enough to get a working in-app survey
-  // without hand-authoring one via dashboard/MCP/CLI.
+  // without hand-authoring one via dashboard/MCP.
   const demoSurvey = await findOrCreate<typeof questionnaires.$inferSelect>(
     db, questionnaires,
     {

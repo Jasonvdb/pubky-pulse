@@ -97,10 +97,10 @@ val op = Owl.startOperation("Photo Upload")
 
 ## Server-Side Metric Definitions
 
-The metric definition must exist on the server before the SDK emits events for that slug if you want it to appear in metric queries with a human-readable name. Create it via the CLI or dashboard first:
+The metric definition must exist on the server before the SDK emits events for that slug if you want it to appear in metric queries with a human-readable name. Create it in the dashboard or with the `create-metric` MCP tool first:
 
-```bash
-owlmetry metrics create --project-id <id> --name "Photo Upload" --slug photo-upload --lifecycle --format json
+```json
+{ "project_id": "<id>", "name": "Photo Upload", "slug": "photo-upload" }
 ```
 
 ## When to Use Metrics vs Events

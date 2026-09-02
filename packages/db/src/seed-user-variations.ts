@@ -214,7 +214,7 @@ const USERS: SeededUser[] = [
 ];
 
 async function resolveTarget(db: ReturnType<typeof createDatabaseConnection>) {
-  // Optional CLI arg: project slug. Default: jayvdb1@gmail.com's first project.
+  // Optional command-line arg: project slug. Default: jayvdb1@gmail.com's first project.
   const slugArg = process.argv[2];
   const emailDefault = "jayvdb1@gmail.com";
 

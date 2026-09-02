@@ -63,7 +63,7 @@ Each team includes a `default_agent_key` field — the oldest non-deleted agent 
 
 ## POST /v1/auth/agent-login
 
-Verify code and provision an agent API key in one step. Used by the CLI. Does not set a JWT cookie.
+Verify code and provision an agent API key in one step, for non-browser clients. Does not set a JWT cookie.
 
 If the user belongs to multiple teams and `team_id` is not specified, returns 400 with the list of teams.
 
@@ -279,7 +279,7 @@ Get a single API key by ID.
     "key_type": "agent",
     "app_id": null,
     "team_id": "uuid",
-    "name": "CLI Agent Key",
+    "name": "Agent Key",
     "created_by": "uuid",
     "permissions": ["events:read", "apps:read", "apps:write", "..."],
     "created_at": "2024-01-01T00:00:00.000Z",

@@ -169,13 +169,13 @@ describe("POST /v1/auth/agent-login", () => {
   });
 });
 
-describe("Full CLI agent flow (end-to-end)", () => {
+describe("Full agent bootstrap flow (end-to-end)", () => {
   it("send-code → agent-login for new user", async () => {
     // Step 1: Send code
     const sendRes = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "cliuser@owlmetry.com" },
+      payload: { email: "agentuser@owlmetry.com" },
     });
     expect(sendRes.statusCode).toBe(200);
 
@@ -183,7 +183,7 @@ describe("Full CLI agent flow (end-to-end)", () => {
     const loginRes = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "cliuser@owlmetry.com", code: testEmailService.lastCode },
+      payload: { email: "agentuser@owlmetry.com", code: testEmailService.lastCode },
     });
     expect(loginRes.statusCode).toBe(201);
     const body = loginRes.json();

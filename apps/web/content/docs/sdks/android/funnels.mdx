@@ -75,20 +75,20 @@ suspend fun handleSignup(email: String, password: String) {
 
 ## Funnel Definitions
 
-Funnel definitions are created through the CLI or the dashboard, not through the SDK. The SDK only emits the step events. Define matching definitions via the CLI:
+Funnel definitions are created through the dashboard or the `create-funnel` MCP tool, not through the SDK. The SDK only emits the step events. Define matching definitions first:
 
-```bash
-cat > /tmp/funnel-steps.json << 'EOF'
-[
-  {"name": "Welcome", "event_filter": {"step_name": "welcome-screen"}},
-  {"name": "Account", "event_filter": {"step_name": "create-account"}},
-  {"name": "Profile", "event_filter": {"step_name": "complete-profile"}},
-  {"name": "First Post", "event_filter": {"step_name": "first-post"}}
-]
-EOF
-
-owlmetry funnels create --project-id <id> --name "Onboarding" --slug onboarding \
-  --steps-file /tmp/funnel-steps.json --format json
+```json
+{
+  "project_id": "<id>",
+  "name": "Onboarding",
+  "slug": "onboarding",
+  "steps": [
+    {"name": "Welcome", "event_filter": {"step_name": "welcome-screen"}},
+    {"name": "Account", "event_filter": {"step_name": "create-account"}},
+    {"name": "Profile", "event_filter": {"step_name": "complete-profile"}},
+    {"name": "First Post", "event_filter": {"step_name": "first-post"}}
+  ]
+}
 ```
 
 See [Funnels](/docs/concepts/funnels) for details on creating definitions, analysis modes (open vs closed), and query options.

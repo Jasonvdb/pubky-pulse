@@ -84,7 +84,7 @@ DATABASE_URL='postgresql://owlmetry:<password>@localhost:5432/owlmetry' pnpm db:
 
 This creates all database tables and sets up monthly event partitions. The `events`, `metric_events`, and `funnel_events` tables use `PARTITION BY RANGE` on the `timestamp` column. Partitions for the current month plus the next 2 months are created automatically.
 
-Your first user account will be auto-created when you log in through the dashboard or CLI.
+Your first user account will be auto-created when you log in through the dashboard.
 
 ## 5. Verify the server starts
 

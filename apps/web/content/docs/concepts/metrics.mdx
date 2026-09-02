@@ -6,14 +6,16 @@ description: Track performance with lifecycle operations (start, complete, fail,
 Structured metrics let you measure the performance of specific operations in your app -- network requests, file uploads, checkout flows, or any timed process. Unlike raw events, metrics follow a defined lifecycle and produce aggregated performance data.
 
 ```text title="Add structured metrics with your coding agent"
-Add Owlmetry structured metrics to this project.
-Load `/owlmetry-cli` plus `/owlmetry-swift`, `/owlmetry-android`, or `/owlmetry-node`
-(install the owlmetry-skills Claude Code plugin if missing).
+Add Owlmetry structured metrics to this project. Connect the Owlmetry MCP
+server first (https://owlmetry.com/docs/mcp) — it exposes its integration
+guide as the owlmetry://guide resource, and the SDK docs are at
+https://owlmetry.com/docs/sdks.
 
 - Identify operations where duration and success rate matter
   (network requests, file processing, data loading).
-- For each one, create a metric definition on the server via
-  the CLI with --lifecycle for timed operations.
+- For each one, create a metric definition on the server with the
+  create-metric MCP tool, then use the SDK's lifecycle API for
+  timed operations.
 - In the code, wrap each operation with startOperation() at the
   beginning, then .complete(), .fail(), or .cancel() at every exit.
 - Every start must have exactly one terminal call — don't leak
@@ -92,7 +94,7 @@ Each definition includes:
 | `schema_definition` | Optional schema for expected attributes on start/complete/record phases |
 | `aggregation_rules` | Optional rules for how to aggregate this metric |
 
-Definitions are managed through the [dashboard](/docs/concepts/projects-and-apps), the [CLI](/docs/cli/metrics), or the [API](/docs/api-reference/metrics).
+Definitions are managed through the [dashboard](/docs/concepts/projects-and-apps), [MCP](/docs/mcp/metrics), or the [API](/docs/api-reference/metrics).
 
 You do not need to create a definition before sending metric events. Events are stored regardless. Definitions provide metadata and enable richer dashboard features.
 

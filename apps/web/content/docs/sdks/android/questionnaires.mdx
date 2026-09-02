@@ -1,11 +1,11 @@
 ---
 title: Questionnaires
-description: Render in-app surveys with OwlQuestionnaireGate, OwlQuestionnaireView, and Owl.saveQuestionnaireResponse.
+description: Render in-app surveys with PulseQuestionnaireGate, PulseQuestionnaireView, and Pulse.saveQuestionnaireResponse.
 ---
 
 Questionnaires are structured multi-question surveys (text, single/multi choice, 1–5 rating, 0–10 NPS) shown in-app. Each questionnaire has an immutable slug, a versioned schema of up to 30 questions, and a one-and-done global dismiss path. Responses store a snapshot of the schema they were submitted against, so historical answers always render correctly even after the parent definition has been edited. For the full concept overview, see [Questionnaires](/docs/concepts/questionnaires).
 
-The Compose UI (`OwlQuestionnaireGate` / `OwlQuestionnaireView`) lives in the `owlmetry-android-compose` artifact; the programmatic APIs (`Owl.fetchQuestionnaire`, `Owl.saveQuestionnaireResponse`, `Owl.dismissQuestionnaires`) live in the core module.
+The Compose UI (`PulseQuestionnaireGate` / `PulseQuestionnaireView`) lives in the `pulse-android-compose` artifact; the programmatic APIs (`Pulse.fetchQuestionnaire`, `Pulse.saveQuestionnaireResponse`, `Pulse.dismissQuestionnaires`) live in the core module.
 
 ## Prerequisite
 
@@ -17,7 +17,7 @@ When the trigger fires AND the user is eligible (not already responded, not glob
 
 - **Sure, happy to help** → starts the step flow
 - **Maybe later** → closes the sheet, no server write; the trigger re-evaluates on the next foreground
-- **Don't ask again** → confirmation dialog, then writes the global-dismiss flag (`Owl.dismissQuestionnaires()`); never asked again
+- **Don't ask again** → confirmation dialog, then writes the global-dismiss flag (`Pulse.dismissQuestionnaires()`); never asked again
 
 Once accepted, questions render **one per page** with a top progress bar and Back / Next / Submit buttons. **Every Next tap saves the current answer set as a draft** (`isComplete = false`); the final Submit sends `isComplete = true` and flips the server-side `submitted_at`. On successful submit, an in-sheet success page (checkmark + "Thanks!" + Done) replaces the questions.
 
@@ -27,17 +27,17 @@ The SDK saves the current answer set on every Next tap, so a user who quits half
 
 ## Auto-trigger gate (primary path)
 
-Compose has no modifier-driven presentation, so the gate is a **wrapper composable** (`OwlQuestionnaireGate`) — the analog of Swift's `.owlQuestionnaire(...)` modifier. Render your screen as its `content` and the gate overlays the questionnaire once the trigger fires and the server returns an eligible spec.
+Compose has no modifier-driven presentation, so the gate is a **wrapper composable** (`PulseQuestionnaireGate`) — the analog of Swift's `.pulseQuestionnaire(...)` modifier. Render your screen as its `content` and the gate overlays the questionnaire once the trigger fires and the server returns an eligible spec.
 
 ```kotlin
-import com.owlmetry.android.compose.OwlQuestionnaireGate
-import com.owlmetry.android.OwlQuestionnaireTrigger
+import org.pubky.pulse.android.compose.PulseQuestionnaireGate
+import org.pubky.pulse.android.PulseQuestionnaireTrigger
 
 @Composable
 fun RootScreen() {
-    OwlQuestionnaireGate(
+    PulseQuestionnaireGate(
         slug = "post-onboarding",
-        trigger = OwlQuestionnaireTrigger.afterLaunches(3),
+        trigger = PulseQuestionnaireTrigger.afterLaunches(3),
     ) {
         // Your normal screen content goes here
         AppNavHost()
@@ -54,8 +54,8 @@ fun RootScreen() {
 | `showsConsent` | `true` | When `true`, opens with the "Quick favor?" consent prompt. When `false`, jumps straight to question 1. Auto-skipped when resuming a draft. |
 | `isEligible` | `null` | Sync closure; return `false` to skip. App-side gating (paid status, feature flags). Re-evaluates on every foreground (`ON_RESUME`). |
 | `forceShow` | `false` | Debug-only override that bypasses every local gate and most server gates (still respects `inactive`). Wire to a debug-menu toggle or `BuildConfig.DEBUG`. |
-| `strings` | `.DEFAULT` | Override consent + flow copy via `OwlQuestionnaireStrings.DEFAULT.with(...)`. The spec's `description` wins over `strings.consentBody` when present. |
-| `onSubmitted` | `null` | Fires once on the call that flips the response to submitted. Receives `OwlQuestionnaireReceipt`. |
+| `strings` | `.DEFAULT` | Override consent + flow copy via `PulseQuestionnaireStrings.DEFAULT.with(...)`. The spec's `description` wins over `strings.consentBody` when present. |
+| `onSubmitted` | `null` | Fires once on the call that flips the response to submitted. Receives `PulseQuestionnaireReceipt`. |
 | `onCancel` | `null` | Fires on Maybe later / Cancel / swipe-dismiss without submitting. |
 | `onDismissed` | `null` | Fires on Don't ask again (global opt-out, confirmed). |
 
@@ -64,40 +64,40 @@ The gate evaluates once per composition entry and again on each foreground (`ON_
 ### Composable triggers (ANDed conditions)
 
 ```kotlin
-import com.owlmetry.android.OwlQuestionnaireTrigger
-import com.owlmetry.android.OwlQuestionnaireCondition
+import org.pubky.pulse.android.PulseQuestionnaireTrigger
+import org.pubky.pulse.android.PulseQuestionnaireCondition
 
-OwlQuestionnaireGate(
+PulseQuestionnaireGate(
     slug = "weekly-checkin",
-    trigger = OwlQuestionnaireTrigger.whenAll(
-        OwlQuestionnaireCondition.Launches(atLeast = 3),
-        OwlQuestionnaireCondition.DaysSinceFirstLaunch(atLeast = 7),
+    trigger = PulseQuestionnaireTrigger.whenAll(
+        PulseQuestionnaireCondition.Launches(atLeast = 3),
+        PulseQuestionnaireCondition.DaysSinceFirstLaunch(atLeast = 7),
     ),
 ) { content() }
 ```
 
 Available conditions:
 
-- `OwlQuestionnaireCondition.Launches(atLeast)` — total `Owl.configure(...)` calls since install (one bump per process)
-- `OwlQuestionnaireCondition.Foregrounds(atLeast)` — total foreground transitions since install
-- `OwlQuestionnaireCondition.DaysSinceFirstLaunch(atLeast)`
-- `OwlQuestionnaireCondition.HoursSinceFirstLaunch(atLeast)`
+- `PulseQuestionnaireCondition.Launches(atLeast)` — total `Pulse.configure(...)` calls since install (one bump per process)
+- `PulseQuestionnaireCondition.Foregrounds(atLeast)` — total foreground transitions since install
+- `PulseQuestionnaireCondition.DaysSinceFirstLaunch(atLeast)`
+- `PulseQuestionnaireCondition.HoursSinceFirstLaunch(atLeast)`
 
-Shortcuts on `OwlQuestionnaireTrigger`:
+Shortcuts on `PulseQuestionnaireTrigger`:
 
 - `.afterLaunch` — equivalent to `Launches(atLeast = 1)`
 - `.afterLaunches(n)` — equivalent to `Launches(atLeast = n)`
 - `.whenAll(vararg conditions)` — all conditions ANDed
-- `.manual` — never auto-trigger; present `OwlQuestionnaireView` directly
+- `.manual` — never auto-trigger; present `PulseQuestionnaireView` directly
 
 All conditions in `whenAll` are ANDed. For OR logic, use the `isEligible` closure or attach two gates with different slugs.
 
 ### Gating with `isEligible`
 
 ```kotlin
-OwlQuestionnaireGate(
+PulseQuestionnaireGate(
     slug = "free-user-survey",
-    trigger = OwlQuestionnaireTrigger.afterLaunch,
+    trigger = PulseQuestionnaireTrigger.afterLaunch,
     isEligible = { !user.isPaid },
 ) { content() }
 ```
@@ -110,32 +110,32 @@ Set `forceShow = true` to bypass every local gate (trigger conditions, `isEligib
 
 ### Trigger state accessors
 
-`Owl` exposes the persistent counters that drive the trigger evaluator — useful for debugging or building your own gates:
+`Pulse` exposes the persistent counters that drive the trigger evaluator — useful for debugging or building your own gates:
 
 ```kotlin
-val launches = Owl.launchCount        // total Owl.configure(...) calls
-val foregrounds = Owl.foregroundCount // total foreground transitions
-val installedAt = Owl.firstLaunchAt   // Long? — epoch millis of the first configure()
+val launches = Pulse.launchCount        // total Pulse.configure(...) calls
+val foregrounds = Pulse.foregroundCount // total foreground transitions
+val installedAt = Pulse.firstLaunchAt   // Long? — epoch millis of the first configure()
 ```
 
 ## Manual presentation
 
-For ad-hoc triggers ("show after the user finishes the import wizard"), call `Owl.fetchQuestionnaire` and present `OwlQuestionnaireView` yourself. `fetchQuestionnaire` returns a result whose `.questionnaire` is null when the user is ineligible (`.ineligibleReason` carries `alreadyResponded`, `globallyDismissed`, or `inactive`) and whose `.inProgress` carries any unsubmitted draft to resume.
+For ad-hoc triggers ("show after the user finishes the import wizard"), call `Pulse.fetchQuestionnaire` and present `PulseQuestionnaireView` yourself. `fetchQuestionnaire` returns a result whose `.questionnaire` is null when the user is ineligible (`.ineligibleReason` carries `alreadyResponded`, `globallyDismissed`, or `inactive`) and whose `.inProgress` carries any unsubmitted draft to resume.
 
 ```kotlin
-import com.owlmetry.android.Owl
-import com.owlmetry.android.OwlQuestionnaire
-import com.owlmetry.android.OwlQuestionnaireDraft
-import com.owlmetry.android.compose.OwlQuestionnaireView
+import org.pubky.pulse.android.Pulse
+import org.pubky.pulse.android.PulseQuestionnaire
+import org.pubky.pulse.android.PulseQuestionnaireDraft
+import org.pubky.pulse.android.compose.PulseQuestionnaireView
 
-var spec by remember { mutableStateOf<OwlQuestionnaire?>(null) }
-var inProgress by remember { mutableStateOf<OwlQuestionnaireDraft?>(null) }
+var spec by remember { mutableStateOf<PulseQuestionnaire?>(null) }
+var inProgress by remember { mutableStateOf<PulseQuestionnaireDraft?>(null) }
 var show by remember { mutableStateOf(false) }
 val scope = rememberCoroutineScope()
 
 Button(onClick = {
     scope.launch {
-        val result = runCatching { Owl.fetchQuestionnaire("post-import") }.getOrNull()
+        val result = runCatching { Pulse.fetchQuestionnaire("post-import") }.getOrNull()
         val q = result?.questionnaire   // null ⇒ ineligible; result.ineligibleReason carries why
         if (q != null) { spec = q; inProgress = result.inProgress; show = true }
     }
@@ -145,7 +145,7 @@ if (show) {
     val q = spec
     if (q != null) {
         ModalBottomSheet(onDismissRequest = { show = false }) {
-            OwlQuestionnaireView(
+            PulseQuestionnaireView(
                 questionnaire = q,
                 inProgress = inProgress,             // resume mid-flow
                 showsConsent = inProgress == null,   // skip consent on resume
@@ -157,15 +157,15 @@ if (show) {
 }
 ```
 
-`OwlQuestionnaireView`'s public `showsConsent` defaults to `false` — the consumer is already deciding to show it, so the step flow opens directly. Pass `showsConsent = true` if you want the consent prompt in front.
+`PulseQuestionnaireView`'s public `showsConsent` defaults to `false` — the consumer is already deciding to show it, so the step flow opens directly. Pass `showsConsent = true` if you want the consent prompt in front.
 
 ## Programmatic dismissal
 
-To opt the user out of all future questionnaires from code (e.g. a settings toggle), call `Owl.dismissQuestionnaires()`:
+To opt the user out of all future questionnaires from code (e.g. a settings toggle), call `Pulse.dismissQuestionnaires()`:
 
 ```kotlin
 scope.launch {
-    runCatching { Owl.dismissQuestionnaires() }
+    runCatching { Pulse.dismissQuestionnaires() }
 }
 ```
 
@@ -173,13 +173,13 @@ It's idempotent and survives reinstall server-side (stored in `app_users.propert
 
 ## Localization
 
-`OwlQuestionnaireView` and `OwlQuestionnaireGate` both accept an `OwlQuestionnaireStrings` parameter. Override individual strings with `OwlQuestionnaireStrings.DEFAULT.with(...)`:
+`PulseQuestionnaireView` and `PulseQuestionnaireGate` both accept a `PulseQuestionnaireStrings` parameter. Override individual strings with `PulseQuestionnaireStrings.DEFAULT.with(...)`:
 
 ```kotlin
-OwlQuestionnaireGate(
+PulseQuestionnaireGate(
     slug = "post-onboarding",
-    trigger = OwlQuestionnaireTrigger.afterLaunch,
-    strings = OwlQuestionnaireStrings.DEFAULT.with(
+    trigger = PulseQuestionnaireTrigger.afterLaunch,
+    strings = PulseQuestionnaireStrings.DEFAULT.with(
         submitButton = "Send",
         consentTitle = "Got a minute?",
         consentBody = "Your feedback shapes the roadmap.",
@@ -194,23 +194,23 @@ Every consent button and step-flow button label is independently overridable (`t
 
 ## Saving and submitting from custom UI
 
-If you're rendering your own survey UI instead of `OwlQuestionnaireView`, call `Owl.saveQuestionnaireResponse(slug, answers, isComplete)` to persist progress. Pass `isComplete = false` after each answer to save a draft (idempotent — the server upserts by `(project, slug, user_id)`, so the SDK doesn't track a response id across calls); pass `isComplete = true` on the final submit to flip `submitted_at` and fire the team notification:
+If you're rendering your own survey UI instead of `PulseQuestionnaireView`, call `Pulse.saveQuestionnaireResponse(slug, answers, isComplete)` to persist progress. Pass `isComplete = false` after each answer to save a draft (idempotent — the server upserts by `(project, slug, user_id)`, so the SDK doesn't track a response id across calls); pass `isComplete = true` on the final submit to flip `submitted_at` and fire the team notification:
 
 ```kotlin
-import com.owlmetry.android.OwlQuestionnaireAnswerValue
+import org.pubky.pulse.android.PulseQuestionnaireAnswerValue
 
 // Save a draft after the user answers Q2
-Owl.saveQuestionnaireResponse(
+Pulse.saveQuestionnaireResponse(
     slug = "post-import",
     answers = mapOf(
-        "q1" to OwlQuestionnaireAnswerValue.RatingValue(5),
-        "q2" to OwlQuestionnaireAnswerValue.TextValue("Nice!"),
+        "q1" to PulseQuestionnaireAnswerValue.RatingValue(5),
+        "q2" to PulseQuestionnaireAnswerValue.TextValue("Nice!"),
     ),
     isComplete = false,
 )
 
 // Final submit — accumulate everything and flip submitted_at
-val receipt = Owl.saveQuestionnaireResponse(
+val receipt = Pulse.saveQuestionnaireResponse(
     slug = "post-import",
     answers = allAnswers,
     isComplete = true,
@@ -218,7 +218,7 @@ val receipt = Owl.saveQuestionnaireResponse(
 if (receipt.wasSubmitted) { /* show a thank-you state */ }
 ```
 
-Answer value types (all sealed subclasses of `OwlQuestionnaireAnswerValue`):
+Answer value types (all sealed subclasses of `PulseQuestionnaireAnswerValue`):
 
 - `TextValue(String)`
 - `ChoiceValue(String)` — single choice
@@ -226,15 +226,15 @@ Answer value types (all sealed subclasses of `OwlQuestionnaireAnswerValue`):
 - `RatingValue(Int)` — 1–5
 - `NpsValue(Int)` — 0–10
 
-Every save sends the full accumulated answer set; the server merges, so going Back and re-answering an earlier question just overwrites that key. `OwlQuestionnaireReceipt.wasSubmitted` is true exactly once per response — on the call that flipped `submitted_at` — making it safe to gate success-state UI on without separate bookkeeping.
+Every save sends the full accumulated answer set; the server merges, so going Back and re-answering an earlier question just overwrites that key. `PulseQuestionnaireReceipt.wasSubmitted` is true exactly once per response — on the call that flipped `submitted_at` — making it safe to gate success-state UI on without separate bookkeeping.
 
 ## Errors
 
-`Owl.fetchQuestionnaire` and `Owl.saveQuestionnaireResponse` throw `OwlQuestionnaireError`:
+`Pulse.fetchQuestionnaire` and `Pulse.saveQuestionnaireResponse` throw `PulseQuestionnaireError`:
 
-- `OwlQuestionnaireError.NotConfigured` — `Owl.configure(...)` hasn't been called yet
-- `OwlQuestionnaireError.SlugNotFound` — the slug doesn't exist in the project (developer error — check spelling)
-- `OwlQuestionnaireError.ServerError` / `OwlQuestionnaireError.TransportFailure` — network / 5xx
+- `PulseQuestionnaireError.NotConfigured` — `Pulse.configure(...)` hasn't been called yet
+- `PulseQuestionnaireError.SlugNotFound` — the slug doesn't exist in the project (developer error — check spelling)
+- `PulseQuestionnaireError.ServerError` / `PulseQuestionnaireError.TransportFailure` — network / 5xx
 
 `fetchQuestionnaire` doesn't throw for ineligible users — it returns a result whose `.questionnaire` is null and whose `.ineligibleReason` (`alreadyResponded` / `globallyDismissed` / `inactive`) explains why.
 

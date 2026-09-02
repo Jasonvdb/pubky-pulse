@@ -1,9 +1,9 @@
 ---
 title: Configuration
-description: Configure the Swift SDK with Owl.configure() — API key, endpoint, and options.
+description: Configure the Swift SDK with Pulse.configure() — API key, endpoint, and options.
 ---
 
-Call `Owl.configure()` once, as early as possible in your app's lifecycle. This initializes the SDK, starts a new session, and begins capturing events.
+Call `Pulse.configure()` once, as early as possible in your app's lifecycle. This initializes the SDK, starts a new session, and begins capturing events.
 
 ## Basic Setup
 
@@ -11,18 +11,18 @@ In a SwiftUI app, call `configure()` in the `@main` App `init()`:
 
 ```swift
 import SwiftUI
-import Owlmetry
+import PubkyPulse
 
 @main
 struct MyApp: App {
     init() {
         do {
-            try Owl.configure(
-                endpoint: "https://ingest.owlmetry.com",
-                apiKey: "owl_client_..."
+            try Pulse.configure(
+                endpoint: "https://ingest.pulse.pubky.org",
+                apiKey: "pulse_client_..."
             )
         } catch {
-            print("Owlmetry configuration failed: \(error)")
+            print("Pubky Pulse configuration failed: \(error)")
         }
     }
 
@@ -37,19 +37,19 @@ struct MyApp: App {
 For UIKit apps, call it in `application(_:didFinishLaunchingWithOptions:)`:
 
 ```swift
-import Owlmetry
+import PubkyPulse
 
 func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
 ) -> Bool {
     do {
-        try Owl.configure(
-            endpoint: "https://ingest.owlmetry.com",
-            apiKey: "owl_client_..."
+        try Pulse.configure(
+            endpoint: "https://ingest.pulse.pubky.org",
+            apiKey: "pulse_client_..."
         )
     } catch {
-        print("Owlmetry configuration failed: \(error)")
+        print("Pubky Pulse configuration failed: \(error)")
     }
     return true
 }
@@ -59,19 +59,19 @@ func application(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `endpoint` | `String` | required | Your Owlmetry ingest server URL. |
-| `apiKey` | `String` | required | Client API key. Must start with `owl_client_`. |
+| `endpoint` | `String` | required | Your Pubky Pulse ingest server URL. |
+| `apiKey` | `String` | required | Client API key. Must start with `pulse_client_`. |
 | `flushOnBackground` | `Bool` | `true` | Automatically flush buffered events when the app enters the background. |
 | `compressionEnabled` | `Bool` | `true` | Gzip-compress request bodies before sending. |
 | `networkTrackingEnabled` | `Bool` | `true` | Automatically track URLSession HTTP requests. |
-| `consoleLogging` | `Bool` | `true` | Print events to the Xcode console / terminal. Each line is prefixed with `🦉 Owlmetry` and the log level. Set to `false` to suppress. |
+| `consoleLogging` | `Bool` | `true` | Print events to the Xcode console / terminal. Each line is prefixed with `Pubky Pulse` and the log level. Set to `false` to suppress. |
 
 ## Full Example with All Options
 
 ```swift
-try Owl.configure(
-    endpoint: "https://ingest.owlmetry.com",
-    apiKey: "owl_client_...",
+try Pulse.configure(
+    endpoint: "https://ingest.pulse.pubky.org",
+    apiKey: "pulse_client_...",
     flushOnBackground: true,
     compressionEnabled: true,
     networkTrackingEnabled: false,  // disable if you don't want HTTP request tracking
@@ -91,12 +91,12 @@ try Owl.configure(
 
 ## Configuration Errors
 
-`Owl.configure()` is a throwing function. The `OwlConfigurationError` enum covers three cases:
+`Pulse.configure()` is a throwing function. The `PulseConfigurationError` enum covers three cases:
 
 | Error | When it occurs |
 |-------|---------------|
 | `invalidEndpoint` | The endpoint string is not a valid URL. |
-| `invalidApiKey` | The API key does not start with `owl_client_`. |
+| `invalidApiKey` | The API key does not start with `pulse_client_`. |
 | `missingBundleId` | `Bundle.main.bundleIdentifier` is nil or empty. This can happen in command-line tools or certain test environments. |
 
 ## Calling Configure More Than Once
@@ -108,7 +108,7 @@ Calling `configure()` again is safe. The SDK will shut down the previous transpo
 In most cases, the SDK handles cleanup automatically via background task flushing and termination persistence. If you need to guarantee delivery at a specific point, call `shutdown()` explicitly:
 
 ```swift
-await Owl.shutdown()
+await Pulse.shutdown()
 ```
 
 ## Next Steps

@@ -1,16 +1,16 @@
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { docsSource } from "@/lib/docs-source";
-import { OwlLogo } from "@/components/owl-logo";
+import { PulseLogo } from "@/components/pulse-logo";
 import { BookOpen, LayoutDashboard, Github } from "lucide-react";
 import type { ReactNode } from "react";
 
 function DocsNavTitle() {
   return (
     <span className="inline-flex items-center gap-2.5">
-      <OwlLogo className="h-6 w-6" />
+      <PulseLogo className="h-6 w-6" />
       <span className="text-lg font-semibold tracking-tight">
-        Owlmetry
+        Pubky Pulse
       </span>
     </span>
   );
@@ -32,7 +32,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             { text: "Dashboard", url: "/dashboard", icon: <LayoutDashboard /> },
             {
               text: "GitHub",
-              url: "https://github.com/owlmetry/owlmetry",
+              url: "https://github.com/pubky/pubky-pulse",
               external: true,
               icon: <Github />,
             },

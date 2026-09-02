@@ -9,7 +9,7 @@ import {
   apps,
   appUsers,
   projects,
-} from "@owlmetry/db";
+} from "@pubky-pulse/db";
 import {
   QUESTIONNAIRE_RESPONSE_STATUSES,
   QUESTIONNAIRE_SLUG_REGEX,
@@ -18,7 +18,7 @@ import {
   MAX_QUESTIONNAIRE_DESCRIPTION_LENGTH,
   validateQuestionnaireSchema,
   parseTimeParam,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type {
   DataMode,
   QuestionnaireResponseStatus,
@@ -34,7 +34,7 @@ import type {
   QuestionnaireAnalyticsResponse,
   QuestionnaireRatingBucket,
   QuestionnaireChoiceCount,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { resolveProject } from "../utils/project.js";

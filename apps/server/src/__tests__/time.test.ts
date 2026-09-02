@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { parseTimeParam } from "@owlmetry/shared";
+import { parseTimeParam } from "@pubky-pulse/shared";
 
 beforeEach(() => {
   vi.useFakeTimers();

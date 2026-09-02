@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { LogLevel, StoredEventResponse } from "@owlmetry/shared";
+import type { LogLevel, StoredEventResponse } from "@pubky-pulse/shared";
 import { EventLevelBadge } from "@/components/event-level-badge";
 import { VersionBadge } from "@/components/version-badge";
 import { CountryCell } from "@/components/country-flag";

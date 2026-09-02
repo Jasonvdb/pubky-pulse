@@ -3,7 +3,7 @@ import { createInterface } from "node:readline";
 import { createDatabaseConnection } from "./index.js";
 
 const url =
-  process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry_test";
+  process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse_test";
 
 function getDatabaseName(connectionUrl: string): string | null {
   try {
@@ -34,7 +34,7 @@ async function main() {
   const dbName = getDatabaseName(url);
   if (!dbName || !dbName.endsWith("_test")) {
     console.error(`ABORT: Database "${dbName}" does not end with "_test".`);
-    console.error("This script only runs against test databases (e.g. owlmetry_test). Set DATABASE_URL to a _test database.");
+    console.error("This script only runs against test databases (e.g. pubky_pulse_test). Set DATABASE_URL to a _test database.");
     process.exit(1);
   }
 

@@ -104,7 +104,7 @@ describe("GET /v1/apps/:id", () => {
   });
 
   it("returns 404 for app in another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@owlmetry.com", "Other");
+    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
 
     const res = await app.inject({
       method: "GET",
@@ -144,7 +144,7 @@ describe("POST /v1/apps", () => {
       payload: {
         name: "Android App",
         platform: "android",
-        bundle_id: "com.owlmetry.android",
+        bundle_id: "org.pubky.pulse.android",
         project_id: testData.projectId,
       },
     });
@@ -153,9 +153,9 @@ describe("POST /v1/apps", () => {
     const body = res.json();
     expect(body.name).toBe("Android App");
     expect(body.platform).toBe("android");
-    expect(body.bundle_id).toBe("com.owlmetry.android");
+    expect(body.bundle_id).toBe("org.pubky.pulse.android");
     expect(body.team_id).toBe(testData.teamId);
-    expect(body.client_secret).toMatch(/^owl_client_/);
+    expect(body.client_secret).toMatch(/^pulse_client_/);
   });
 
   it("auto-created client key appears in keys list", async () => {
@@ -167,7 +167,7 @@ describe("POST /v1/apps", () => {
       payload: {
         name: "Key List App",
         platform: "apple",
-        bundle_id: "com.owlmetry.keylist",
+        bundle_id: "org.pubky.pulse.keylist",
         project_id: testData.projectId,
       },
     });
@@ -195,7 +195,7 @@ describe("POST /v1/apps", () => {
       payload: {
         name: "Ingest App",
         platform: "apple",
-        bundle_id: "com.owlmetry.ingest",
+        bundle_id: "org.pubky.pulse.ingest",
         project_id: testData.projectId,
       },
     });
@@ -208,7 +208,7 @@ describe("POST /v1/apps", () => {
       url: "/v1/ingest",
       headers: { authorization: `Bearer ${clientKey}` },
       payload: {
-        bundle_id: "com.owlmetry.ingest",
+        bundle_id: "org.pubky.pulse.ingest",
         events: [
           { level: "info", message: "test event", session_id: TEST_SESSION_ID },
         ],
@@ -227,7 +227,7 @@ describe("POST /v1/apps", () => {
       payload: {
         name: "Consistent App",
         platform: "apple",
-        bundle_id: "com.owlmetry.consistent",
+        bundle_id: "org.pubky.pulse.consistent",
         project_id: testData.projectId,
       },
     });
@@ -241,7 +241,7 @@ describe("POST /v1/apps", () => {
     });
 
     const listedApp = listRes.json().apps.find(
-      (a: { bundle_id: string }) => a.bundle_id === "com.owlmetry.consistent"
+      (a: { bundle_id: string }) => a.bundle_id === "org.pubky.pulse.consistent"
     );
     expect(listedApp.client_secret).toBe(createdKey);
   });
@@ -279,7 +279,7 @@ describe("POST /v1/apps", () => {
       payload: {
         name: "Nope",
         platform: "apple",
-        bundle_id: "com.owlmetry.nope",
+        bundle_id: "org.pubky.pulse.nope",
         project_id: testData.projectId,
       },
     });
@@ -294,7 +294,7 @@ describe("POST /v1/apps", () => {
       method: "POST",
       url: "/v1/apps",
       headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Second App", platform: "web", bundle_id: "owlmetry.com", project_id: testData.projectId },
+      payload: { name: "Second App", platform: "web", bundle_id: "pulse.pubky.org", project_id: testData.projectId },
     });
 
     const res = await app.inject({
@@ -323,7 +323,7 @@ describe("POST /v1/apps", () => {
       payload: {
         name: "Ghost App",
         platform: "apple",
-        bundle_id: "com.owlmetry.ghost",
+        bundle_id: "org.pubky.pulse.ghost",
         project_id: testData.projectId,
       },
     });
@@ -354,7 +354,7 @@ describe("PATCH /v1/apps/:id", () => {
       method: "PATCH",
       url: `/v1/apps/${testData.appId}`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { bundle_id: "com.owlmetry.updated" },
+      payload: { bundle_id: "org.pubky.pulse.updated" },
     });
 
     // bundle_id is not an updatable field, so this is treated as an empty update
@@ -494,7 +494,7 @@ describe("DELETE /v1/apps/:id", () => {
   });
 
   it("returns 404 for app belonging to another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@owlmetry.com", "Other");
+    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
 
     const res = await app.inject({
       method: "DELETE",

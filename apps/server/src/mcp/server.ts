@@ -19,8 +19,8 @@ import { registerStatsTools } from "./tools/stats.js";
 // displays this verbatim at the top of every session that has the server
 // connected, so it's the primary discovery surface for the feature set.
 // Keep it terse and feature-comprehensive; deep concepts live in
-// `owlmetry://guide`.
-const SERVER_INSTRUCTIONS = `Owlmetry — self-hosted analytics for web, backend and mobile apps. Use these tools to manage projects/apps, query analytics, and triage user-facing surfaces.
+// `pubky-pulse://guide`.
+const SERVER_INSTRUCTIONS = `Pubky Pulse — self-hosted analytics for web, backend and mobile apps. Use these tools to manage projects/apps, query analytics, and triage user-facing surfaces.
 
 Capabilities:
 - Projects & apps — create/update/delete, manage API keys (client/agent/import), team-scoped ownership
@@ -34,12 +34,12 @@ Capabilities:
 - Attachments — binary files attached to events; signed downloads
 - Audit logs, background jobs (trigger/cancel), user listings
 
-For concepts, resource hierarchy, naming conventions, soft-delete rules, key types, data modes, and end-to-end workflows, fetch the \`owlmetry://guide\` resource — it covers everything tool descriptions don't.`;
+For concepts, resource hierarchy, naming conventions, soft-delete rules, key types, data modes, and end-to-end workflows, fetch the \`pubky-pulse://guide\` resource — it covers everything tool descriptions don't.`;
 
 export function createMcpServer(app: FastifyInstance, agentKey: string): McpServer {
   const server = new McpServer(
     {
-      name: "owlmetry",
+      name: "pubky-pulse",
       version: "1.0.0",
     },
     {
@@ -48,12 +48,12 @@ export function createMcpServer(app: FastifyInstance, agentKey: string): McpServ
   );
 
   // Register the operational guide as a resource
-  server.registerResource("guide", "owlmetry://guide", {
-    description: "Owlmetry operational guide — concepts, resource hierarchy, workflows, and conventions for using the MCP tools.",
+  server.registerResource("guide", "pubky-pulse://guide", {
+    description: "Pubky Pulse operational guide — concepts, resource hierarchy, workflows, and conventions for using the MCP tools.",
     mimeType: "text/markdown",
   }, async () => ({
     contents: [{
-      uri: "owlmetry://guide",
+      uri: "pubky-pulse://guide",
       mimeType: "text/markdown",
       text: GUIDE_CONTENT,
     }],

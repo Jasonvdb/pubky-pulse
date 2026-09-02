@@ -1,6 +1,6 @@
 ---
 title: Questionnaires
-description: Render in-app surveys with OwlQuestionnaireView and the .owlQuestionnaire view modifier.
+description: Render in-app surveys with PulseQuestionnaireView and the .pulseQuestionnaire view modifier.
 ---
 
 import Concept from '../../../_snippets/questionnaires.mdx';
@@ -17,13 +17,13 @@ When the trigger fires AND the user is eligible (not already responded, not glob
 
 - **Sure, happy to help** → expands the sheet to full size and starts the step flow
 - **Maybe later** → closes the sheet, no server write; the trigger re-evaluates on the next foreground
-- **Don't ask again** → confirmation dialog, then writes the global-dismiss flag (`Owl.dismissQuestionnaires()`); never asked again
+- **Don't ask again** → confirmation dialog, then writes the global-dismiss flag (`Pulse.dismissQuestionnaires()`); never asked again
 
 Once accepted, questions render **one per page** with a top progress bar and Back / Next / Submit buttons at the bottom. **Every Next tap saves the current answer set as a draft** (`is_complete: false`); the final Submit sends `is_complete: true` and flips the server-side `submitted_at`. The sheet is **non-swipe-dismissible** — users exit by tapping Cancel (toolbar), finishing the flow, or choosing a consent option. On successful submit, an in-sheet success page (checkmark + "Thanks!" + Done) replaces the questions.
 
 ### Resuming an unsubmitted draft
 
-`Owl.fetchQuestionnaire(slug:)` returns an `OwlQuestionnaireFetchResult` that bundles the spec with an optional `inProgress: OwlQuestionnaireDraft` — populated when the current user already has a draft response on the server (`submitted_at` still null). The auto-trigger modifier and the manual `OwlQuestionnaireView` both accept the draft and resume the flow at the first unanswered question with the prior answers pre-filled; the consent detent is skipped on resume because the user already opted in earlier. Abandoned drafts are soft-deleted after 90 days of inactivity by the `questionnaire_draft_cleanup` background job.
+`Pulse.fetchQuestionnaire(slug:)` returns a `PulseQuestionnaireFetchResult` that bundles the spec with an optional `inProgress: PulseQuestionnaireDraft` — populated when the current user already has a draft response on the server (`submitted_at` still null). The auto-trigger modifier and the manual `PulseQuestionnaireView` both accept the draft and resume the flow at the first unanswered question with the prior answers pre-filled; the consent detent is skipped on resume because the user already opted in earlier. Abandoned drafts are soft-deleted after 90 days of inactivity by the `questionnaire_draft_cleanup` background job.
 
 ### Short vs long text answers
 
@@ -49,16 +49,16 @@ The flag is set at authoring time on the server (dashboard or MCP); the SDK simp
 
 ## Auto-trigger view modifier
 
-The easiest path is to attach `.owlQuestionnaire(slug:…)` to a long-lived view (often the root of your app or a tab's content):
+The easiest path is to attach `.pulseQuestionnaire(slug:…)` to a long-lived view (often the root of your app or a tab's content):
 
 ```swift
 import SwiftUI
-import Owlmetry
+import PubkyPulse
 
 struct ContentView: View {
     var body: some View {
         TabView { ... }
-            .owlQuestionnaire(
+            .pulseQuestionnaire(
                 slug: "post-onboarding",
                 trigger: .afterLaunches(3)
             )
@@ -73,7 +73,7 @@ The consent prompt is shown by default. Pass `showsConsent: false` to skip it an
 All conditions are ANDed:
 
 ```swift
-.owlQuestionnaire(
+.pulseQuestionnaire(
     slug: "weekly-checkin",
     trigger: .when(
         .launches(atLeast: 3),
@@ -84,7 +84,7 @@ All conditions are ANDed:
 
 Available conditions:
 
-- `.launches(atLeast: Int)` — total `Owl.configure(...)` calls since install (one bump per process)
+- `.launches(atLeast: Int)` — total `Pulse.configure(...)` calls since install (one bump per process)
 - `.foregrounds(atLeast: Int)` — total foreground transitions since install
 - `.daysSinceFirstLaunch(atLeast: Int)`
 - `.hoursSinceFirstLaunch(atLeast: Int)`
@@ -93,14 +93,14 @@ Shortcuts:
 
 - `.afterLaunch` — equivalent to `.launches(atLeast: 1)`
 - `.afterLaunches(n)` — equivalent to `.launches(atLeast: n)`
-- `.manual` — never auto-trigger; consumer presents `OwlQuestionnaireView` directly
+- `.manual` — never auto-trigger; consumer presents `PulseQuestionnaireView` directly
 
-OR-logic isn't built in. If you need it, use the `isEligible` closure or attach two `.owlQuestionnaire(...)` modifiers with different slugs.
+OR-logic isn't built in. If you need it, use the `isEligible` closure or attach two `.pulseQuestionnaire(...)` modifiers with different slugs.
 
 ### Gating with `isEligible`
 
 ```swift
-.owlQuestionnaire(
+.pulseQuestionnaire(
     slug: "free-user-survey",
     trigger: .afterLaunch,
     isEligible: { !user.isPaid }
@@ -120,7 +120,7 @@ Set `forceShow: true` to bypass every local gate (trigger conditions, `isEligibl
 
 var body: some View {
     SomeRootView()
-        .owlQuestionnaire(
+        .pulseQuestionnaire(
             slug: "post-onboarding",
             trigger: .when(.daysSinceFirstLaunch(atLeast: 7)),
             #if DEBUG
@@ -137,7 +137,7 @@ Wire `previewQuestionnaire` to a debug-menu toggle, an env-var check, or a launc
 The view inherits the SwiftUI environment tint. Override with the `tint:` parameter:
 
 ```swift
-.owlQuestionnaire(slug: "...", trigger: .afterLaunch, tint: .orange)
+.pulseQuestionnaire(slug: "...", trigger: .afterLaunch, tint: .orange)
 ```
 
 The Submit button, rating stars, single-choice checkmarks, and multi-choice toggles all pick up the tint.
@@ -145,7 +145,7 @@ The Submit button, rating stars, single-choice checkmarks, and multi-choice togg
 ### Callbacks
 
 ```swift
-.owlQuestionnaire(
+.pulseQuestionnaire(
     slug: "post-onboarding",
     trigger: .afterLaunches(3),
     onSubmitted: { receipt in
@@ -160,14 +160,14 @@ The Submit button, rating stars, single-choice checkmarks, and multi-choice togg
 )
 ```
 
-`onCancel` fires when the user taps Cancel mid-flow or "Maybe later" on the consent prompt — answers entered up to that point persist as a draft on the server, but no `onSubmitted` fires. `onDismissed` fires when the user taps "Don't ask again" → confirm, after the server-side global-dismiss flag is written. `onSubmitted` fires only on the final Submit; the `OwlQuestionnaireReceipt` carries `wasSubmitted: Bool` which is `true` for that one call (it flipped server-side `submitted_at` from null to non-null) and `false` for the per-question draft saves leading up to it.
+`onCancel` fires when the user taps Cancel mid-flow or "Maybe later" on the consent prompt — answers entered up to that point persist as a draft on the server, but no `onSubmitted` fires. `onDismissed` fires when the user taps "Don't ask again" → confirm, after the server-side global-dismiss flag is written. `onSubmitted` fires only on the final Submit; the `PulseQuestionnaireReceipt` carries `wasSubmitted: Bool` which is `true` for that one call (it flipped server-side `submitted_at` from null to non-null) and `false` for the per-question draft saves leading up to it.
 
 ## Manual presentation
 
-For ad-hoc triggers ("show this survey after the user finishes the import wizard"), call `Owl.fetchQuestionnaire` and present `OwlQuestionnaireView` yourself. `fetchQuestionnaire` returns an `OwlQuestionnaireFetchResult` whose `.questionnaire` is nil when the user is ineligible (`.ineligibleReason` carries `alreadyResponded`, `globallyDismissed`, or `inactive`) and whose `.inProgress` carries any unsubmitted draft to resume. The public init defaults `showsConsent: false` — the consumer is already deciding to show it, so the step flow opens directly. Pass `showsConsent: true` if you want the small-detent prompt in front:
+For ad-hoc triggers ("show this survey after the user finishes the import wizard"), call `Pulse.fetchQuestionnaire` and present `PulseQuestionnaireView` yourself. `fetchQuestionnaire` returns a `PulseQuestionnaireFetchResult` whose `.questionnaire` is nil when the user is ineligible (`.ineligibleReason` carries `alreadyResponded`, `globallyDismissed`, or `inactive`) and whose `.inProgress` carries any unsubmitted draft to resume. The public init defaults `showsConsent: false` — the consumer is already deciding to show it, so the step flow opens directly. Pass `showsConsent: true` if you want the small-detent prompt in front:
 
 ```swift
-@State private var presentation: (OwlQuestionnaire, OwlQuestionnaireDraft?)?
+@State private var presentation: (PulseQuestionnaire, PulseQuestionnaireDraft?)?
 @State private var showing = false
 
 // ...
@@ -175,7 +175,7 @@ For ad-hoc triggers ("show this survey after the user finishes the import wizard
 Button("Take the post-import survey") {
     Task {
         do {
-            let result = try await Owl.fetchQuestionnaire(slug: "post-import")
+            let result = try await Pulse.fetchQuestionnaire(slug: "post-import")
             if let q = result.questionnaire {
                 presentation = (q, result.inProgress)
                 showing = true
@@ -190,7 +190,7 @@ Button("Take the post-import survey") {
 .sheet(isPresented: $showing) {
     if let (spec, draft) = presentation {
         NavigationStack {
-            OwlQuestionnaireView(
+            PulseQuestionnaireView(
                 questionnaire: spec,
                 inProgress: draft,
                 onSubmitted: { _ in showing = false },
@@ -205,23 +205,23 @@ Pass the draft through `inProgress:` so the flow container pre-fills the prior a
 
 ## Programmatic dismissal
 
-To opt the user out of all future questionnaires from code (e.g. a settings toggle), call `Owl.dismissQuestionnaires()`:
+To opt the user out of all future questionnaires from code (e.g. a settings toggle), call `Pulse.dismissQuestionnaires()`:
 
 ```swift
 Toggle("Show in-app surveys", isOn: $surveysEnabled)
     .onChange(of: surveysEnabled) { _, newValue in
         if !newValue {
-            Task { try? await Owl.dismissQuestionnaires() }
+            Task { try? await Pulse.dismissQuestionnaires() }
         }
     }
 ```
 
 ## Localization
 
-`OwlQuestionnaireView` and the gate modifier both accept an `OwlQuestionnaireStrings` parameter. Every user-facing string is a `LocalizedStringResource` resolving against the SDK's bundled `Localizable.xcstrings` catalog. Override individual strings with `.default.with(...)`:
+`PulseQuestionnaireView` and the gate modifier both accept a `PulseQuestionnaireStrings` parameter. Every user-facing string is a `LocalizedStringResource` resolving against the SDK's bundled `Localizable.xcstrings` catalog. Override individual strings with `.default.with(...)`:
 
 ```swift
-.owlQuestionnaire(
+.pulseQuestionnaire(
     slug: "...",
     trigger: .afterLaunch,
     strings: .default.with(
@@ -241,28 +241,28 @@ If the questionnaire's server-side `description` field is non-empty, it override
 
 ## Trigger state accessors
 
-`Owl` exposes the persistent counters that drive the trigger evaluator — useful for debugging or building your own gates:
+`Pulse` exposes the persistent counters that drive the trigger evaluator — useful for debugging or building your own gates:
 
 ```swift
-let launches = Owl.launchCount       // total Owl.configure(...) calls
-let foregrounds = Owl.foregroundCount // total foreground transitions
-let installedAt = Owl.firstLaunchAt   // Date? — first Owl.configure(...) timestamp
+let launches = Pulse.launchCount       // total Pulse.configure(...) calls
+let foregrounds = Pulse.foregroundCount // total foreground transitions
+let installedAt = Pulse.firstLaunchAt   // Date? — first Pulse.configure(...) timestamp
 ```
 
 ## Saving and submitting from custom UI
 
-If you're rendering your own survey UI instead of `OwlQuestionnaireView`, call `Owl.saveQuestionnaireResponse(slug:answers:isComplete:)` to persist progress. Pass `isComplete: false` after each answer the user provides to save a draft (idempotent — the server upserts by `(project, slug, user_id)`, so the SDK doesn't track a response id across calls); pass `isComplete: true` on the final submit to flip `submitted_at` and fire the team notification:
+If you're rendering your own survey UI instead of `PulseQuestionnaireView`, call `Pulse.saveQuestionnaireResponse(slug:answers:isComplete:)` to persist progress. Pass `isComplete: false` after each answer the user provides to save a draft (idempotent — the server upserts by `(project, slug, user_id)`, so the SDK doesn't track a response id across calls); pass `isComplete: true` on the final submit to flip `submitted_at` and fire the team notification:
 
 ```swift
 // Save a draft after the user answers Q2
-_ = try await Owl.saveQuestionnaireResponse(
+_ = try await Pulse.saveQuestionnaireResponse(
     slug: "post-import",
     answers: ["q1": .rating(5), "q2": .text("Nice!")],
     isComplete: false
 )
 
 // Final submit — accumulate everything and flip submitted_at
-let receipt = try await Owl.saveQuestionnaireResponse(
+let receipt = try await Pulse.saveQuestionnaireResponse(
     slug: "post-import",
     answers: allAnswers,
     isComplete: true
@@ -270,15 +270,15 @@ let receipt = try await Owl.saveQuestionnaireResponse(
 assert(receipt.wasSubmitted)
 ```
 
-Every save sends the full accumulated answer set; the server merges, so going Back and re-answering an earlier question just overwrites that key in the saved row. `OwlQuestionnaireReceipt.wasSubmitted` is true exactly once per response — on the call that flipped `submitted_at` — making it safe to gate success-state UI on without separate bookkeeping.
+Every save sends the full accumulated answer set; the server merges, so going Back and re-answering an earlier question just overwrites that key in the saved row. `PulseQuestionnaireReceipt.wasSubmitted` is true exactly once per response — on the call that flipped `submitted_at` — making it safe to gate success-state UI on without separate bookkeeping.
 
 ## Errors
 
-`Owl.fetchQuestionnaire` and `Owl.saveQuestionnaireResponse` throw `OwlQuestionnaireError`:
+`Pulse.fetchQuestionnaire` and `Pulse.saveQuestionnaireResponse` throw `PulseQuestionnaireError`:
 
-- `.notConfigured` — `Owl.configure(...)` hasn't been called yet
+- `.notConfigured` — `Pulse.configure(...)` hasn't been called yet
 - `.slugNotFound` — the slug doesn't exist in the project (developer error — check spelling)
 - `.invalidAnswers(detail)` — answers don't conform to the questionnaire's schema
 - `.serverError(statusCode:body:)` / `.transportFailure(message:)` — network / 5xx
 
-`fetchQuestionnaire` doesn't throw for ineligible users — it returns an `OwlQuestionnaireFetchResult` whose `.questionnaire` is nil and whose `.ineligibleReason` (`alreadyResponded` / `globallyDismissed` / `inactive`) explains why.
+`fetchQuestionnaire` doesn't throw for ineligible users — it returns a `PulseQuestionnaireFetchResult` whose `.questionnaire` is nil and whose `.ineligibleReason` (`alreadyResponded` / `globallyDismissed` / `inactive`) explains why.

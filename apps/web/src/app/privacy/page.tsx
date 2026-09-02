@@ -3,9 +3,9 @@ import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Owlmetry",
+  title: "Privacy Policy — Pubky Pulse",
   description:
-    "Learn how Owlmetry collects, uses, and protects your data. Privacy policy for the Owlmetry analytics platform.",
+    "Learn what data Pubky Pulse collects and how a deployment handles it. Privacy policy for the Pubky Pulse observability platform.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -25,19 +25,21 @@ export default function PrivacyPolicyPage() {
 
             <h2>Who We Are</h2>
             <p>
-              Adapted Hub LLC operates Owlmetry, an analytics platform for
-              mobile and backend applications. Owlmetry is available as a hosted
-              service at{" "}
-              <a href="https://owlmetry.com">owlmetry.com</a> and as
-              self-hosted open-source software.
+              Pubky maintains Pubky Pulse, an observability platform for web,
+              backend and mobile apps. Pubky Pulse is self-hosted, MIT-licensed
+              open-source software: every deployment is run and operated by
+              whoever installed it, on their own infrastructure. This policy
+              describes what the software collects and stores &mdash; the
+              operator of the deployment you use is the party responsible for
+              it.
             </p>
 
             <h2>Information We Collect</h2>
 
             <h3>Platform Users (You)</h3>
             <p>
-              When you create an Owlmetry account, we collect the following
-              information:
+              When you create a Pubky Pulse account, the following
+              information is stored:
             </p>
             <ul>
               <li>
@@ -92,8 +94,8 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Network connection type</strong> (wifi, cellular,
-                ethernet, or offline — attached to every event by the mobile
-                SDKs)
+                ethernet, or offline — attached to every event by the Swift and
+                Android SDKs)
               </li>
             </ul>
 
@@ -107,9 +109,9 @@ export default function PrivacyPolicyPage() {
               <li>Contact lists, photos, or other device content</li>
             </ul>
 
-            <h2>How We Use Your Information</h2>
+            <h2>How the Data Is Used</h2>
             <ul>
-              <li>Provide and operate the Owlmetry analytics service</li>
+              <li>Provide and operate the Pubky Pulse deployment you use</li>
               <li>Authenticate your account and maintain your session</li>
               <li>
                 Send verification codes and team invitation emails
@@ -117,15 +119,15 @@ export default function PrivacyPolicyPage() {
               <li>Monitor service health and prevent abuse</li>
             </ul>
             <p>
-              We do not use your data for advertising, profiling, or any purpose
-              other than providing the service.
+              Pubky Pulse contains no advertising, profiling, or third-party
+              tracking of any kind.
             </p>
 
             <h2>Data Storage and Security</h2>
             <ul>
               <li>
-                Data is stored in a PostgreSQL database hosted on DigitalOcean
-                infrastructure in the United States
+                Data is stored in a single PostgreSQL database on the
+                infrastructure the operator chose
               </li>
               <li>
                 API keys are SHA-256 hashed before storage — full keys are shown
@@ -144,8 +146,8 @@ export default function PrivacyPolicyPage() {
               </li>
             </ul>
             <p>
-              If you self-host Owlmetry, your data stays entirely on your own
-              infrastructure.
+              Because Pubky Pulse is self-hosted, your data stays entirely on the
+              operator&apos;s own infrastructure.
             </p>
 
             <h2>Data Retention</h2>
@@ -160,33 +162,28 @@ export default function PrivacyPolicyPage() {
                 and permanently removed after 7 days
               </li>
               <li>Email verification codes expire after 10 minutes</li>
-              <li>
-                Database backups are retained for 7 days on the hosted service
-              </li>
               <li>Team invitations expire after 7 days</li>
             </ul>
 
             <h2>Third-Party Services</h2>
             <p>
-              We use a minimal set of third-party services. We do not use any
-              analytics, advertising, or tracking services on our own platform.
+              Pubky Pulse ships with no analytics, advertising, or tracking
+              services. A deployment needs one external service:
             </p>
             <ul>
               <li>
-                <strong>Resend</strong> — email delivery for verification codes
-                and team invitations
-              </li>
-              <li>
-                <strong>Cloudflare</strong> — CDN, SSL termination, and DDoS
-                protection
-              </li>
-              <li>
-                <strong>DigitalOcean</strong> — infrastructure hosting
+                <strong>Resend</strong> — email delivery for verification codes,
+                team invitations, and notification emails
               </li>
             </ul>
+            <p>
+              Anything else &mdash; where the database and servers live, whether
+              a CDN sits in front &mdash; is chosen by the operator of the
+              deployment.
+            </p>
 
             <h2>Cookies</h2>
-            <p>Owlmetry uses a single authentication cookie:</p>
+            <p>Pubky Pulse uses a single authentication cookie:</p>
             <ul>
               <li>
                 <strong>Name:</strong> <code>token</code>
@@ -208,8 +205,8 @@ export default function PrivacyPolicyPage() {
 
             <h2>Our Role as a Data Processor</h2>
             <p>
-              When you use Owlmetry to collect data about your application&apos;s
-              users, you are the data controller and Owlmetry acts as a data
+              When you use Pubky Pulse to collect data about your application&apos;s
+              users, you are the data controller and Pubky Pulse acts as a data
               processor (under GDPR) or service provider (under CCPA). This
               means:
             </p>
@@ -218,7 +215,7 @@ export default function PrivacyPolicyPage() {
                 You determine what data is collected from your users and why
               </li>
               <li>
-                We process that data solely to provide the Owlmetry service to
+                We process that data solely to provide the Pubky Pulse service to
                 you
               </li>
               <li>
@@ -258,9 +255,9 @@ export default function PrivacyPolicyPage() {
               </li>
             </ul>
             <p>
-              To exercise any of these rights, contact us at{" "}
-              <a href="mailto:privacy@owlmetry.com">privacy@owlmetry.com</a>.
-              We will respond within 30 days.
+              To exercise any of these rights, contact the operator of the Pubky
+              Pulse deployment you use. The software provides the export and
+              deletion endpoints they need to answer you.
             </p>
 
             <h2>Your Rights Under CCPA</h2>
@@ -285,43 +282,38 @@ export default function PrivacyPolicyPage() {
               </li>
             </ul>
             <p>
-              To exercise any of these rights, contact us at{" "}
-              <a href="mailto:privacy@owlmetry.com">privacy@owlmetry.com</a>.
-            </p>
-
-            <h2>International Data Transfers</h2>
-            <p>
-              Data collected through the hosted service is stored in the United
-              States. If you are located outside the United States, your data
-              will be transferred to and processed in the United States. We rely
-              on standard contractual clauses where required for lawful
-              international data transfers.
+              To exercise any of these rights, contact the operator of the Pubky
+              Pulse deployment you use.
             </p>
 
             <h2>Children&apos;s Privacy</h2>
             <p>
-              Owlmetry is not directed at children under 16 years of age. We do
+              Pubky Pulse is not directed at children under 16 years of age. We do
               not knowingly collect personal information from children under 16.
-              If you believe we have collected information from a child under 16,
-              please contact us at{" "}
-              <a href="mailto:privacy@owlmetry.com">privacy@owlmetry.com</a>{" "}
-              and we will promptly delete it.
+              If you believe a deployment has collected information from a child
+              under 16, contact its operator so they can delete it.
             </p>
 
             <h2>Changes to This Policy</h2>
             <p>
-              We may update this privacy policy from time to time. The effective
-              date at the top of this page indicates when the policy was last
-              revised. If we make material changes, we will notify you by email.
+              This privacy policy may be updated from time to time. The
+              effective date at the top of this page indicates when it was last
+              revised.
             </p>
 
-            <h2>Contact Us</h2>
+            <h2>Contact</h2>
             <p>
-              If you have questions about this privacy policy or our data
-              practices, contact us at:
-            </p>
-            <p>
-              <a href="mailto:privacy@owlmetry.com">privacy@owlmetry.com</a>
+              Questions about the data a specific deployment holds go to its
+              operator. Questions about how the software itself handles data can
+              be raised at{" "}
+              <a
+                href="https://github.com/pubky/pubky-pulse"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                github.com/pubky/pubky-pulse
+              </a>
+              .
             </p>
           </article>
         </div>

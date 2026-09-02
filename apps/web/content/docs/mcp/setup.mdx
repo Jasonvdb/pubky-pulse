@@ -1,11 +1,11 @@
 ---
 title: Setup
-description: Configure your MCP client to connect to Owlmetry — Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, and Roo Code.
+description: Configure your MCP client to connect to Pubky Pulse — Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, and Roo Code.
 ---
 
 ## Prerequisites
 
-You need an **agent API key** (`owl_agent_*`) to connect. A default agent key is automatically created when you sign up — sign in below to see it pre-filled in all editor configs.
+You need an **agent API key** (`pulse_agent_*`) to connect. A default agent key is created for you on first sign-in — sign in below to see it pre-filled in all editor configs.
 
 <Callout>
 Agent keys get all permissions by default and are scoped to your team. You can also create additional keys from the **API Keys** page in the dashboard. See [Authentication](/docs/concepts/authentication) for details on key types and permissions.
@@ -15,7 +15,7 @@ Agent keys get all permissions by default and are scoped to your team. You can a
 
 | Environment | URL |
 |-------------|-----|
-| Hosted (owlmetry.com) | `https://api.owlmetry.com/mcp` |
+| Pubky's instance | `https://api.pulse.pubky.org/mcp` |
 | Self-hosted | `https://your-server.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
 
@@ -27,11 +27,12 @@ Pick your editor below for copy-pasteable config. We support **Claude Code**, **
 
 ## Other MCP Clients
 
-Any MCP-compatible client can connect to Owlmetry. The endpoint uses:
+Any MCP-compatible client can connect to Pubky Pulse. The endpoint uses:
 
+- **Server name:** `pubky-pulse`
 - **Transport:** Streamable HTTP (stateless JSON)
-- **URL:** `https://api.owlmetry.com/mcp`
-- **Auth:** `Authorization: Bearer owl_agent_YOUR_KEY_HERE` header (required on POST and GET)
+- **URL:** `https://api.pulse.pubky.org/mcp` (self-hosted: your own `/mcp` endpoint)
+- **Auth:** `Authorization: Bearer pulse_agent_YOUR_KEY_HERE` header (required on POST and GET)
 - **Mode:** Stateless JSON — each POST request is independent, no session initialization needed. GET opens an authenticated SSE stream; DELETE returns 405.
 
 ## MCP Resources
@@ -40,13 +41,13 @@ In addition to the tool surface, the server exposes one MCP resource that client
 
 | URI | Description |
 |-----|-------------|
-| `owlmetry://guide` | Operational guide — concepts, resource hierarchy, workflows, and conventions |
+| `pubky-pulse://guide` | Operational guide — concepts, resource hierarchy, workflows, and conventions |
 
 Supported clients read the guide automatically so agents understand how to use the tools effectively. The full SDK and platform documentation lives at [/docs](/docs).
 
 ## Authentication
 
-The MCP endpoint only accepts agent API keys (`owl_agent_*`). Client keys (`owl_client_*`) and JWT tokens are rejected with 401.
+The MCP endpoint only accepts agent API keys (`pulse_agent_*`). Client keys (`pulse_client_*`) and JWT tokens are rejected with 401.
 
 Permissions are enforced per-tool — if your agent key doesn't have `projects:write`, the `create-project` tool will return an error. See [Authentication](/docs/concepts/authentication) for details on API key permissions.
 
@@ -64,6 +65,6 @@ After setup, ask the agent to call the `whoami` tool. It should return your key 
 ```
 
 If you see an authentication error, check that:
-1. The key starts with `owl_agent_` (not `owl_client_`)
+1. The key starts with `pulse_agent_` (not `pulse_client_`)
 2. The key hasn't expired
 3. The URL points to the correct server

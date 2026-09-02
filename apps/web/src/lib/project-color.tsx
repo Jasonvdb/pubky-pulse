@@ -1,4 +1,4 @@
-import { PROJECT_COLOR_FALLBACK } from "@owlmetry/shared/project-colors";
+import { PROJECT_COLOR_FALLBACK } from "@pubky-pulse/shared/project-colors";
 
 interface ProjectDotProps {
   color: string | null | undefined;

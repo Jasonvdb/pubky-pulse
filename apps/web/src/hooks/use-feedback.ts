@@ -8,7 +8,7 @@ import type {
   FeedbackDetailResponse,
   FeedbackQueryParams,
   FeedbackStatus,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 export function useFeedback(filters: Partial<FeedbackQueryParams> = {}) {
   const qs = buildQueryString(filters);

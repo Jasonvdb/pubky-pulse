@@ -4,7 +4,7 @@ import {
   validatePermissionsForKeyType,
   ALLOWED_PERMISSIONS_BY_KEY_TYPE,
   DEFAULT_API_KEY_PERMISSIONS,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import {
   buildApp,
   truncateAll,
@@ -320,7 +320,7 @@ describe("API key permission enforcement — apps routes", () => {
       payload: {
         name: "Agent Created App",
         platform: "android",
-        bundle_id: "com.owlmetry.agent",
+        bundle_id: "org.pubky.pulse.agent",
         project_id: testData.projectId,
       },
     });
@@ -338,7 +338,7 @@ describe("API key permission enforcement — apps routes", () => {
       payload: {
         name: "Nope",
         platform: "apple",
-        bundle_id: "com.owlmetry.nope",
+        bundle_id: "org.pubky.pulse.nope",
         project_id: testData.projectId,
       },
     });
@@ -574,7 +574,7 @@ describe("API key team boundary enforcement", () => {
 
   beforeEach(async () => {
     // Create a second user (gets their own team)
-    const other = await createUserAndGetToken(app, "other@owlmetry.com", "Other");
+    const other = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
     otherTeamToken = other.token;
     otherTeamId = other.teamId;
 
@@ -829,9 +829,9 @@ describe("JWT user permission bypass", () => {
     const { token, teamId } = await getTokenAndTeamId(app);
 
     // Create a second user and add as member
-    const member = await createUserAndGetToken(app, "member@owlmetry.com", "Member");
+    const member = await createUserAndGetToken(app, "member@pulse.pubky.org", "Member");
     await addTeamMember(teamId, member.userId, "member");
-    const { token: memberToken } = await createUserAndGetToken(app, "member@owlmetry.com");
+    const { token: memberToken } = await createUserAndGetToken(app, "member@pulse.pubky.org");
 
     // Member can read
     const readRes = await app.inject({
@@ -858,7 +858,7 @@ describe("JWT user permission bypass", () => {
 
   it("JWT user cannot access other team's resources", async () => {
     // Create second user (gets their own team)
-    const { token: outsiderToken } = await createUserAndGetToken(app, "outsider@owlmetry.com", "Outsider");
+    const { token: outsiderToken } = await createUserAndGetToken(app, "outsider@pulse.pubky.org", "Outsider");
 
     // Cannot get test team's project
     const projRes = await app.inject({
@@ -1075,7 +1075,7 @@ describe("PATCH /v1/auth/keys/:id", () => {
     const { keyId } = await createKeyAndGetId(token, teamId);
 
     // Create another user (different team)
-    const { token: outsiderToken } = await createUserAndGetToken(app, "outsider@owlmetry.com", "Outsider");
+    const { token: outsiderToken } = await createUserAndGetToken(app, "outsider@pulse.pubky.org", "Outsider");
 
     const res = await app.inject({
       method: "PATCH",
@@ -1092,9 +1092,9 @@ describe("PATCH /v1/auth/keys/:id", () => {
     const { keyId } = await createKeyAndGetId(token, teamId);
 
     // Create second user and add as member
-    const memberUser = await createUserAndGetToken(app, "member-update@owlmetry.com", "Member");
+    const memberUser = await createUserAndGetToken(app, "member-update@pulse.pubky.org", "Member");
     await addTeamMember(teamId, memberUser.userId, "member");
-    const { token: memberToken } = await createUserAndGetToken(app, "member-update@owlmetry.com");
+    const { token: memberToken } = await createUserAndGetToken(app, "member-update@pulse.pubky.org");
 
     const res = await app.inject({
       method: "PATCH",

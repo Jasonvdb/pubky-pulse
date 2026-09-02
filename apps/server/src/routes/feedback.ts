@@ -6,19 +6,19 @@ import {
   apps,
   projects,
   appUsers,
-} from "@owlmetry/db";
+} from "@pubky-pulse/db";
 import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   FEEDBACK_STATUSES,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type {
   FeedbackStatus,
   FeedbackQueryParams,
   UpdateFeedbackRequest,
   CreateFeedbackCommentRequest,
   UpdateFeedbackCommentRequest,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { resolveProject } from "../utils/project.js";

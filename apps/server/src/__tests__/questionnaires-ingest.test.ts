@@ -15,7 +15,7 @@ import {
 import {
   QUESTIONNAIRES_DISMISSED_PROPERTY,
   type QuestionnaireSchema,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 let app: FastifyInstance;
 let dbClient: postgres.Sql;

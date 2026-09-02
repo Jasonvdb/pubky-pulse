@@ -1,4 +1,4 @@
-import type { LogLevel } from "@owlmetry/shared";
+import type { LogLevel } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 type Tone = "red" | "yellow" | "cyan" | "gray";

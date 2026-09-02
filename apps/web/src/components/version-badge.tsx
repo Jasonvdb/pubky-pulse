@@ -1,5 +1,5 @@
 // Deep import bypasses the barrel export which pulls in node:crypto
-import { compareToLatest, compareVersions } from "@owlmetry/shared/version";
+import { compareToLatest, compareVersions } from "@pubky-pulse/shared/version";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";

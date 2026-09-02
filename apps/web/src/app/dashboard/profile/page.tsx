@@ -7,7 +7,7 @@ import {
   SPARKLINE_WINDOW_DAYS,
   resolveSparklineWindowDays,
   type SparklineWindowDays,
-} from "@owlmetry/shared/preferences";
+} from "@pubky-pulse/shared/preferences";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

@@ -7,10 +7,10 @@ User properties let you attach custom key-value data to the current user. Proper
 
 ## Setting Properties
 
-Call `Owl.setUserProperties()` after the user is identified:
+Call `Pulse.setUserProperties()` after the user is identified:
 
 ```kotlin
-Owl.setUserProperties(mapOf(
+Pulse.setUserProperties(mapOf(
     "plan" to "premium",
     "org" to "acme",
 ))
@@ -25,7 +25,7 @@ Set properties whenever user-level data changes:
 ```kotlin
 // After a successful purchase
 fun handlePurchaseComplete(product: Product) {
-    Owl.setUserProperties(mapOf(
+    Pulse.setUserProperties(mapOf(
         "subscriber" to "true",
         "subscription_product" to product.id,
     ))
@@ -33,7 +33,7 @@ fun handlePurchaseComplete(product: Product) {
 
 // After profile update
 fun handleProfileSaved(user: User) {
-    Owl.setUserProperties(mapOf(
+    Pulse.setUserProperties(mapOf(
         "company" to user.company,
         "role" to user.role,
     ))
@@ -45,7 +45,7 @@ fun handleProfileSaved(user: User) {
 Set a value to an empty string to delete it:
 
 ```kotlin
-Owl.setUserProperties(mapOf("temporary_flag" to ""))
+Pulse.setUserProperties(mapOf("temporary_flag" to ""))
 ```
 
 ## Merge Behavior
@@ -54,17 +54,17 @@ Properties are merged server-side. Only the keys you send are updated; other key
 
 ```kotlin
 // First call
-Owl.setUserProperties(mapOf("plan" to "free", "org" to "acme"))
+Pulse.setUserProperties(mapOf("plan" to "free", "org" to "acme"))
 // Server state: { plan: "free", org: "acme" }
 
 // Second call
-Owl.setUserProperties(mapOf("plan" to "premium"))
+Pulse.setUserProperties(mapOf("plan" to "premium"))
 // Server state: { plan: "premium", org: "acme" }
 ```
 
 ## With Identity
 
-Properties follow the current user identity. If the user is anonymous, properties are set on the anonymous user. When the user is later identified via `Owl.setUser()`, properties are automatically merged into the real user.
+Properties follow the current user identity. If the user is anonymous, properties are set on the anonymous user. When the user is later identified via `Pulse.setUser()`, properties are automatically merged into the real user.
 
 ## Limits
 

@@ -1,4 +1,4 @@
-import { cleanupSoftDeletedResources } from "@owlmetry/db";
+import { cleanupSoftDeletedResources } from "@pubky-pulse/db";
 import type { JobHandler } from "../services/job-runner.js";
 
 export const softDeleteCleanupHandler: JobHandler = async (ctx) => {

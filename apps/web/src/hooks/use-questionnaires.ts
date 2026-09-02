@@ -14,7 +14,7 @@ import type {
   QuestionnaireResponseStatus,
   QuestionnaireSchema,
   TeamQuestionnaireListResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 export function useQuestionnaires(
   projectId: string | undefined,

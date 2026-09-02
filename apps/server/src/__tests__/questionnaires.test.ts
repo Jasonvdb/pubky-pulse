@@ -11,7 +11,7 @@ import {
   TEST_BUNDLE_ID,
   TEST_DB_URL,
 } from "./setup.js";
-import type { QuestionnaireSchema } from "@owlmetry/shared";
+import type { QuestionnaireSchema } from "@pubky-pulse/shared";
 
 let app: FastifyInstance;
 let token: string;

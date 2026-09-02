@@ -1,6 +1,6 @@
 "use client";
 
-import type { FunnelStepAnalytics } from "@owlmetry/shared";
+import type { FunnelStepAnalytics } from "@pubky-pulse/shared";
 
 interface FunnelChartProps {
   steps: FunnelStepAnalytics[];

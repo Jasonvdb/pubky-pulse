@@ -24,7 +24,7 @@ Two error events are considered the same issue when they produce the same finger
 
 - **Normalized message**: Variable parts stripped — `"User 123 not found"` and `"User 456 not found"` both normalize to `"user <n> not found"`.
 - **Source module**: The `source_module` field from the event, if present.
-- **Discriminator** (optional): The fingerprint can include an extra discriminator so semantically distinct errors don't collapse onto a single issue. Two cases use one today: `sdk:network_request` events (see below) and any error event carrying an `_error_type` reserved attribute (set automatically when you call `Owl.error(error)` with an Error/Exception value — different runtime types stay on separate issues even when the message is identical).
+- **Discriminator** (optional): The fingerprint can include an extra discriminator so semantically distinct errors don't collapse onto a single issue. Two cases use one today: `sdk:network_request` events (see below) and any error event carrying an `_error_type` reserved attribute (set automatically when you call `Pulse.error(error)` with an Error/Exception value — different runtime types stay on separate issues even when the message is identical).
 - **App + dev mode**: Fingerprints are scoped per app and per dev/prod mode.
 
 The normalization strips:
@@ -45,7 +45,7 @@ Network issues get a human-readable title `Network error: METHOD host/path` (e.g
 
 ## Session-burst aliasing
 
-A single logical failure often produces multiple error events — a loader throws, a caller catches and logs, an `OwlOperation.fail(error:)` emits `metric:X:fail`. Each has its own `(message, source_module)`, so each hashes to a distinct fingerprint. Without aliasing, a single failure would create many separate issues.
+A single logical failure often produces multiple error events — a loader throws, a caller catches and logs, a `PulseOperation.fail(error:)` emits `metric:X:fail`. Each has its own `(message, source_module)`, so each hashes to a distinct fingerprint. Without aliasing, a single failure would create many separate issues.
 
 To avoid that, the scan clusters events by session and time. Within one session, any set of error events whose timestamps all fall within **5 seconds** of the burst's first event is treated as one logical failure.
 
@@ -66,7 +66,7 @@ Each issue tracks **occurrences** — one per unique session where the error hap
 - **Session ID**: Links back to the session's full event stream for investigation.
 - **User ID**: Which user was affected (if known).
 - **App version**: Which version the error occurred in.
-- **SDK name and version**: Which Owlmetry SDK (e.g. `owlmetry-swift`) and SDK version produced the originating event. Auto-stamped by official SDKs, nullable.
+- **SDK name and version**: Which Pubky Pulse SDK (e.g. `pubky-pulse-swift`) and SDK version produced the originating event. Auto-stamped by official SDKs, nullable.
 - **Environment**: iOS, Android, web, backend, etc.
 - **Timestamp**: When the error occurred.
 
@@ -115,7 +115,7 @@ When the issue-scan job processes a new occurrence for an issue currently in `sn
 
 When the scan job finds an error matching a `resolved` issue, it compares the event's `app_version` against the issue's `resolved_at_version`. If the event version is newer, the issue is automatically set to `regressed`.
 
-For this reason, `resolved_at_version` is **required** when transitioning an issue to `resolved` (across the dashboard, iOS app, MCP `version`, and the REST API). If you don't have a fix version, pick the option that matches your intent: use `silenced` for a known issue you've decided to live with (e.g. a transient infrastructure blip with nothing to fix — won't bother you again), or `snoozed` if you suspect it was a one-off and want to be re-alerted only if it actually recurs. Resolving without a version would silently disable regression detection for that issue, which is rarely what you want.
+For this reason, `resolved_at_version` is **required** when transitioning an issue to `resolved` (across the dashboard, MCP `version`, and the REST API). If you don't have a fix version, pick the option that matches your intent: use `silenced` for a known issue you've decided to live with (e.g. a transient infrastructure blip with nothing to fix — won't bother you again), or `snoozed` if you suspect it was a one-off and want to be re-alerted only if it actually recurs. Resolving without a version would silently disable regression detection for that issue, which is rarely what you want.
 
 The comparison is **semver-aware** — `1.10.0` correctly regresses past `1.9.0` (and standard build-number suffixes like `1.2.3 (456)` plus date-style versions like `2024.10.15` are handled). See [Latest Version Detection](/docs/concepts/latest-version-detection) for the full comparator rules.
 

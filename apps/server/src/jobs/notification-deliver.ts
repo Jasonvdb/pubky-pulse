@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { notificationDeliveries } from "@owlmetry/db";
+import { notificationDeliveries } from "@pubky-pulse/db";
 import type { JobHandler } from "../services/job-runner.js";
 import type { NotificationDispatcher } from "../services/notifications/dispatcher.js";
 

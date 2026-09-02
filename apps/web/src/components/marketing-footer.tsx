@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { OwlLogo } from "@/components/owl-logo";
+import { PulseLogo } from "@/components/pulse-logo";
 
 const columns = [
   {
     title: "Product",
     links: [
       { label: "Features", href: "#features" },
-      { label: "Pricing", href: "#pricing" },
+      { label: "Self-Hosted", href: "#self-hosted" },
       { label: "Get Started", href: "#get-started" },
       { label: "About", href: "/about" },
     ],
@@ -19,7 +19,7 @@ const columns = [
       { label: "Android SDK", href: "/docs/sdks/android" },
       { label: "Node.js SDK", href: "/docs/sdks/node" },
       { label: "API Reference", href: "/docs/api-reference" },
-      { label: "GitHub", href: "https://github.com/owlmetry/owlmetry" },
+      { label: "GitHub", href: "https://github.com/pubky/pubky-pulse" },
     ],
   },
   {
@@ -32,7 +32,8 @@ const columns = [
   {
     title: "Contact",
     links: [
-      { label: "jason@owlmetry.com", href: "mailto:jason@owlmetry.com" },
+      { label: "GitHub Issues", href: "https://github.com/pubky/pubky-pulse/issues" },
+      { label: "Discussions", href: "https://github.com/pubky/pubky-pulse/discussions" },
     ],
   },
 ];
@@ -44,9 +45,9 @@ export function MarketingFooter() {
         <div className="grid gap-12 md:grid-cols-5">
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <OwlLogo className="h-7 w-7" />
+              <PulseLogo className="h-7 w-7" />
               <span className="text-lg font-semibold tracking-tight text-white/90">
-                Owlmetry
+                Pubky Pulse
               </span>
             </div>
             <p className="text-sm text-white/35 leading-relaxed">
@@ -75,9 +76,9 @@ export function MarketingFooter() {
         </div>
         <div className="mt-16 flex items-center justify-between border-t border-white/[0.06] pt-8">
           <p className="text-xs text-white/25">
-            &copy; {new Date().getFullYear()} Owlmetry
+            &copy; {new Date().getFullYear()} Pubky Pulse
           </p>
-          <p className="text-xs text-white/25">Open Source</p>
+          <p className="text-xs text-white/25">Open source — MIT licensed</p>
         </div>
       </div>
     </footer>

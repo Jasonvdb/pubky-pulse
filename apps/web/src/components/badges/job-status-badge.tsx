@@ -1,4 +1,4 @@
-import type { JobStatus } from "@owlmetry/shared";
+import type { JobStatus } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 interface JobStatusBadgeProps {

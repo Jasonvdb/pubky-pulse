@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { FunnelDefinitionResponse } from "@owlmetry/shared";
+import type { FunnelDefinitionResponse } from "@pubky-pulse/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProjectDot } from "@/lib/project-color";
 import { StaggerItem } from "@/components/ui/animated-page";

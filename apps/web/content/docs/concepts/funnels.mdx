@@ -6,16 +6,16 @@ description: Define multi-step funnels to measure user conversion and drop-off a
 Funnels let you define an ordered sequence of steps that users should complete, then measure how many users reach each step and where they drop off. They are useful for tracking conversion flows like onboarding, checkout, or signup.
 
 ```text title="Add funnel tracking with your coding agent"
-Add Owlmetry funnel tracking to this project. Connect the Owlmetry MCP
-server first (https://owlmetry.com/docs/mcp) — it exposes its integration
-guide as the owlmetry://guide resource, and the SDK docs are at
-https://owlmetry.com/docs/sdks.
+Add Pubky Pulse funnel tracking to this project. Connect the Pubky Pulse MCP
+server first (https://pulse.pubky.org/docs/mcp) — it exposes its integration
+guide as the pubky-pulse://guide resource, and the SDK docs are at
+https://pulse.pubky.org/docs/sdks.
 
 - Identify 2-3 key user journeys worth measuring conversion on
   (e.g., onboarding, checkout, activation).
 - For each journey, define the funnel on the server with the
   create-funnel MCP tool using 3-6 ordered steps, then add
-  Owl.step("step-name") calls at each progression point in the code.
+  Pulse.step("step-name") calls at each progression point in the code.
 - Each step must be a point every user passes through — don't
   include optional side-paths or engagement actions as steps.
 - Split alternative paths into separate funnels (e.g., screenshot
@@ -86,7 +86,7 @@ Closed mode answers: "How many users completed the full progression from step 1 
 
 Both modes group events by `user_id`. A "user" in funnel analytics means a distinct `user_id` value. In closed mode, the system tracks each user's earliest timestamp at each step and requires strict chronological ordering — step N must occur after step N-1.
 
-**Important:** Events with no `user_id` are excluded from funnel analytics. The Swift SDK automatically attaches an anonymous `owl_anon_*` ID to every event, so those events *do* flow into funnels. On the Node SDK you must scope an instance to a user with `Owl.withUser("…")` before emitting `step()` — global `Owl.step()` calls have no `user_id` and are excluded from funnel results. Call `Owl.setUser("real-id")` (Swift) after sign-in to claim earlier anonymous events to the real user.
+**Important:** Events with no `user_id` are excluded from funnel analytics. The Swift SDK automatically attaches an anonymous `pulse_anon_*` ID to every event, so those events *do* flow into funnels. On the Node SDK you must scope an instance to a user with `Pulse.withUser("…")` before emitting `step()` — global `Pulse.step()` calls have no `user_id` and are excluded from funnel results. Call `Pulse.setUser("real-id")` (Swift) after sign-in to claim earlier anonymous events to the real user.
 
 ## Analytics Results
 

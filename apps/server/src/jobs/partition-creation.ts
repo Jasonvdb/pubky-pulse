@@ -2,7 +2,7 @@ import {
   ensurePartitions,
   ensureMetricEventPartitions,
   ensureFunnelEventPartitions,
-} from "@owlmetry/db";
+} from "@pubky-pulse/db";
 import type { JobHandler } from "../services/job-runner.js";
 
 export const partitionCreationHandler: JobHandler = async (ctx) => {

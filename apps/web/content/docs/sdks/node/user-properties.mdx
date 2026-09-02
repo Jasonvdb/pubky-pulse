@@ -7,15 +7,15 @@ User properties let you attach custom key-value data to a user. Properties are m
 
 ## Setting Properties
 
-Use `Owl.setUserProperties()` with a user ID, or call it on a scoped instance:
+Use `Pulse.setUserProperties()` with a user ID, or call it on a scoped instance:
 
 ```typescript
 // With explicit user ID
-Owl.setUserProperties("user_123", { plan: "premium", org: "acme" });
+Pulse.setUserProperties("user_123", { plan: "premium", org: "acme" });
 
 // With scoped instance
-const owl = Owl.withUser("user_123");
-owl.setUserProperties({ plan: "premium", org: "acme" });
+const pulse = Pulse.withUser("user_123");
+pulse.setUserProperties({ plan: "premium", org: "acme" });
 ```
 
 The call is fire-and-forget. Properties are sent to the server in the background with automatic retries.
@@ -28,7 +28,7 @@ Set properties whenever user-level data changes:
 // After a subscription change
 app.post("/webhooks/billing", async (req, res) => {
     const { userId, plan } = req.body;
-    Owl.setUserProperties(userId, {
+    Pulse.setUserProperties(userId, {
         plan,
         subscribed_at: new Date().toISOString(),
     });
@@ -37,8 +37,8 @@ app.post("/webhooks/billing", async (req, res) => {
 
 // After profile update
 app.patch("/api/profile", async (req, res) => {
-    const owl = Owl.withUser(req.auth.userId);
-    owl.setUserProperties({
+    const pulse = Pulse.withUser(req.auth.userId);
+    pulse.setUserProperties({
         company: req.body.company,
         role: req.body.role,
     });
@@ -51,7 +51,7 @@ app.patch("/api/profile", async (req, res) => {
 Set a value to an empty string to delete it:
 
 ```typescript
-owl.setUserProperties({ temporary_flag: "" });
+pulse.setUserProperties({ temporary_flag: "" });
 ```
 
 ## Merge Behavior
@@ -60,11 +60,11 @@ Properties are merged server-side. Only the keys you send are updated; other key
 
 ```typescript
 // First call
-owl.setUserProperties({ plan: "free", org: "acme" });
+pulse.setUserProperties({ plan: "free", org: "acme" });
 // Server state: { plan: "free", org: "acme" }
 
 // Second call
-owl.setUserProperties({ plan: "premium" });
+pulse.setUserProperties({ plan: "premium" });
 // Server state: { plan: "premium", org: "acme" }
 ```
 

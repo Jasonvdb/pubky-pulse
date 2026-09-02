@@ -15,7 +15,7 @@ The API server auto-loads `.env` via dotenv on startup. The web dashboard reads 
 | `JWT_SECRET` | Random string used to sign JWT tokens. Generate with `openssl rand -base64 48`. Must be kept secret. Changing this value invalidates all existing sessions. |
 | `CORS_ORIGINS` | Allowed origin for cross-origin requests from the web dashboard. Set to your dashboard URL (e.g., `https://yourdomain.com`). |
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain authentication. Set to `.yourdomain.com` (note the leading dot) so the auth cookie is shared between `yourdomain.com` and `api.yourdomain.com`. Required when the API and dashboard are on different subdomains. |
-| `OWLMETRY_ATTACHMENTS_SIGNING_SECRET` | **Required in production.** Random string used to sign attachment download URLs. Generate with `openssl rand -hex 32`. Must differ from `JWT_SECRET`. Outside production, falls back to `JWT_SECRET` so local dev just works. |
+| `PULSE_ATTACHMENTS_SIGNING_SECRET` | **Required in production.** Random string used to sign attachment download URLs. Generate with `openssl rand -hex 32`. Must differ from `JWT_SECRET`. Outside production, falls back to `JWT_SECRET` so local dev just works. |
 
 ## Optional variables
 
@@ -25,19 +25,19 @@ The API server auto-loads `.env` via dotenv on startup. The web dashboard reads 
 | `HOST` | `0.0.0.0` | Bind address for the API server. |
 | `MAX_DATABASE_SIZE_GB` | `0` (disabled) | When set to a positive number, enables automatic pruning. An hourly check (plus one on startup) drops the oldest monthly event partitions when the database exceeds this size. |
 | `RESEND_API_KEY` | (empty) | API key from [Resend](https://resend.com) for sending verification emails. If not set, verification codes are printed to the server console (useful for single-user or development setups). |
-| `EMAIL_FROM` | `noreply@owlmetry.com` | The "from" address used when sending verification and invitation emails via Resend. |
+| `EMAIL_FROM` | `noreply@pulse.pubky.org` | The "from" address used when sending verification and invitation emails via Resend. Replace the default with an address on your own domain. |
 | `NODE_ENV` | `development` | Set to `production` for production deployments. Affects cookie security (`secure` flag) and Next.js behavior. |
 | `WEB_APP_URL` | `http://localhost:3000` | Base URL of the web dashboard. Used for links in invitation emails and redirects. Set to your dashboard URL in production (e.g., `https://yourdomain.com`). |
-| `API_PUBLIC_URL` | `https://api.owlmetry.com` | Public base URL of the API server. Included in attachment upload/download URLs returned to SDKs and the dashboard. Set to your API subdomain when self-hosting. |
+| `API_PUBLIC_URL` | `https://api.pulse.pubky.org` | Public base URL of the API server. Included in attachment upload/download URLs returned to SDKs and the dashboard. The default is only a placeholder — set it to your own API subdomain. |
 | `SYSTEM_JOBS_ALERT_EMAIL` | (empty) | If set, system job runs send a completion/failure email to this address. Leave empty to disable system-job alerts. |
-| `OWLMETRY_ATTACHMENTS_PATH` | `./data/attachments` (dev) / `/opt/owlmetry-attachments` (prod) | Directory on disk where event attachment bytes are stored. Must be writable by the API server process. Exclude from `pg_dump` backups — attachments live on disk, not in Postgres. |
-| `OWLMETRY_ATTACHMENTS_INTERNAL_URI` | (empty) | Optional internal URI prefix used by nginx `X-Accel-Redirect` when serving attachment downloads. See `deploy/attachments-nginx-snippet.conf`. |
+| `PULSE_ATTACHMENTS_PATH` | `./data/attachments` (dev) / `/opt/pubky-pulse-attachments` (prod) | Directory on disk where event attachment bytes are stored. Must be writable by the API server process. Exclude from `pg_dump` backups — attachments live on disk, not in Postgres. |
+| `PULSE_ATTACHMENTS_INTERNAL_URI` | (empty) | Optional internal URI prefix used by nginx `X-Accel-Redirect` when serving attachment downloads. See `deploy/attachments-nginx-snippet.conf`. |
 
 ## Example `.env` file
 
 ```bash
 NODE_ENV=production
-DATABASE_URL=postgresql://owlmetry:yourpassword@localhost:5432/owlmetry
+DATABASE_URL=postgresql://pubky_pulse:yourpassword@localhost:5432/pubky_pulse
 JWT_SECRET=your-random-64-char-secret-here
 PORT=4000
 HOST=0.0.0.0
@@ -51,9 +51,9 @@ EMAIL_FROM=noreply@yourdomain.com
 SYSTEM_JOBS_ALERT_EMAIL=ops@yourdomain.com
 
 # Event attachments
-OWLMETRY_ATTACHMENTS_PATH=/opt/owlmetry-attachments
-OWLMETRY_ATTACHMENTS_SIGNING_SECRET=your-random-hex-string-32-bytes
-OWLMETRY_ATTACHMENTS_INTERNAL_URI=/_attachments/
+PULSE_ATTACHMENTS_PATH=/opt/pubky-pulse-attachments
+PULSE_ATTACHMENTS_SIGNING_SECRET=your-random-hex-string-32-bytes
+PULSE_ATTACHMENTS_INTERNAL_URI=/_attachments/
 ```
 
 ## Migration note
@@ -61,7 +61,7 @@ OWLMETRY_ATTACHMENTS_INTERNAL_URI=/_attachments/
 Database migrations (`pnpm db:migrate`) run from the `packages/db` directory and do not auto-load the `.env` file. When running migrations over SSH, prefix the command with the `DATABASE_URL`:
 
 ```bash
-DATABASE_URL='postgresql://owlmetry:password@localhost:5432/owlmetry' pnpm db:migrate
+DATABASE_URL='postgresql://pubky_pulse:password@localhost:5432/pubky_pulse' pnpm db:migrate
 ```
 
 The API server loads `.env` automatically via its config module, so this is only relevant for running migrations in isolation (e.g., during deployment scripts).

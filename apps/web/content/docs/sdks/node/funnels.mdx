@@ -1,22 +1,22 @@
 ---
 title: Funnels
-description: Record funnel step completions with Owl.step() in the Node.js SDK.
+description: Record funnel step completions with Pulse.step() in the Node.js SDK.
 ---
 
-Use `Owl.step()` to emit named step completions that feed into [funnel analytics](/docs/concepts/funnels). The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
+Use `Pulse.step()` to emit named step completions that feed into [funnel analytics](/docs/concepts/funnels). The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
 
 ## Tracking Steps
 
 ```typescript
-Owl.step("signup-started");
-Owl.step("email-verified");
-Owl.step("profile-completed");
+Pulse.step("signup-started");
+Pulse.step("email-verified");
+Pulse.step("profile-completed");
 ```
 
 You can include optional attributes:
 
 ```typescript
-Owl.step("plan-selected", { plan: "pro", interval: "annual" });
+Pulse.step("plan-selected", { plan: "pro", interval: "annual" });
 ```
 
 ## Per-User Funnel Tracking
@@ -24,11 +24,11 @@ Owl.step("plan-selected", { plan: "pro", interval: "annual" });
 Funnels are most useful when steps are associated with a specific user. Use a scoped instance so every step carries the user ID:
 
 ```typescript
-const owl = Owl.withUser(userId);
-owl.step("checkout-started");
+const pulse = Pulse.withUser(userId);
+pulse.step("checkout-started");
 // ... later
-owl.step("payment-completed");
-owl.step("order-confirmed");
+pulse.step("payment-completed");
+pulse.step("order-confirmed");
 ```
 
 Without a user ID, funnel analytics cannot correlate steps across a conversion path.
@@ -42,14 +42,14 @@ Backend services often track steps that happen outside the client -- webhook cal
 ```typescript
 app.post("/webhooks/stripe", async (req, res) => {
   const event = req.body;
-  const owl = Owl.withUser(event.data.object.metadata.user_id);
+  const pulse = Pulse.withUser(event.data.object.metadata.user_id);
 
   if (event.type === "payment_intent.succeeded") {
-    owl.step("payment-succeeded", { amount: String(event.data.object.amount) });
+    pulse.step("payment-succeeded", { amount: String(event.data.object.amount) });
   }
 
   if (event.type === "invoice.paid") {
-    owl.step("subscription-activated");
+    pulse.step("subscription-activated");
   }
 
   res.sendStatus(200);
@@ -60,13 +60,13 @@ app.post("/webhooks/stripe", async (req, res) => {
 
 ```typescript
 async function processOnboarding(userId: string) {
-  const owl = Owl.withUser(userId);
+  const pulse = Pulse.withUser(userId);
 
   await generateWelcomeEmail(userId);
-  owl.step("welcome-email-sent");
+  pulse.step("welcome-email-sent");
 
   await provisionAccount(userId);
-  owl.step("account-provisioned");
+  pulse.step("account-provisioned");
 }
 ```
 

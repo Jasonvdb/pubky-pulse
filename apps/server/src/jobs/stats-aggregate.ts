@@ -2,7 +2,7 @@ import type { JobHandler } from "../services/job-runner.js";
 import type postgres from "postgres";
 
 // Re-aggregate this many trailing buckets when no explicit range is provided.
-// 72h covers ~the 99.9th percentile of mobile SDK arrival latency (offline
+// 72h covers ~the 99.9th percentile of SDK arrival latency (offline
 // buffering can stretch real arrivals out for a day or two). Larger windows
 // just cost more SQL with no observable correctness gain.
 const TRAILING_BUCKETS_DEFAULT = 3;

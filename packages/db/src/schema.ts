@@ -40,7 +40,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   preferences: jsonb("preferences")
-    .$type<import("@owlmetry/shared").UserPreferences>()
+    .$type<import("@pubky-pulse/shared").UserPreferences>()
     .notNull()
     .default({}),
   created_at: timestamp("created_at", { withTimezone: true })
@@ -917,7 +917,7 @@ export const questionnaireResponseComments = pgTable(
 // Channel-agnostic: in-app rendering reads this directly; email is a separate
 // delivery row. type/channel are varchar (not enum) to keep the schema open as new
 // notification types and channels are added — runtime validation lives in
-// @owlmetry/shared NOTIFICATION_TYPES + NOTIFICATION_CHANNELS.
+// @pubky-pulse/shared NOTIFICATION_TYPES + NOTIFICATION_CHANNELS.
 export const notifications = pgTable(
   "notifications",
   {

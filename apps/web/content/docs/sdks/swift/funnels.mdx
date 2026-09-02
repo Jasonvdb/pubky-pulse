@@ -1,19 +1,19 @@
 ---
 title: Funnels
-description: Record funnel step completions with Owl.step() in the Swift SDK.
+description: Record funnel step completions with Pulse.step() in the Swift SDK.
 ---
 
 Funnels measure how users progress through a multi-step flow and where they drop off. The SDK side of funnel tracking is a single method call per step. For a broader overview of funnel concepts, analysis modes, and grouping options, see [Funnels](/docs/concepts/funnels).
 
 ## Tracking Steps
 
-Call `Owl.step()` when a user completes a funnel step. The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
+Call `Pulse.step()` when a user completes a funnel step. The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
 
 ```swift
-Owl.step("welcome-screen")
-Owl.step("create-account", attributes: ["method": "email"])
-Owl.step("complete-profile")
-Owl.step("first-post")
+Pulse.step("welcome-screen")
+Pulse.step("create-account", attributes: ["method": "email"])
+Pulse.step("complete-profile")
+Pulse.step("first-post")
 ```
 
 ### Method Signature
@@ -32,12 +32,12 @@ public static func step(
 
 ## How It Works
 
-`Owl.step("welcome-screen")` emits a funnel event that the server matches against funnel definitions by the step name.
+`Pulse.step("welcome-screen")` emits a funnel event that the server matches against funnel definitions by the step name.
 
 For a funnel step with the filter `{"step_name": "welcome-screen"}`, the SDK call is:
 
 ```swift
-Owl.step("welcome-screen")
+Pulse.step("welcome-screen")
 ```
 
 Step names must match exactly between your SDK calls and your funnel definition's `event_filter.step_name` values.
@@ -48,10 +48,10 @@ Define the funnel on the server with steps that match your `step()` calls:
 
 | Step | Event Filter | SDK Call |
 |------|-------------|----------|
-| Welcome | `{"step_name": "welcome-screen"}` | `Owl.step("welcome-screen")` |
-| Account Created | `{"step_name": "create-account"}` | `Owl.step("create-account")` |
-| Profile Complete | `{"step_name": "complete-profile"}` | `Owl.step("complete-profile")` |
-| First Post | `{"step_name": "first-post"}` | `Owl.step("first-post")` |
+| Welcome | `{"step_name": "welcome-screen"}` | `Pulse.step("welcome-screen")` |
+| Account Created | `{"step_name": "create-account"}` | `Pulse.step("create-account")` |
+| Profile Complete | `{"step_name": "complete-profile"}` | `Pulse.step("complete-profile")` |
+| First Post | `{"step_name": "first-post"}` | `Pulse.step("first-post")` |
 
 In your SwiftUI views:
 
@@ -61,11 +61,11 @@ struct WelcomeView: View {
         VStack {
             Text("Welcome to the app")
             Button("Get Started") {
-                Owl.step("welcome-screen")
+                Pulse.step("welcome-screen")
                 navigateToSignup()
             }
         }
-        .owlScreen("Welcome")
+        .pulseScreen("Welcome")
     }
 }
 
@@ -73,10 +73,10 @@ struct SignupView: View {
     func handleSignup() async {
         do {
             try await createAccount(email: email, password: password)
-            Owl.step("create-account", attributes: ["method": "email"])
+            Pulse.step("create-account", attributes: ["method": "email"])
             navigateToProfile()
         } catch {
-            Owl.error("Signup failed", screenName: "Signup")
+            Pulse.error("Signup failed", screenName: "Signup")
         }
     }
 }

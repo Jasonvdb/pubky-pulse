@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { eq, and, inArray, isNull, isNotNull, sql, desc, gte, lte } from "drizzle-orm";
-import { metricDefinitions, metricEvents, projects, apps } from "@owlmetry/db";
-import { parseTimeParam, validateMetricSlug, PG_UNIQUE_VIOLATION, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, METRIC_PHASES } from "@owlmetry/shared";
+import { metricDefinitions, metricEvents, projects, apps } from "@pubky-pulse/db";
+import { parseTimeParam, validateMetricSlug, PG_UNIQUE_VIOLATION, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, METRIC_PHASES } from "@pubky-pulse/shared";
 import type {
   CreateMetricDefinitionRequest,
   UpdateMetricDefinitionRequest,
@@ -12,7 +12,7 @@ import type {
   CompletionsCountQueryParams,
   MetricStatsParams,
   MetricStatsEntry,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";

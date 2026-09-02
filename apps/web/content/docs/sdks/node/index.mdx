@@ -1,21 +1,21 @@
 ---
 title: Node.js SDK
-description: Integrate Owlmetry into Node.js backends, Express, Fastify, and serverless functions.
+description: Integrate Pubky Pulse into Node.js backends, Express, Fastify, and serverless functions.
 ---
 
-The `@owlmetry/node` SDK instruments Node.js backend services -- Express, Fastify, raw HTTP servers, and serverless functions like AWS Lambda, Vercel Serverless Functions, and Firebase Cloud Functions. It has zero runtime dependencies and ships as both ESM and CommonJS.
+The `@synonymdev/pubky-pulse-node` SDK instruments Node.js backend services -- Express, Fastify, raw HTTP servers, and serverless functions like AWS Lambda, Vercel Serverless Functions, and Firebase Cloud Functions. It has zero runtime dependencies and ships as both ESM and CommonJS.
 
 ## Features
 
-- **[Events](/docs/sdks/node/events)** -- log at four severity levels (info, debug, warn, error) with custom attributes and automatic source-module capture from the call stack. `Owl.error` accepts a string or an `Error`/exception value — when given an Error, the SDK extracts type, stack, `Error.cause` chain, AggregateError children, and Node `code/syscall/path` into reserved `_error_*` attributes
-- **[Auto-Capture of Unhandled Errors](/docs/sdks/node/events#auto-capture-of-unhandled-errors)** -- default-on listeners on `uncaughtException` and `unhandledRejection` forward to `Owl.error` with `_unhandled` set; crash semantics preserved
+- **[Events](/docs/sdks/node/events)** -- log at four severity levels (info, debug, warn, error) with custom attributes and automatic source-module capture from the call stack. `Pulse.error` accepts a string or an `Error`/exception value — when given an Error, the SDK extracts type, stack, `Error.cause` chain, AggregateError children, and Node `code/syscall/path` into reserved `_error_*` attributes
+- **[Auto-Capture of Unhandled Errors](/docs/sdks/node/events#auto-capture-of-unhandled-errors)** -- default-on listeners on `uncaughtException` and `unhandledRejection` forward to `Pulse.error` with `_unhandled` set; crash semantics preserved
 - **[File Attachments](/docs/concepts/attachments)** -- attach files from disk or in-memory buffers to any event via the `attachments` option on every log method
 - **[Structured Metrics](/docs/sdks/node/metrics)** -- track operation lifecycles (start, complete, fail, cancel) and record single-shot measurements
 - **[Funnels](/docs/sdks/node/funnels)** -- emit named step completions for backend conversion tracking
-- **[User Scoping](/docs/sdks/node/identity)** -- `Owl.withUser(userId)` returns a scoped instance that tags every event with a user ID
-- **[Session Scoping](/docs/sdks/node/identity#withsession)** -- `Owl.withSession(sessionId)` links backend events to a client's session for cross-SDK correlation
-- **[User Properties](/docs/sdks/node/user-properties)** -- attach custom metadata to users via `Owl.setUserProperties()`
-- **[Serverless Support](/docs/sdks/node/serverless)** -- `Owl.wrapHandler()` guarantees event flush before your function returns
+- **[User Scoping](/docs/sdks/node/identity)** -- `Pulse.withUser(userId)` returns a scoped instance that tags every event with a user ID
+- **[Session Scoping](/docs/sdks/node/identity#withsession)** -- `Pulse.withSession(sessionId)` links backend events to a client's session for cross-SDK correlation
+- **[User Properties](/docs/sdks/node/user-properties)** -- attach custom metadata to users via `Pulse.setUserProperties()`
+- **[Serverless Support](/docs/sdks/node/serverless)** -- `Pulse.wrapHandler()` guarantees event flush before your function returns
 - **Auto-flush** -- events are buffered and sent in batches on a configurable interval, with automatic flush on process exit via the `beforeExit` handler
 - **Gzip compression** -- payloads over 512 bytes are compressed automatically
 - **Retry with backoff** -- failed ingestion requests retry up to 5 times with exponential backoff
@@ -23,20 +23,20 @@ The `@owlmetry/node` SDK instruments Node.js backend services -- Express, Fastif
 ## Requirements
 
 - Node.js 20 or later
-- An Owlmetry backend app with a client API key (`owl_client_...`)
+- A Pubky Pulse backend app with a client API key (`pulse_client_...`)
 
 ## Quick Start
 
 ```typescript
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   serviceName: "my-api",
 });
 
-Owl.info("Server started", { port: 4000 });
+Pulse.info("Server started", { port: 4000 });
 ```
 
 See the [installation guide](/docs/sdks/node/installation) to get started.

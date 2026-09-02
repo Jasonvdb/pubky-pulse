@@ -26,7 +26,7 @@
  */
 import { createDatabaseConnection } from "./index.js";
 import { apps, appUsers, appUserApps } from "./schema.js";
-import { ANONYMOUS_ID_PREFIX, baseLanguage } from "@owlmetry/shared";
+import { ANONYMOUS_ID_PREFIX, baseLanguage } from "@pubky-pulse/shared";
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import "dotenv/config";
 
@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 const USERS_PER_APP = 200;
 // Fraction of users left without a preferred language (simulates devices still

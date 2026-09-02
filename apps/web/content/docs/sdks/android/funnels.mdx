@@ -1,19 +1,19 @@
 ---
 title: Funnels
-description: Record funnel step completions with Owl.step() in the Android SDK.
+description: Record funnel step completions with Pulse.step() in the Android SDK.
 ---
 
 Funnels measure how users progress through a multi-step flow and where they drop off. The SDK side of funnel tracking is a single method call per step. For a broader overview of funnel concepts, analysis modes, and grouping options, see [Funnels](/docs/concepts/funnels).
 
 ## Tracking Steps
 
-Call `Owl.step()` when a user completes a funnel step. The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
+Call `Pulse.step()` when a user completes a funnel step. The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
 
 ```kotlin
-Owl.step("welcome-screen")
-Owl.step("create-account", attributes = mapOf("method" to "email"))
-Owl.step("complete-profile")
-Owl.step("first-post")
+Pulse.step("welcome-screen")
+Pulse.step("create-account", attributes = mapOf("method" to "email"))
+Pulse.step("complete-profile")
+Pulse.step("first-post")
 ```
 
 ### Method Signature
@@ -32,7 +32,7 @@ public fun step(
 
 ## How It Works
 
-`Owl.step("welcome-screen")` emits an info-level event with the message `step:welcome-screen` that the server matches against funnel definitions by the step name.
+`Pulse.step("welcome-screen")` emits an info-level event with the message `step:welcome-screen` that the server matches against funnel definitions by the step name.
 
 Step names must match exactly between your SDK calls and your funnel definition's `event_filter.step_name` values.
 
@@ -42,20 +42,20 @@ Define the funnel on the server with steps that match your `step()` calls:
 
 | Step | Event Filter | SDK Call |
 |------|-------------|----------|
-| Welcome | `{"step_name": "welcome-screen"}` | `Owl.step("welcome-screen")` |
-| Account Created | `{"step_name": "create-account"}` | `Owl.step("create-account")` |
-| Profile Complete | `{"step_name": "complete-profile"}` | `Owl.step("complete-profile")` |
-| First Post | `{"step_name": "first-post"}` | `Owl.step("first-post")` |
+| Welcome | `{"step_name": "welcome-screen"}` | `Pulse.step("welcome-screen")` |
+| Account Created | `{"step_name": "create-account"}` | `Pulse.step("create-account")` |
+| Profile Complete | `{"step_name": "complete-profile"}` | `Pulse.step("complete-profile")` |
+| First Post | `{"step_name": "first-post"}` | `Pulse.step("first-post")` |
 
 In your Compose UI:
 
 ```kotlin
 @Composable
 fun WelcomeScreen(onContinue: () -> Unit) {
-    Column(modifier = Modifier.owlScreen("Welcome")) {
+    Column(modifier = Modifier.pulseScreen("Welcome")) {
         Text("Welcome to the app")
         Button(onClick = {
-            Owl.step("welcome-screen")
+            Pulse.step("welcome-screen")
             onContinue()
         }) {
             Text("Get Started")
@@ -66,9 +66,9 @@ fun WelcomeScreen(onContinue: () -> Unit) {
 suspend fun handleSignup(email: String, password: String) {
     try {
         createAccount(email, password)
-        Owl.step("create-account", attributes = mapOf("method" to "email"))
+        Pulse.step("create-account", attributes = mapOf("method" to "email"))
     } catch (e: Throwable) {
-        Owl.error(e, "Signup failed", screenName = "Signup")
+        Pulse.error(e, "Signup failed", screenName = "Signup")
     }
 }
 ```

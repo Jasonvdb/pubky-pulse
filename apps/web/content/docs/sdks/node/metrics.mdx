@@ -10,7 +10,7 @@ The SDK supports [structured metrics](/docs/concepts/metrics) for tracking opera
 An operation tracks the full lifecycle of a unit of work -- from start to completion, failure, or cancellation. The SDK automatically measures duration.
 
 ```typescript
-const op = Owl.startOperation("order-processing", { order_id: "abc-123" });
+const op = Pulse.startOperation("order-processing", { order_id: "abc-123" });
 
 try {
   await processPayment(order);
@@ -23,7 +23,7 @@ try {
 
 ### Starting an Operation
 
-`Owl.startOperation(metric, attrs?)` returns an `OwlOperation` object and emits a `start` phase event immediately.
+`Pulse.startOperation(metric, attrs?)` returns a `PulseOperation` object and emits a `start` phase event immediately.
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -32,7 +32,7 @@ try {
 
 ### Completing an Operation
 
-Call exactly one of these methods on the returned `OwlOperation`:
+Call exactly one of these methods on the returned `PulseOperation`:
 
 | Method | Description |
 |---|---|
@@ -47,8 +47,8 @@ Each method automatically calculates `duration_ms` from the time `startOperation
 Operations started from a scoped instance tag all lifecycle events with the user ID:
 
 ```typescript
-const owl = Owl.withUser("user_42");
-const op = owl.startOperation("checkout");
+const pulse = Pulse.withUser("user_42");
+const op = pulse.startOperation("checkout");
 
 try {
   await chargeUser(order);
@@ -60,11 +60,11 @@ try {
 
 ## Single-Shot Metrics
 
-Use `Owl.recordMetric()` for measurements that do not have a start/end lifecycle:
+Use `Pulse.recordMetric()` for measurements that do not have a start/end lifecycle:
 
 ```typescript
-Owl.recordMetric("daily-active-users", { count: String(dauCount) });
-Owl.recordMetric("queue-depth", { size: String(queue.length) });
+Pulse.recordMetric("daily-active-users", { count: String(dauCount) });
+Pulse.recordMetric("queue-depth", { size: String(queue.length) });
 ```
 
 This emits a single `record` phase event. It is useful for periodic measurements, counts, or any value you want to track over time.
@@ -75,7 +75,7 @@ Metric slugs must contain only lowercase letters, numbers, and hyphens (`/^[a-z0
 
 ```typescript
 // "API Request Time" becomes "api-request-time"
-Owl.startOperation("API Request Time");
+Pulse.startOperation("API Request Time");
 ```
 
 Define your metric slugs in the dashboard or with the `create-metric` MCP tool before sending events to get the most out of metric aggregation queries. See [Structured Metrics](/docs/concepts/metrics) for details on how the server processes metric events.
@@ -86,8 +86,8 @@ A complete Express route with operation tracking and error handling:
 
 ```typescript
 app.post("/api/orders", async (req, res) => {
-  const owl = Owl.withUser(req.auth.userId);
-  const op = owl.startOperation("create-order", {
+  const pulse = Pulse.withUser(req.auth.userId);
+  const op = pulse.startOperation("create-order", {
     item_count: String(req.body.items.length),
   });
 

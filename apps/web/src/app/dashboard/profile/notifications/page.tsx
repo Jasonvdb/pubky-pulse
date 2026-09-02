@@ -1,6 +1,6 @@
 "use client";
 
-// Renders straight from NOTIFICATION_TYPE_META in @owlmetry/shared/preferences,
+// Renders straight from NOTIFICATION_TYPE_META in @pubky-pulse/shared/preferences,
 // so adding a new type there shows up here automatically.
 import {
   NOTIFICATION_CHANNELS,
@@ -9,7 +9,7 @@ import {
   isChannelEnabled,
   type NotificationChannel,
   type NotificationType,
-} from "@owlmetry/shared/preferences";
+} from "@pubky-pulse/shared/preferences";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/use-user-preferences";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";

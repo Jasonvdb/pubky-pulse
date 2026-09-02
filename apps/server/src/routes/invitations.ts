@@ -1,13 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, isNull, gt } from "drizzle-orm";
-import { teamInvitations, teams, teamMembers, users } from "@owlmetry/db";
-import { VALID_TEAM_ROLES, PG_UNIQUE_VIOLATION } from "@owlmetry/shared";
+import { teamInvitations, teams, teamMembers, users } from "@pubky-pulse/db";
+import { VALID_TEAM_ROLES, PG_UNIQUE_VIOLATION } from "@pubky-pulse/shared";
 import type {
   TeamRole,
   CreateTeamInvitationRequest,
   AcceptInvitationRequest,
   TeamInvitationResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requireAuth, getTeamRole, assertTeamRole } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { config } from "../config.js";

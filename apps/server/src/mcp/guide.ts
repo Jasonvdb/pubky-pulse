@@ -1,12 +1,12 @@
-export const GUIDE_CONTENT = `# Owlmetry — Agent Guide
+export const GUIDE_CONTENT = `# Pubky Pulse — Agent Guide
 
-Owlmetry is a self-hosted analytics platform for web, backend and mobile apps. It captures events, structured metrics, and funnel conversions from client SDKs (Swift, Node.js), stores them in a partitioned PostgreSQL database, and exposes query and management APIs.
+Pubky Pulse is a self-hosted analytics platform for web, backend and mobile apps. It captures events, structured metrics, and funnel conversions from its SDKs (Node, Swift, Android — a Web SDK is coming soon), stores them in a partitioned PostgreSQL database, and exposes query and management APIs.
 
-You are connected via MCP using an **agent key** (\`owl_agent_...\`). Agent keys are for reading data and managing resources. **Client keys** (\`owl_client_...\`) are used by SDKs for event ingestion — you will not ingest events yourself, but you will retrieve client keys when creating apps for SDK configuration. **Import keys** (\`owl_import_...\`) are for bulk-importing historical event data — you can create these with the \`create-import-key\` tool.
+You are connected via MCP using an **agent key** (\`pulse_agent_...\`). Agent keys are for reading data and managing resources. **Client keys** (\`pulse_client_...\`) are used by SDKs for event ingestion — you will not ingest events yourself, but you will retrieve client keys when creating apps for SDK configuration. **Import keys** (\`pulse_import_...\`) are for bulk-importing historical event data — you can create these with the \`create-import-key\` tool.
 
 ## Resource Hierarchy
 
-Owlmetry organises resources in a **Team → Project → Apps** hierarchy:
+Pubky Pulse organises resources in a **Team → Project → Apps** hierarchy:
 
 - **Team** — the top-level account. All resources (projects, apps, keys) are team-scoped. Use \`whoami\` to see your team and permissions.
 - **Project** — groups related apps under one product (e.g., "MyApp" project). Metrics and funnels are defined at the project level so they span all apps in the project. Each project has configurable data retention policies for events (default: 120 days), metrics (default: 365 days), and funnels (default: 365 days).
@@ -28,10 +28,10 @@ All list tools support an optional \`team_id\` parameter to scope results.
 ## Concepts
 
 ### Events
-Events are raw log records emitted by SDKs — every \`Owl.info()\`, \`Owl.error()\`, \`Owl.step()\`, etc. Each event has:
+Events are raw log records emitted by SDKs — every \`Pulse.info()\`, \`Pulse.error()\`, \`Pulse.step()\`, etc. Each event has:
 - **level**: \`info\`, \`debug\`, \`warn\`, \`error\`
 - **message**: the log message or event name
-- **session_id**: unique per SDK \`configure()\` call, groups events in a session. See **Cross-SDK Session Correlation** below for the iOS-to-Node pattern.
+- **session_id**: unique per SDK \`configure()\` call, groups events in a session. See **Cross-SDK Session Correlation** below for the client-to-backend pattern.
 - **user_id**: optional, set via identity claim
 - **screen_name**: optional, from SDK screen tracking
 - **environment**: the runtime — \`ios\`, \`ipados\`, \`macos\`, \`watchos\`, \`android\`, \`web\`, \`backend\`
@@ -43,17 +43,17 @@ Query events when debugging specific issues, investigating user behavior, or rev
 
 Every SDK emits events under a \`session_id\`. By default the Node SDK's session is **per-process** — shared across every request the process handles — which is almost never what you want for a multi-client backend. To make client and backend events show up together under one session, forward the client's session id with each request.
 
-The pattern (iOS → Node):
+The pattern (client → backend):
 
-1. **Client (Swift)**: read \`Owl.sessionId\` and attach it to outgoing requests as an \`X-Owl-Session-Id\` header.
-2. **Backend (Node)**: pull the header off the request and either wrap the handler in \`Owl.withSession(sessionId)\` (all events inside that scope pick it up) or pass \`{ sessionId }\` to each individual log call.
+1. **Client (Swift / Android)**: read \`Pulse.sessionId\` and attach it to outgoing requests as an \`X-Pulse-Session-Id\` header.
+2. **Backend (Node)**: pull the header off the request and either wrap the handler in \`Pulse.withSession(sessionId)\` (all events inside that scope pick it up) or pass \`{ sessionId }\` to each individual log call.
 
 **Precedence**: per-call \`options.sessionId\` > \`withSession(...)\` scope > default session from \`configure()\`. Non-UUID values are silently ignored, so it is safe to forward the header unconditionally.
 
-Result: one logical user interaction (tap → API call → DB query → response → UI update) lands under a single \`session_id\`. \`investigate-event\` and \`query-events\` with \`session_id\` filters then return the full cross-app timeline automatically. Wire this up on any project that has both a Swift app and a Node backend in the same project — it is the whole point of grouping them under one project.
+Result: one logical user interaction (tap → API call → DB query → response → UI update) lands under a single \`session_id\`. \`investigate-event\` and \`query-events\` with \`session_id\` filters then return the full cross-app timeline automatically. Wire this up on any project that pairs a client app with a Node backend — it is the whole point of grouping them under one project.
 
 ### Structured Metrics
-Metrics are project-scoped definitions that tell Owlmetry what structured data to expect. Two kinds:
+Metrics are project-scoped definitions that tell Pubky Pulse what structured data to expect. Two kinds:
 
 - **Lifecycle metrics**: track operations with a start → complete/fail/cancel flow. Use for things with duration — API calls, uploads, database queries. The SDK auto-tracks \`duration_ms\`. Phases: \`start\`, \`complete\`, \`fail\`, \`cancel\`.
 - **Single-shot metrics** (\`record\` phase): record a point-in-time measurement. Use for snapshots — cache hit rates, queue depth, cold start time.
@@ -67,7 +67,7 @@ Metric slugs: lowercase letters, numbers, hyphens only (\`/^[a-z0-9-]+$/\`).
 ### Funnels
 Funnels measure how users progress through a multi-step flow and where they drop off. Each funnel has ordered steps with an \`event_filter\` matching on \`step_name\` and/or \`screen_name\`.
 
-The \`step_name\` in the filter matches what developers pass to \`Owl.step("step-name")\` — no prefix transformation needed.
+The \`step_name\` in the filter matches what developers pass to \`Pulse.step("step-name")\` — no prefix transformation needed.
 
 Two analysis modes:
 - **Open mode** (default): independent — each step counts distinct users separately, regardless of other steps. Good for non-linear flows.
@@ -78,7 +78,7 @@ Maximum 20 steps per funnel. Funnel slugs follow the same rules as metric slugs.
 ### Data Modes
 The \`data_mode\` parameter filters development vs production events:
 - \`production\` (default) — real user data only
-- \`development\` — test/debug data only (SDKs auto-detect: DEBUG builds on iOS, \`NODE_ENV !== "production"\` on Node)
+- \`development\` — test/debug data only (SDKs auto-detect: DEBUG builds on Apple platforms, debuggable builds on Android, \`NODE_ENV !== "production"\` on Node)
 - \`all\` — both
 
 Available on: \`query-events\`, \`query-metric\`, \`list-metric-events\`, \`query-funnel\`.
@@ -91,10 +91,10 @@ All time parameters (\`since\`, \`until\`) accept:
 Default ranges: events = 24 hours, funnels = 30 days, metrics = 24 hours.
 
 ### User Properties
-Custom key-value properties stored on project-level users. Users are unique per project, not per app — the same user ID seen from multiple apps (e.g., iOS + backend) is a single user. Each user tracks which apps they've been seen from. Properties are set via SDK (\`setUserProperties()\`). Properties are shallow-merged on update; empty string values delete keys. Limits: 50 keys max, 50-char keys, 200-char values.
+Custom key-value properties stored on project-level users. Users are unique per project, not per app — the same user ID seen from multiple apps (e.g., a web front-end, a mobile app, and their backend) is a single user. Each user tracks which apps they've been seen from. Properties are set via SDK (\`setUserProperties()\`). Properties are shallow-merged on update; empty string values delete keys. Limits: 50 keys max, 50-char keys, 200-char values.
 
 ### Issues
-Error events are automatically scanned hourly and grouped into **issues** via fingerprinting (normalized error message + source module, plus optional discriminator). The discriminator is set for two cases: \`sdk:network_request\` errors discriminate on \`METHOD host/templated_path\` from \`_http_url\`/\`_http_method\`, and any error event carrying an \`_error_type\` reserved attribute (set by the SDKs when consumers call \`Owl.error(error)\` with an Error/Exception value) discriminates on the runtime type so different error classes with identical wording stay on separate issues. Each issue tracks:
+Error events are automatically scanned hourly and grouped into **issues** via fingerprinting (normalized error message + source module, plus optional discriminator). The discriminator is set for two cases: \`sdk:network_request\` errors discriminate on \`METHOD host/templated_path\` from \`_http_url\`/\`_http_method\`, and any error event carrying an \`_error_type\` reserved attribute (set by the SDKs when consumers call \`Pulse.error(error)\` with an Error/Exception value) discriminates on the runtime type so different error classes with identical wording stay on separate issues. Each issue tracks:
 - **Occurrences**: one per unique session. Each occurrence records the \`session_id\`, \`user_id\`, \`event_id\`, \`app_version\`, and \`environment\` — use these to drill into what happened.
 - **Unique users**: how many distinct users are affected (severity indicator)
 - **Status lifecycle**: \`new\` → \`in_progress\` (claimed by agent/user) → \`resolved\` (the app version where the fix was applied is **required** — it powers regression detection) → may \`regress\` if the error reappears in a newer version. Two off-ramps stop notifications without claiming a fix: \`silenced\` (terminal — stays silent even if the error keeps happening; use for transient infra blips), and \`snoozed\` (auto-reverts to \`new\` and re-fires \`issue.new\` on the very next occurrence; use when you suspect a one-off and only want to be alerted if the assumption turns out wrong).
@@ -125,7 +125,7 @@ To fully investigate an issue, follow this workflow:
 8. **Resolve or escalate**: \`resolve-issue\` with the fix version once patched (the version is required so the regression detector has something to compare against). Use \`silence-issue\` when there's nothing to fix and you don't want to hear about it again. Use \`snooze-issue\` when you suspect a one-off — same as silence but auto-reopens to \`new\` if the error recurs. Leave the comment for the team to act on otherwise.
 
 ### Feedback
-Free-text user feedback. Two ingest paths: mobile apps via the Swift SDK (\`OwlFeedbackView\` / \`Owl.sendFeedback\`), and server handlers via the Node SDK (\`Owl.sendFeedback\`) — use the Node path when a team collects feedback through their own frontend (form, chat widget, support page) and wants it forwarded into Owlmetry. Each feedback row captures \`message\`, optional \`submitter_name\` and \`submitter_email\`, plus the session, user, app version, device, environment, and country — automatically on mobile, caller-supplied on Node.
+Free-text user feedback. Two ingest paths: mobile apps via the Swift and Android SDKs (\`PulseFeedbackView\` / \`Pulse.sendFeedback\`), and server handlers via the Node SDK (\`Pulse.sendFeedback\`) — use the Node path when a team collects feedback through their own frontend (form, chat widget, support page) and wants it forwarded into Pubky Pulse. Each feedback row captures \`message\`, optional \`submitter_name\` and \`submitter_email\`, plus the session, user, app version, device, environment, and country — automatically on mobile, caller-supplied on Node.
 
 - **Status lifecycle** — free transitions between \`new\`, \`in_review\`, \`addressed\`, \`dismissed\`. No forced order; \`dismissed\` is the "not actionable" state.
 - **Comments** — investigation notes from users (\`👤\`) and agents (\`🕶️\`), mirror the issue-comment model.
@@ -135,11 +135,11 @@ Free-text user feedback. Two ingest paths: mobile apps via the Swift SDK (\`OwlF
 Typical workflow: \`list-feedback\` filtered to \`status: "new"\` → \`get-feedback\` to read the message and linked session → \`investigate-event\` on an event from that session to understand what the user was doing → \`add-feedback-comment\` with root cause or a cross-link to a related issue → \`update-feedback-status\` to \`in_review\` or \`addressed\`.
 
 ### Questionnaires
-Structured multi-question surveys, complementary to free-text feedback. Each questionnaire has an immutable \`slug\` and a JSON \`schema\` of up to 30 questions (\`text\`, \`single_choice\`, \`multi_choice\`, \`rating\` 1–5, \`nps\` 0–10). The Swift SDK fetches the spec by slug and renders it via \`OwlQuestionnaireView\` (or auto-triggers via \`.owlQuestionnaire(...)\` view modifier on the Nth launch). Each submitted response stores its own \`schema_snapshot\` (captured at completion) so editing the parent definition never retroactively changes how historical answers render.
+Structured multi-question surveys, complementary to free-text feedback. Each questionnaire has an immutable \`slug\` and a JSON \`schema\` of up to 30 questions (\`text\`, \`single_choice\`, \`multi_choice\`, \`rating\` 1–5, \`nps\` 0–10). The Swift and Android SDKs fetch the spec by slug and render it via \`PulseQuestionnaireView\` (or auto-trigger it on the Nth launch — SwiftUI's \`.pulseQuestionnaire(...)\` view modifier, Compose's \`PulseQuestionnaireGate\` wrapper). Each submitted response stores its own \`schema_snapshot\` (captured at completion) so editing the parent definition never retroactively changes how historical answers render.
 
-- **Progressive responses** — the Swift SDK persists answers on every Next tap, not just on Submit. A user who answers Q1 then quits has a row in \`questionnaire_responses\` with \`submitted_at = null\`, \`status = 'draft'\`, \`schema_snapshot = null\`, and \`{q1: ...}\` in \`answers\`. Subsequent Next taps merge new keys onto the same row (re-saves overwrite). On the final Submit, \`submitted_at\` flips to non-null, \`status\` becomes \`new\`, and the live schema is snapshotted. The team notification fires only on the flip — drafts don't ping. Drafts appear in \`list-questionnaire-responses\` and \`get-questionnaire-analytics\` by default (so abandonment shows up as a drop-off curve in the per-question rollups); pass \`submitted_only: true\` to filter them out.
+- **Progressive responses** — the mobile SDKs persist answers on every Next tap, not just on Submit. A user who answers Q1 then quits has a row in \`questionnaire_responses\` with \`submitted_at = null\`, \`status = 'draft'\`, \`schema_snapshot = null\`, and \`{q1: ...}\` in \`answers\`. Subsequent Next taps merge new keys onto the same row (re-saves overwrite). On the final Submit, \`submitted_at\` flips to non-null, \`status\` becomes \`new\`, and the live schema is snapshotted. The team notification fires only on the flip — drafts don't ping. Drafts appear in \`list-questionnaire-responses\` and \`get-questionnaire-analytics\` by default (so abandonment shows up as a drop-off curve in the per-question rollups); pass \`submitted_only: true\` to filter them out.
 - **Resume across launches** — if a user has an unsubmitted draft, \`GET /v1/questionnaires/:slug\` (the SDK eligibility check) returns \`in_progress: { response_id, answers }\` alongside the spec, and the SDK lands them at the first unanswered question with prior answers pre-filled.
-- **Slug** — immutable after creation. The Swift SDK references it directly; renaming would orphan the in-app integration.
+- **Slug** — immutable after creation. The mobile SDKs reference it directly; renaming would orphan the in-app integration.
 - **Dismissal** — when a user taps "Don't show again" in any questionnaire sheet, the SDK calls \`POST /v1/questionnaires/dismiss\` and the server writes \`_questionnaires_dismissed_at\` to \`app_users.properties\`. Globally one-and-done across every questionnaire in the project for that user — survives reinstall.
 - **One response per user per slug** — partial unique index drives the race-safe upsert; duplicate completed submission returns 409 \`already_responded\`. Drafts can resume any number of times until completion.
 - **Schema versioning** — none in V1. Edits to a questionnaire's \`schema\` apply going forward; submitted responses keep their captured \`schema_snapshot\`. Drafts render against the live schema until completion — at submit time, answers whose question id is no longer in the schema are pruned.
@@ -183,7 +183,7 @@ Aggregation runs every hour at \`:05\` UTC (re-aggregates the trailing 3 hours) 
 Asynchronous server-side tasks with progress tracking and optional email notifications. Used for long-running operations like bulk syncs. Only one instance of each job type (per project) can run at a time — duplicates return an error.
 
 ### Notifications
-Owlmetry has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app and email (Resend). New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`).
+Pubky Pulse has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app and email (Resend). New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`).
 
 **Issue notification types** — there are two:
 - \`issue.new\` fires from \`issue_scan\` at the end of every hourly run, with one alert per team summarizing all production issues that were just created or regressed. Defaults: in_app on, email off. Bypasses any cadence throttle, so the alert lands within ~5 min of detection.
@@ -344,12 +344,14 @@ If a tool returns a permissions error, the agent key is missing the required per
 
 ## SDK Integration Guides
 
-This guide is served as the MCP resource \`owlmetry://guide\` — fetch it whenever you need the concepts, conventions, or SDK detail behind a tool. MCP is the agent interface: create projects and apps, define metrics and funnels, and query events with the tools (\`create-project\`, \`create-app\`, \`create-metric\`, \`create-funnel\`, \`query-events\`).
+This guide is served as the MCP resource \`pubky-pulse://guide\` — fetch it whenever you need the concepts, conventions, or SDK detail behind a tool. MCP is the agent interface: create projects and apps, define metrics and funnels, and query events with the tools (\`create-project\`, \`create-app\`, \`create-metric\`, \`create-funnel\`, \`query-events\`).
 
-Two SDKs instrument apps. What each covers:
+Pubky Pulse instruments web, backend and mobile apps. Three SDKs ship today and a Web SDK is on the way — what each covers:
 
-- **Swift** — package installation, \`Owl.configure()\`, event logging, automatic screen tracking, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (drop-in \`OwlFeedbackView\` or programmatic \`Owl.sendFeedback\`), and reading \`Owl.sessionId\` to forward to a backend for session correlation.
-- **Node** — package installation, \`Owl.configure()\`, event logging, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback forwarding** (when the team collects feedback through their own frontend and wants it pushed to Owlmetry with \`Owl.sendFeedback\`), and **per-request session/user scoping** (\`Owl.withSession(...)\` / \`Owl.withUser(...)\` / per-call \`options.sessionId\`) for linking backend events to a client session via the \`X-Owl-Session-Id\` header.
+- **Web** — *coming soon*. Until it ships, instrument a browser front-end against the ingest API directly (\`POST /v1/ingest\` with a \`pulse_client_\` key). Create the app with \`platform: "web"\` now — web events, users, metrics, funnels, and issues are already first-class server-side.
+- **Node** ([github.com/pubky/pubky-pulse-node](https://github.com/pubky/pubky-pulse-node)) — package installation, \`Pulse.configure()\`, event logging, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback forwarding** (when the team collects feedback through their own frontend and wants it pushed to Pubky Pulse with \`Pulse.sendFeedback\`), and **per-request session/user scoping** (\`Pulse.withSession(...)\` / \`Pulse.withUser(...)\` / per-call \`options.sessionId\`) for linking backend events to a client session via the \`X-Pulse-Session-Id\` header.
+- **Swift** ([github.com/pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift)) — iOS, iPadOS and macOS: package installation, \`Pulse.configure()\`, event logging, automatic screen tracking, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (drop-in \`PulseFeedbackView\` or programmatic \`Pulse.sendFeedback\`), **questionnaires** (\`.pulseQuestionnaire(...)\` / \`PulseQuestionnaireView\`), and reading \`Pulse.sessionId\` to forward to a backend for session correlation.
+- **Android** ([github.com/pubky/pubky-pulse-android](https://github.com/pubky/pubky-pulse-android)) — Kotlin core plus an optional Jetpack Compose artifact: dependency setup, \`Pulse.configure()\`, event logging, screen tracking (\`Modifier.pulseScreen()\`), structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (\`PulseFeedbackView\` / \`Pulse.sendFeedback\`), **questionnaires** (\`PulseQuestionnaireGate\` / \`PulseQuestionnaireView\`), and reading \`Pulse.sessionId\` to forward to a backend for session correlation.
 
 ## Key Notes
 
@@ -362,7 +364,7 @@ Two SDKs instrument apps. What each covers:
 
 ## Bulk Import
 
-To migrate historical event data from another system into Owlmetry:
+To migrate historical event data from another system into Pubky Pulse:
 
 1. **Create an import key** using the \`create-import-key\` tool with the target \`app_id\`.
 2. **Write an export script** that reads events from the source system and POSTs them to \`POST /v1/import\` with the import key as a Bearer token.
@@ -370,5 +372,5 @@ To migrate historical event data from another system into Owlmetry:
 4. Events with a matching \`client_event_id\` are **updated** (not skipped), so re-running an import script after tweaking attributes is safe.
 5. The request body is \`{ "events": [...] }\` — same event shape as SDK ingestion (\`message\`, \`level\`, \`session_id\` required; \`timestamp\`, \`user_id\`, \`custom_attributes\`, etc. optional).
 6. Metric events (\`metric:slug:phase\` messages) and funnel events (\`step:step_name\` messages, or legacy \`track:step_name\`) are auto-detected and dual-written.
-7. Import keys use the \`owl_import_\` prefix and are scoped to a single app.
+7. Import keys use the \`pulse_import_\` prefix and are scoped to a single app.
 `;

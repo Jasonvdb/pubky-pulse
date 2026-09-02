@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { LOG_LEVELS, ENVIRONMENTS } from "@owlmetry/shared";
+import { LOG_LEVELS, ENVIRONMENTS } from "@pubky-pulse/shared";
 import { callApi, callApiRaw, buildQuery } from "../helpers.js";
 
 const DATA_MODES = ["production", "development", "all"] as const;

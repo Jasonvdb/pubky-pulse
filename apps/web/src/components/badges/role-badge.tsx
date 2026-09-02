@@ -1,4 +1,4 @@
-import type { TeamRole } from "@owlmetry/shared";
+import type { TeamRole } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 const ROLE_META: Record<TeamRole, { emoji: string; label: string; variant: "default" | "secondary" | "outline" }> = {

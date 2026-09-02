@@ -1,29 +1,29 @@
 ---
 title: API Reference
-description: Complete REST API reference for Owlmetry. Base URL, authentication, and endpoint documentation.
+description: Complete REST API reference for Pubky Pulse. Base URL, authentication, and endpoint documentation.
 ---
 
-Complete REST API reference for Owlmetry.
+Complete REST API reference for Pubky Pulse.
 
 ## Base URL
 
-All API endpoints are served from:
+Pubky Pulse is self-hosted, so the base URL is your own deployment's API subdomain. Every endpoint lives under the `/v1` prefix. Replace the example hostnames below with your domain:
 
 ```
-https://api.owlmetry.com/v1
+https://api.yourdomain.com/v1
 ```
 
 SDK event ingestion uses a separate subdomain:
 
 ```
-https://ingest.owlmetry.com/v1
+https://ingest.yourdomain.com/v1
 ```
 
 Both subdomains route to the same Fastify server on port 4000. The split exists for operational clarity and independent rate limiting.
 
 ## Authentication
 
-Owlmetry supports two authentication methods:
+Pubky Pulse supports two authentication methods:
 
 ### JWT Cookie (Dashboard)
 
@@ -38,16 +38,16 @@ Cookie: token=eyJhbGciOiJIUzI1NiIs...
 Used by SDKs, MCP clients, and programmatic access. Pass the API key in the `Authorization` header:
 
 ```
-Authorization: Bearer owl_agent_abc123...
+Authorization: Bearer pulse_agent_abc123...
 ```
 
 There are three key types:
 
 | Type | Prefix | Purpose |
 |------|--------|---------|
-| Client | `owl_client_` | SDK event ingestion (scoped to an app) |
-| Agent | `owl_agent_` | MCP and programmatic read/write access (scoped to a team) |
-| Import | `owl_import_` | Bulk historical data import via [`POST /v1/import`](/docs/api-reference/import) (scoped to an app) |
+| Client | `pulse_client_` | SDK event ingestion (scoped to an app) |
+| Agent | `pulse_agent_` | MCP and programmatic read/write access (scoped to a team) |
+| Import | `pulse_import_` | Bulk historical data import via [`POST /v1/import`](/docs/api-reference/import) (scoped to an app) |
 
 ## Error Responses
 
@@ -117,4 +117,4 @@ Beyond the endpoints documented in this section, the API also exposes:
 | Area | Notes |
 |------|-------|
 | [Attachments](/docs/api-reference/attachments) | Reserve, upload, list, download (signed URL), and delete event attachments; query per-project/user quota usage. |
-| MCP | `POST /mcp`, `GET /mcp`, `DELETE /mcp` — Model Context Protocol endpoint for AI coding agents. Authenticated with an `owl_agent_*` Bearer token. See the [MCP docs](/docs/mcp). |
+| MCP | `POST /mcp`, `GET /mcp`, `DELETE /mcp` — Model Context Protocol endpoint for AI coding agents. Authenticated with a `pulse_agent_*` Bearer token. See the [MCP docs](/docs/mcp). |

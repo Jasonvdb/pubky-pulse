@@ -38,17 +38,17 @@ async function sendCode(email: string): Promise<string> {
 
 describe("POST /v1/auth/agent-login", () => {
   it("verifies code and returns agent key for new user", async () => {
-    const code = await sendCode("newagent@owlmetry.com");
+    const code = await sendCode("newagent@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "newagent@owlmetry.com", code },
+      payload: { email: "newagent@pulse.pubky.org", code },
     });
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.api_key).toMatch(/^owl_agent_/);
+    expect(body.api_key).toMatch(/^pulse_agent_/);
     expect(body.team.name).toBe("Newagent's Team");
   });
 
@@ -63,17 +63,17 @@ describe("POST /v1/auth/agent-login", () => {
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.api_key).toMatch(/^owl_agent_/);
+    expect(body.api_key).toMatch(/^pulse_agent_/);
     expect(body.team.id).toBe(testData.teamId);
   });
 
   it("returned agent key works for API calls", async () => {
-    const code = await sendCode("apitest@owlmetry.com");
+    const code = await sendCode("apitest@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "apitest@owlmetry.com", code },
+      payload: { email: "apitest@pulse.pubky.org", code },
     });
 
     const agentKey = res.json().api_key;
@@ -156,7 +156,7 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("rejects non-member team_id", async () => {
-    const other = await createUserAndGetToken(app, "other@owlmetry.com");
+    const other = await createUserAndGetToken(app, "other@pulse.pubky.org");
     const code = await sendCode(TEST_USER.email);
 
     const res = await app.inject({
@@ -175,7 +175,7 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
     const sendRes = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "agentuser@owlmetry.com" },
+      payload: { email: "agentuser@pulse.pubky.org" },
     });
     expect(sendRes.statusCode).toBe(200);
 
@@ -183,11 +183,11 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
     const loginRes = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "agentuser@owlmetry.com", code: testEmailService.lastCode },
+      payload: { email: "agentuser@pulse.pubky.org", code: testEmailService.lastCode },
     });
     expect(loginRes.statusCode).toBe(201);
     const body = loginRes.json();
-    expect(body.api_key).toMatch(/^owl_agent_/);
+    expect(body.api_key).toMatch(/^pulse_agent_/);
     expect(body.team).toBeDefined();
 
     // Step 3: Agent key works (no auto-provisioned projects)
@@ -215,7 +215,7 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
     });
     expect(loginRes.statusCode).toBe(201);
     const body = loginRes.json();
-    expect(body.api_key).toMatch(/^owl_agent_/);
+    expect(body.api_key).toMatch(/^pulse_agent_/);
 
     // Agent key works — existing user has seeded project
     const projRes = await app.inject({
@@ -230,12 +230,12 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
 
 describe("GET /v1/auth/whoami", () => {
   it("returns key info for agent key auth", async () => {
-    const code = await sendCode("whoami@owlmetry.com");
+    const code = await sendCode("whoami@pulse.pubky.org");
 
     const loginRes = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "whoami@owlmetry.com", code },
+      payload: { email: "whoami@pulse.pubky.org", code },
     });
     const agentKey = loginRes.json().api_key;
 

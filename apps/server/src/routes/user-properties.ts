@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq } from "drizzle-orm";
-import { appUsers } from "@owlmetry/db";
+import { appUsers } from "@pubky-pulse/db";
 import {
   MAX_USER_PROPERTY_KEY_LENGTH,
   MAX_USER_PROPERTY_VALUE_LENGTH,
   MAX_USER_PROPERTIES_COUNT,
-} from "@owlmetry/shared";
-import type { SetUserPropertiesRequest, SetUserPropertiesResponse } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import type { SetUserPropertiesRequest, SetUserPropertiesResponse } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { mergeUserProperties } from "../utils/user-properties.js";
 import { resolveProjectIdFromApp } from "../utils/project.js";

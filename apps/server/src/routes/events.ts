@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, lte, desc, asc, inArray, isNull, sql } from "drizzle-orm";
-import { events, apps, eventAttachments } from "@owlmetry/db";
-import { parseTimeParam, LOG_LEVELS } from "@owlmetry/shared";
-import type { EventsQueryParams, EventsCountQueryParams, LogLevel } from "@owlmetry/shared";
+import { events, apps, eventAttachments } from "@pubky-pulse/db";
+import { parseTimeParam, LOG_LEVELS } from "@pubky-pulse/shared";
+import type { EventsQueryParams, EventsCountQueryParams, LogLevel } from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds, hasTeamAccess } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { normalizeLimit, encodeKeysetCursor, decodeKeysetCursor } from "../utils/pagination.js";

@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ProjectResponse } from "@owlmetry/shared";
+import type { ProjectResponse } from "@pubky-pulse/shared";
 
 export const ALL_PROJECTS = "__all__";
 

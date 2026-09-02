@@ -6,7 +6,7 @@ import {
   STATS_GRAINS,
   STATS_MAX_WINDOW_DAYS,
   STATS_MAX_WINDOW_HOURS,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
 const DATA_MODES = ["production", "development", "all"] as const;

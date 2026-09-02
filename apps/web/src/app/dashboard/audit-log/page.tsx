@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { AuditLogsQueryParams, AuditLogResponse, AuditResourceType, AuditAction } from "@owlmetry/shared";
+import type { AuditLogsQueryParams, AuditLogResponse, AuditResourceType, AuditAction } from "@pubky-pulse/shared";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 import { useTeam } from "@/contexts/team-context";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -36,7 +36,7 @@ import { TIME_RANGES } from "@/lib/time-ranges";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { TableSkeleton } from "@/components/ui/skeletons";
 
-// Mirrors AuditResourceType and AuditAction from @owlmetry/shared (runtime import
+// Mirrors AuditResourceType and AuditAction from @pubky-pulse/shared (runtime import
 // would pull in node:crypto via the barrel export, which Next.js can't bundle)
 const RESOURCE_TYPES: AuditResourceType[] = [
   "app", "project", "api_key", "team", "team_member",

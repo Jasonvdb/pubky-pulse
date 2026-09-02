@@ -36,7 +36,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 const DAYS = 365;
 const HOURS = 72;

@@ -34,7 +34,7 @@ afterAll(async () => {
 
 /** Create a second user and return their token + user info. */
 async function registerSecondUser() {
-  return createUserAndGetToken(app, "second@owlmetry.com", "Second User");
+  return createUserAndGetToken(app, "second@pulse.pubky.org", "Second User");
 }
 
 // ─── Team CRUD ──────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ describe("PATCH /v1/teams/:teamId", () => {
     await addTeamMember(teamId, second.userId, "member");
 
     // Re-authenticate to pick up new membership
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "PATCH",
@@ -236,7 +236,7 @@ describe("DELETE /v1/teams/:teamId", () => {
 
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: adminToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: adminToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "DELETE",
@@ -328,18 +328,18 @@ describe("POST /v1/teams/:teamId/invitations", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "newuser@owlmetry.com" },
+      payload: { email: "newuser@pulse.pubky.org" },
     });
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.email).toBe("newuser@owlmetry.com");
+    expect(body.email).toBe("newuser@pulse.pubky.org");
     expect(body.role).toBe("member");
     expect(body.invited_by.email).toBe(TEST_USER.email);
     expect(body.expires_at).toBeDefined();
 
     // Verify email service was called
-    expect(testEmailService.lastInvitationEmail).toBe("newuser@owlmetry.com");
+    expect(testEmailService.lastInvitationEmail).toBe("newuser@pulse.pubky.org");
     expect(testEmailService.lastInvitationParams?.team_name).toBe("Test Team");
   });
 
@@ -348,13 +348,13 @@ describe("POST /v1/teams/:teamId/invitations", () => {
     const second = await registerSecondUser();
 
     await addTeamMember(teamId, second.userId, "admin");
-    const { token: adminToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: adminToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${adminToken}` },
-      payload: { email: "third@owlmetry.com" },
+      payload: { email: "third@pulse.pubky.org" },
     });
 
     expect(res.statusCode).toBe(201);
@@ -365,13 +365,13 @@ describe("POST /v1/teams/:teamId/invitations", () => {
     const second = await registerSecondUser();
 
     await addTeamMember(teamId, second.userId, "member");
-    const { token: memberToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${memberToken}` },
-      payload: { email: "third@owlmetry.com" },
+      payload: { email: "third@pulse.pubky.org" },
     });
 
     expect(res.statusCode).toBe(403);
@@ -387,7 +387,7 @@ describe("POST /v1/teams/:teamId/invitations", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "second@owlmetry.com" },
+      payload: { email: "second@pulse.pubky.org" },
     });
 
     expect(res.statusCode).toBe(409);
@@ -398,13 +398,13 @@ describe("POST /v1/teams/:teamId/invitations", () => {
     const second = await registerSecondUser();
 
     await addTeamMember(teamId, second.userId, "admin");
-    const { token: adminToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: adminToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${adminToken}` },
-      payload: { email: "third@owlmetry.com", role: "owner" },
+      payload: { email: "third@pulse.pubky.org", role: "owner" },
     });
 
     expect(res.statusCode).toBe(403);
@@ -417,7 +417,7 @@ describe("POST /v1/teams/:teamId/invitations", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "newuser@owlmetry.com", role: "owner" },
+      payload: { email: "newuser@pulse.pubky.org", role: "owner" },
     });
 
     expect(res.statusCode).toBe(201);
@@ -431,14 +431,14 @@ describe("POST /v1/teams/:teamId/invitations", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "newuser@owlmetry.com" },
+      payload: { email: "newuser@pulse.pubky.org" },
     });
 
     const res2 = await app.inject({
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "newuser@owlmetry.com", role: "admin" },
+      payload: { email: "newuser@pulse.pubky.org", role: "admin" },
     });
 
     expect(res1.statusCode).toBe(201);
@@ -457,7 +457,7 @@ describe("GET /v1/invites/:token", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "newuser@owlmetry.com", role: "admin" },
+      payload: { email: "newuser@pulse.pubky.org", role: "admin" },
     });
 
     // Extract token from the accept URL
@@ -473,7 +473,7 @@ describe("GET /v1/invites/:token", () => {
     const body = res.json();
     expect(body.team_name).toBe("Test Team");
     expect(body.role).toBe("admin");
-    expect(body.email).toBe("newuser@owlmetry.com");
+    expect(body.email).toBe("newuser@pulse.pubky.org");
     expect(body.invited_by_name).toBe(TEST_USER.name);
   });
 
@@ -493,7 +493,7 @@ describe("GET /v1/invites/:token", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "expired@owlmetry.com" },
+      payload: { email: "expired@pulse.pubky.org" },
     });
 
     const acceptUrl = testEmailService.lastInvitationParams!.accept_url;
@@ -523,14 +523,14 @@ describe("POST /v1/invites/accept", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { email: "newuser@owlmetry.com", role: "admin" },
+      payload: { email: "newuser@pulse.pubky.org", role: "admin" },
     });
 
     const acceptUrl = testEmailService.lastInvitationParams!.accept_url;
     const inviteToken = new URL(acceptUrl).searchParams.get("token")!;
 
     // Register the new user
-    const newUser = await createUserAndGetToken(app, "newuser@owlmetry.com", "New User");
+    const newUser = await createUserAndGetToken(app, "newuser@pulse.pubky.org", "New User");
 
     // Accept the invitation
     const res = await app.inject({
@@ -546,7 +546,7 @@ describe("POST /v1/invites/accept", () => {
     expect(body.role).toBe("admin");
 
     // Verify the user is now a member
-    const { token: freshToken } = await createUserAndGetToken(app, "newuser@owlmetry.com");
+    const { token: freshToken } = await createUserAndGetToken(app, "newuser@pulse.pubky.org");
     const teamRes = await app.inject({
       method: "GET",
       url: `/v1/teams/${teamId}`,
@@ -564,14 +564,14 @@ describe("POST /v1/invites/accept", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { email: "specific@owlmetry.com" },
+      payload: { email: "specific@pulse.pubky.org" },
     });
 
     const acceptUrl = testEmailService.lastInvitationParams!.accept_url;
     const inviteToken = new URL(acceptUrl).searchParams.get("token")!;
 
     // Different user tries to accept
-    const wrongUser = await createUserAndGetToken(app, "wrong@owlmetry.com", "Wrong User");
+    const wrongUser = await createUserAndGetToken(app, "wrong@pulse.pubky.org", "Wrong User");
 
     const res = await app.inject({
       method: "POST",
@@ -581,7 +581,7 @@ describe("POST /v1/invites/accept", () => {
     });
 
     expect(res.statusCode).toBe(403);
-    expect(res.json().error).toContain("specific@owlmetry.com");
+    expect(res.json().error).toContain("specific@pulse.pubky.org");
   });
 
   it("rejects expired invitation", async () => {
@@ -591,7 +591,7 @@ describe("POST /v1/invites/accept", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { email: "expired@owlmetry.com" },
+      payload: { email: "expired@pulse.pubky.org" },
     });
 
     const acceptUrl = testEmailService.lastInvitationParams!.accept_url;
@@ -602,7 +602,7 @@ describe("POST /v1/invites/accept", () => {
     await client`UPDATE team_invitations SET expires_at = NOW() - INTERVAL '1 day' WHERE token = ${inviteToken}`;
     await client.end();
 
-    const newUser = await createUserAndGetToken(app, "expired@owlmetry.com", "Expired User");
+    const newUser = await createUserAndGetToken(app, "expired@pulse.pubky.org", "Expired User");
 
     const res = await app.inject({
       method: "POST",
@@ -622,13 +622,13 @@ describe("POST /v1/invites/accept", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { email: "accepted@owlmetry.com" },
+      payload: { email: "accepted@pulse.pubky.org" },
     });
 
     const acceptUrl = testEmailService.lastInvitationParams!.accept_url;
     const inviteToken = new URL(acceptUrl).searchParams.get("token")!;
 
-    const newUser = await createUserAndGetToken(app, "accepted@owlmetry.com", "Accepted User");
+    const newUser = await createUserAndGetToken(app, "accepted@pulse.pubky.org", "Accepted User");
 
     // Accept the invitation the first time
     await app.inject({
@@ -639,7 +639,7 @@ describe("POST /v1/invites/accept", () => {
     });
 
     // Re-auth and try to accept again
-    const { token: freshToken } = await createUserAndGetToken(app, "accepted@owlmetry.com");
+    const { token: freshToken } = await createUserAndGetToken(app, "accepted@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
@@ -659,18 +659,18 @@ describe("POST /v1/invites/accept", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { email: "racer@owlmetry.com" },
+      payload: { email: "racer@pulse.pubky.org" },
     });
 
     const acceptUrl = testEmailService.lastInvitationParams!.accept_url;
     const inviteToken = new URL(acceptUrl).searchParams.get("token")!;
 
     // Register user and add them directly as a member (simulating race condition)
-    const newUser = await createUserAndGetToken(app, "racer@owlmetry.com", "Racer");
+    const newUser = await createUserAndGetToken(app, "racer@pulse.pubky.org", "Racer");
     await addTeamMember(teamId, newUser.userId, "member");
 
     // Re-auth to pick up membership
-    const { token: freshToken } = await createUserAndGetToken(app, "racer@owlmetry.com");
+    const { token: freshToken } = await createUserAndGetToken(app, "racer@pulse.pubky.org");
 
     const res = await app.inject({
       method: "POST",
@@ -699,7 +699,7 @@ describe("DELETE /v1/teams/:teamId/invitations/:invitationId", () => {
       method: "POST",
       url: `/v1/teams/${teamId}/invitations`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { email: "newuser@owlmetry.com" },
+      payload: { email: "newuser@pulse.pubky.org" },
     });
 
     const invitationId = createRes.json().id;
@@ -770,11 +770,11 @@ describe("PATCH /v1/teams/:teamId/members/:userId", () => {
     await addTeamMember(teamId, second.userId, "admin");
 
     // Register third user and add as member
-    const third = await createUserAndGetToken(app, "third@owlmetry.com", "Third User");
+    const third = await createUserAndGetToken(app, "third@pulse.pubky.org", "Third User");
     await addTeamMember(teamId, third.userId, "member");
 
     // Admin tries to promote third to owner
-    const { token: adminToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: adminToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "PATCH",
@@ -794,7 +794,7 @@ describe("PATCH /v1/teams/:teamId/members/:userId", () => {
     await addTeamMember(teamId, second.userId, "owner");
 
     // Second owner demotes first — should succeed since there's still one owner left
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res1 = await app.inject({
       method: "PATCH",
@@ -857,7 +857,7 @@ describe("DELETE /v1/teams/:teamId/members/:userId", () => {
 
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: adminToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: adminToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "DELETE",
@@ -874,7 +874,7 @@ describe("DELETE /v1/teams/:teamId/members/:userId", () => {
 
     await addTeamMember(teamId, second.userId, "member");
 
-    const { token: memberToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "DELETE",
@@ -891,10 +891,10 @@ describe("DELETE /v1/teams/:teamId/members/:userId", () => {
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "member");
 
-    const third = await createUserAndGetToken(app, "third@owlmetry.com", "Third User");
+    const third = await createUserAndGetToken(app, "third@pulse.pubky.org", "Third User");
     await addTeamMember(teamId, third.userId, "member");
 
-    const { token: memberToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "DELETE",
@@ -958,7 +958,7 @@ describe("GET /v1/teams/:teamId/members/:userId/agent-keys", () => {
     await addTeamMember(teamId, second.userId, "admin");
 
     // Create key as the second user (needs admin+ to create keys)
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     const keyId = await createAgentKeyForUser(secondToken, teamId, "Second Agent");
 
     const res = await app.inject({
@@ -979,7 +979,7 @@ describe("GET /v1/teams/:teamId/members/:userId/agent-keys", () => {
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     await createAgentKeyForUser(secondToken, teamId, "Active Agent");
     await createClientKeyForUser(secondToken, testData.appId, "Client Key");
 
@@ -1005,7 +1005,7 @@ describe("GET /v1/teams/:teamId/members/:userId/agent-keys", () => {
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     await createAgentKeyForUser(secondToken, teamId, "My Agent");
 
     // Re-auth and demote to member to prove self-access works even as member
@@ -1015,7 +1015,7 @@ describe("GET /v1/teams/:teamId/members/:userId/agent-keys", () => {
       headers: { authorization: `Bearer ${(await getTokenAndTeamId(app)).token}` },
       payload: { role: "member" },
     });
-    const { token: memberToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "GET",
@@ -1034,7 +1034,7 @@ describe("DELETE /v1/teams/:teamId/members/:userId with revoke_agent_keys", () =
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     const keyId = await createAgentKeyForUser(secondToken, teamId, "Agent Key");
 
     const res = await app.inject({
@@ -1054,7 +1054,7 @@ describe("DELETE /v1/teams/:teamId/members/:userId with revoke_agent_keys", () =
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     const agentKeyId = await createAgentKeyForUser(secondToken, teamId, "Agent Key");
     const clientKeyId = await createClientKeyForUser(secondToken, testData.appId, "Client Key");
 
@@ -1076,11 +1076,11 @@ describe("DELETE /v1/teams/:teamId/members/:userId with revoke_agent_keys", () =
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "admin");
 
-    const { token: secondToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     const keyId = await createAgentKeyForUser(secondToken, teamId, "Self Agent");
 
     // Re-auth to pick up membership
-    const { token: freshToken } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token: freshToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
 
     const res = await app.inject({
       method: "DELETE",
@@ -1104,7 +1104,7 @@ describe("Role enforcement on existing routes", () => {
   ) {
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, role);
-    const { token } = await createUserAndGetToken(app, "second@owlmetry.com");
+    const { token } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     return token;
   }
 
@@ -1229,7 +1229,7 @@ describe("API key rejection on team and invitation routes", () => {
     ]);
 
     const routes = [
-      { method: "POST" as const, url: `/v1/teams/${teamId}/invitations`, payload: { email: "test@owlmetry.com" } },
+      { method: "POST" as const, url: `/v1/teams/${teamId}/invitations`, payload: { email: "test@pulse.pubky.org" } },
       { method: "POST" as const, url: "/v1/invites/accept", payload: { token: "00000000-0000-0000-0000-000000000000" } },
       { method: "DELETE" as const, url: `/v1/teams/${teamId}/invitations/00000000-0000-0000-0000-000000000000` },
     ];

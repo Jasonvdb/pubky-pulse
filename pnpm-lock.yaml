@@ -38,10 +38,10 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.28.0
         version: 1.28.0(zod@4.3.6)
-      '@owlmetry/db':
+      '@pubky-pulse/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@owlmetry/shared':
+      '@pubky-pulse/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       dotenv:
@@ -87,7 +87,7 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
-      '@owlmetry/shared':
+      '@pubky-pulse/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@radix-ui/react-label':
@@ -166,7 +166,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@owlmetry/shared':
+      '@pubky-pulse/shared':
         specifier: workspace:*
         version: link:../shared
       drizzle-orm:

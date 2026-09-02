@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { DataMode } from "@owlmetry/shared";
+import type { DataMode } from "@pubky-pulse/shared";
 
-const STORAGE_KEY = "owlmetry:data-mode";
+const STORAGE_KEY = "pubky-pulse:data-mode";
 const DEFAULT_MODE: DataMode = "production";
 
 interface DataModeContextValue {

@@ -11,9 +11,9 @@ import {
   issueOccurrences,
   feedback,
   eventAttachments,
-} from "@owlmetry/db";
-import { ANONYMOUS_ID_PREFIX } from "@owlmetry/shared";
-import type { IdentityClaimRequest, IdentityClaimResponse } from "@owlmetry/shared";
+} from "@pubky-pulse/db";
+import { ANONYMOUS_ID_PREFIX } from "@pubky-pulse/shared";
+import type { IdentityClaimRequest, IdentityClaimResponse } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { resolveProjectIdFromApp } from "../utils/project.js";
 import { mergeAnonAppUserRowIntoReal } from "../utils/claimed-identity.js";

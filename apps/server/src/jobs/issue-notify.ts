@@ -1,6 +1,6 @@
 import { eq, and, isNull, inArray, sql } from "drizzle-orm";
-import { projects, issues, apps } from "@owlmetry/db";
-import type { IssueAlertFrequency } from "@owlmetry/shared";
+import { projects, issues, apps } from "@pubky-pulse/db";
+import type { IssueAlertFrequency } from "@pubky-pulse/shared";
 import type { JobHandler } from "../services/job-runner.js";
 import type { NotificationDispatcher } from "../services/notifications/dispatcher.js";
 import { resolveTeamMemberUserIds } from "../utils/team-members.js";
@@ -96,7 +96,7 @@ export function issueNotifyHandler(dispatcher: NotificationDispatcher): JobHandl
         app_name: appNameMap.get(i.app_id) ?? "Unknown",
       }));
 
-      const dashboardUrl = `${process.env.WEB_APP_URL ?? "https://owlmetry.com"}/dashboard/issues`;
+      const dashboardUrl = `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}/dashboard/issues`;
       const issueWord = qualifyingIssues.length === 1 ? "issue" : "issues";
       const result = await dispatcher.enqueue({
         type: "issue.digest",

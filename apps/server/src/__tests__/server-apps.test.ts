@@ -25,7 +25,7 @@ afterAll(async () => {
 });
 
 describe("server platform apps", () => {
-  it("creates a server app without bundle_id and returns owl_client_ key", async () => {
+  it("creates a server app without bundle_id and returns pulse_client_ key", async () => {
     const token = await getToken(app);
     const res = await app.inject({
       method: "POST",
@@ -43,7 +43,7 @@ describe("server platform apps", () => {
     expect(body.name).toBe("API Server");
     expect(body.platform).toBe("backend");
     expect(body.bundle_id).toBeNull();
-    expect(body.client_secret).toMatch(/^owl_client_/);
+    expect(body.client_secret).toMatch(/^pulse_client_/);
   });
 
   it("auto-created key for server app has client type with events:write", async () => {
@@ -71,7 +71,7 @@ describe("server platform apps", () => {
     const autoKey = keys.find((k: { app_id: string }) => k.app_id === appId);
     expect(autoKey).toBeDefined();
     expect(autoKey.key_type).toBe("client");
-    expect(autoKey.secret).toMatch(/^owl_client_/);
+    expect(autoKey.secret).toMatch(/^pulse_client_/);
   });
 
   it("ingests events with server app key (no bundle_id)", async () => {
@@ -130,7 +130,7 @@ describe("server platform apps", () => {
       payload: {
         name: "Invalid Platform",
         platform: "ios",
-        bundle_id: "com.owlmetry.invalid",
+        bundle_id: "org.pubky.pulse.invalid",
         project_id: testData.projectId,
       },
     });

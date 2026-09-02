@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { appUsers } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
-import { ANONYMOUS_ID_PREFIX } from "@owlmetry/shared";
+import { appUsers } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
+import { ANONYMOUS_ID_PREFIX } from "@pubky-pulse/shared";
 
 /**
  * Merge properties into a user's existing properties via a single upsert.

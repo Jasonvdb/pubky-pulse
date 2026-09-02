@@ -1,6 +1,6 @@
-# Owlmetry Full Demo Test Guide
+# Pubky Pulse Full Demo Test Guide
 
-Step-by-step guide for setting up, running, and verifying the full Owlmetry demo stack. Designed so an AI agent (or human) can follow it end-to-end.
+Step-by-step guide for setting up, running, and verifying the full Pubky Pulse demo stack. Designed so an AI agent (or human) can follow it end-to-end.
 
 ## Phase 1: Prerequisites
 
@@ -19,7 +19,7 @@ If `xcodebuildmcp` is not installed, see https://github.com/getsentry/XcodeBuild
 
 ```bash
 # Create database if it doesn't exist (safe to run if it already exists)
-createdb owlmetry 2>/dev/null || true
+createdb pubky_pulse 2>/dev/null || true
 
 # Install dependencies and build all packages
 pnpm install && pnpm build
@@ -33,24 +33,24 @@ pnpm dev:seed
 
 ### Seed credentials
 
-- **Dashboard login**: `admin@owlmetry.com` (verification code appears in server console)
-- **Agent API key**: `owl_agent_demo_000000000000000000000000000000000000000000`
-- **Server client key**: `owl_client_svr_0000000000000000000000000000000000000000`
+- **Dashboard login**: `admin@pulse.pubky.org` (verification code appears in server console)
+- **Agent API key**: `pulse_agent_demo_000000000000000000000000000000000000000000`
+- **Server client key**: `pulse_client_svr_0000000000000000000000000000000000000000`
 
 ## Phase 3: Start Servers
 
-Kill any stale processes, then start the API server and Node demo server. The Node demo now lives in the sibling [`owlmetry-node`](https://github.com/owlmetry/owlmetry-node) repo under `Examples/Demo/` and resolves `@owlmetry/node` via `file:../..`, so the SDK must be built before the demo can start.
+Kill any stale processes, then start the API server and Node demo server. The Node demo now lives in the sibling [`pubky-pulse-node`](https://github.com/pubky/pubky-pulse-node) repo under `Examples/Demo/` and resolves `@synonymdev/pubky-pulse-node` via `file:../..`, so the SDK must be built before the demo can start.
 
 ```bash
 # Kill stale processes
 lsof -ti:4000 | xargs kill 2>/dev/null || true
 lsof -ti:4007 | xargs kill 2>/dev/null || true
 
-# Terminal 1 — Owlmetry API server (port 4000)
+# Terminal 1 — Pubky Pulse API server (port 4000)
 pnpm dev:server
 
 # Terminal 2 — Build the Node SDK once, then start the demo (port 4007, requires API server)
-cd ../owlmetry-node
+cd ../pubky-pulse-node
 npm install
 npm run build
 cd Examples/Demo
@@ -72,8 +72,8 @@ curl -s http://localhost:4007/health | jq .   # {"status":"ok"}
 Point your agent at the local MCP endpoint (`http://localhost:4000/mcp`) using the seeded agent key. For Claude Code:
 
 ```bash
-claude mcp add --transport http owlmetry http://localhost:4000/mcp \
-  --header "Authorization: Bearer owl_agent_demo_000000000000000000000000000000000000000000"
+claude mcp add --transport http pubky-pulse http://localhost:4000/mcp \
+  --header "Authorization: Bearer pulse_agent_demo_000000000000000000000000000000000000000000"
 ```
 
 Config for every other supported MCP client (Codex, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code) is at [/docs/mcp](/docs/mcp/setup).
@@ -94,12 +94,12 @@ Pick a simulator (e.g., "iPhone 16") and note its UDID. You can also use `--simu
 
 ### Build and run
 
-The iOS demo now lives in the sibling [`owlmetry-swift`](https://github.com/owlmetry/owlmetry-swift) repo under `Examples/Demo/`. Assuming it's checked out as a sibling of this repo:
+The iOS demo now lives in the sibling [`pubky-pulse-swift`](https://github.com/pubky/pubky-pulse-swift) repo under `Examples/Demo/`. Assuming it's checked out as a sibling of this repo:
 
 ```bash
 xcodebuildmcp simulator build-and-run \
-  --scheme OwlmetryDemo \
-  --project-path ../owlmetry-swift/Examples/Demo/OwlmetryDemo.xcodeproj \
+  --scheme PulseDemo \
+  --project-path ../pubky-pulse-swift/Examples/Demo/PulseDemo.xcodeproj \
   --simulator-name "iPhone 16"
 ```
 
@@ -126,12 +126,12 @@ xcodebuildmcp ui-automation screenshot --simulator-id <UDID> --return-format pat
 
 ### What the button does
 
-1. Sends `Owl.info("Demo started")` (iOS)
-2. Sends `Owl.tracking("demo_full_test")` (iOS)
-3. Calls `POST /api/greet` with `name: "OwlBot"` → 2 backend info events
+1. Sends `Pulse.info("Demo started")` (iOS)
+2. Sends `Pulse.tracking("demo_full_test")` (iOS)
+3. Calls `POST /api/greet` with `name: "PulseBot"` → 2 backend info events
 4. Waits 1 second
 5. Calls `POST /api/checkout` with `item: "Premium Plan"` → backend info + warn + error
-6. Sends `Owl.error("Simulated client crash")` (iOS)
+6. Sends `Pulse.error("Simulated client crash")` (iOS)
 
 ## Phase 7: Verify Events
 
@@ -230,7 +230,7 @@ lsof -ti:4000 | xargs kill 2>/dev/null || true
 lsof -ti:4007 | xargs kill 2>/dev/null || true
 
 # Terminate iOS app on simulator
-xcodebuildmcp simulator stop --simulator-id <UDID> --bundle-id dev.owlmetry.demo
+xcodebuildmcp simulator stop --simulator-id <UDID> --bundle-id org.pubky.pulse.demo
 ```
 
 ## Troubleshooting

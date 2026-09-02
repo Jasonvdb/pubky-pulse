@@ -43,7 +43,7 @@ Reserve an event attachment. The SDK sends metadata (filename, size, SHA-256, co
 // Success (201)
 {
   "attachment_id": "uuid",
-  "upload_url": "https://api.owlmetry.com/v1/ingest/attachment/<id>",
+  "upload_url": "https://api.yourdomain.com/v1/ingest/attachment/<id>",
   "expires_at": "2024-01-15T10:35:00.000Z"
 }
 ```
@@ -147,7 +147,7 @@ Fetch a single attachment with a signed download URL.
   "uploaded_at": "2024-01-15T10:30:05.000Z",
   "created_at": "2024-01-15T10:30:00.000Z",
   "download_url": {
-    "url": "https://api.owlmetry.com/v1/attachments/download?t=...",
+    "url": "https://api.yourdomain.com/v1/attachments/download?t=...",
     "expires_at": "2024-01-15T10:31:05.000Z",
     "original_filename": "crash.log",
     "content_type": "text/plain",
@@ -170,7 +170,7 @@ Stream the attachment bytes. Requires a signed token — do not call this endpoi
 |-----------|------|-------------|
 | `t` | string | Signed HMAC token. Expires 60 seconds after being issued. |
 
-Returns the file bytes with `Content-Type`, `Content-Length`, `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`. If the server is configured with `OWLMETRY_ATTACHMENTS_INTERNAL_URI`, the response uses `X-Accel-Redirect` so nginx streams bytes directly without passing them through Node.
+Returns the file bytes with `Content-Type`, `Content-Length`, `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`. If the server is configured with `PULSE_ATTACHMENTS_INTERNAL_URI`, the response uses `X-Accel-Redirect` so nginx streams bytes directly without passing them through Node.
 
 Returns 401 for missing/invalid/expired tokens. Returns 404 if the attachment no longer exists or has not completed upload.
 

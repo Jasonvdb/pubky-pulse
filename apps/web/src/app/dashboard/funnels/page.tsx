@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import type { ProjectResponse, FunnelStep } from "@owlmetry/shared";
-import { validateFunnelSlug } from "@owlmetry/shared/constants";
+import type { ProjectResponse, FunnelStep } from "@pubky-pulse/shared";
+import { validateFunnelSlug } from "@pubky-pulse/shared/constants";
 import { useTeam } from "@/contexts/team-context";
 import { useFunnels, useTeamFunnels } from "@/hooks/use-funnels";
 import { useProjectColorMap, useProjectInfoMap } from "@/hooks/use-project-colors";

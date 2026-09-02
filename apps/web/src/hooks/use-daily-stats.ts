@@ -6,7 +6,7 @@ import type {
   StatsBucketedResponse,
   StatsGrain,
   StatsKind,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { buildQueryString } from "@/lib/query";
 
 interface UseDailyStatsOpts {

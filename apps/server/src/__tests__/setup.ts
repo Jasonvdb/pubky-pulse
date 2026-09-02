@@ -13,9 +13,9 @@ const MIGRATIONS_FOLDER = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../../../packages/db/drizzle",
 );
-import * as schema from "@owlmetry/db";
-import { createDatabaseConnection, ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "@owlmetry/db";
-import type { Permission, TeamRole } from "@owlmetry/shared";
+import * as schema from "@pubky-pulse/db";
+import { createDatabaseConnection, ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "@pubky-pulse/db";
+import type { Permission, TeamRole } from "@pubky-pulse/shared";
 import { authRoutes } from "../routes/auth.js";
 import { ingestRoutes } from "../routes/ingest.js";
 import { feedbackIngestRoutes } from "../routes/feedback-ingest.js";
@@ -50,25 +50,25 @@ import { inAppAdapter } from "../services/notifications/adapters/in-app.js";
 import { createEmailAdapter } from "../services/notifications/adapters/email.js";
 import { notificationDeliverHandler } from "../jobs/notification-deliver.js";
 
-export const TEST_DB_URL = "postgres://localhost:5432/owlmetry_test";
+export const TEST_DB_URL = "postgres://localhost:5432/pubky_pulse_test";
 
 export const TEST_CLIENT_KEY =
-  "owl_client_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  "pulse_client_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 export const TEST_AGENT_KEY =
-  "owl_agent_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  "pulse_agent_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 export const TEST_EXPIRED_KEY =
-  "owl_client_cccccccccccccccccccccccccccccccccccccccccccccc";
+  "pulse_client_cccccccccccccccccccccccccccccccccccccccccccccc";
 export const TEST_BACKEND_CLIENT_KEY =
-  "owl_client_dddddddddddddddddddddddddddddddddddddddddddddd";
+  "pulse_client_dddddddddddddddddddddddddddddddddddddddddddddd";
 export const TEST_ANDROID_CLIENT_KEY =
-  "owl_client_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+  "pulse_client_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 export const TEST_IMPORT_KEY =
-  "owl_import_ffffffffffffffffffffffffffffffffffffffffffffffff";
-export const TEST_ANDROID_BUNDLE_ID = "com.owlmetry.test.android";
-export const TEST_BUNDLE_ID = "com.owlmetry.test";
+  "pulse_import_ffffffffffffffffffffffffffffffffffffffffffffffff";
+export const TEST_ANDROID_BUNDLE_ID = "org.pubky.pulse.test.android";
+export const TEST_BUNDLE_ID = "org.pubky.pulse.test";
 export const TEST_SESSION_ID = "00000000-0000-0000-0000-000000000001";
 export const TEST_USER = {
-  email: "test@owlmetry.com",
+  email: "test@pulse.pubky.org",
   name: "Test User",
 };
 

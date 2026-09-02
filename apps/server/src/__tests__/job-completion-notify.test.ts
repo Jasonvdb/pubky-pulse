@@ -31,13 +31,13 @@ beforeEach(async () => {
   await seedTestData();
   const result = await getTokenAndTeamId(app);
   teamId = result.teamId;
-  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@owlmetry.com'`;
+  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@pulse.pubky.org'`;
   ownerUserId = owner.id;
 });
 
 describe("job completion notification", () => {
   it("manual job with notify=true sends inbox row only to the triggering user", async () => {
-    const u2 = await createUserAndGetToken(app, "other@owlmetry.com");
+    const u2 = await createUserAndGetToken(app, "other@pulse.pubky.org");
     await addTeamMember(teamId, u2.userId, "member");
 
     await app.jobRunner.trigger("test_job", {

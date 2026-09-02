@@ -15,7 +15,7 @@ import type {
   TeamMetricListResponse,
   TeamMetricStatsResponse,
   TeamMetricStatsEntry,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 export function useMetricDefinitions(projectId: string | undefined) {
   const key = projectId ? `/v1/projects/${projectId}/metrics` : null;

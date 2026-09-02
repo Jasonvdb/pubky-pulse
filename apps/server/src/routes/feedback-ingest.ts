@@ -1,14 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, isNull } from "drizzle-orm";
-import { apps, feedback } from "@owlmetry/db";
+import { apps, feedback } from "@pubky-pulse/db";
 import {
   ALLOWED_ENVIRONMENTS_FOR_PLATFORM,
   MAX_FEEDBACK_MESSAGE_LENGTH,
   MAX_FEEDBACK_NAME_LENGTH,
   MAX_FEEDBACK_EMAIL_LENGTH,
   isValidFeedbackEmail,
-} from "@owlmetry/shared";
-import type { IngestFeedbackRequest } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import type { IngestFeedbackRequest } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { resolveIngestCountryCode } from "../utils/event-processing.js";

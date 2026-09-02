@@ -8,4 +8,4 @@ export interface IdentityClaimResponse {
   events_reassigned_count: number;
 }
 
-export const ANONYMOUS_ID_PREFIX = "owl_anon_";
+export const ANONYMOUS_ID_PREFIX = "pulse_anon_";

@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { projects } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
-import { PROJECT_COLORS } from "@owlmetry/shared";
+import { projects } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
+import { PROJECT_COLORS } from "@pubky-pulse/shared";
 
 export async function pickUnusedProjectColor(db: Db, team_id: string): Promise<string> {
   const rows = await db

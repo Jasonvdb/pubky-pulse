@@ -208,14 +208,14 @@ describe("issue_scan splits sdk:network_request errors by host+path+method", () 
     ]);
   });
 
-  it("groups owl_anon_<uuid> path segments together", async () => {
+  it("groups pulse_anon_<uuid> path segments together", async () => {
     // Real production data: anonymous user IDs look like
-    // owl_anon_FE631B1B-0F18-4F20-8018-896D0F5CF86F. The UUID rule strips
+    // pulse_anon_FE631B1B-0F18-4F20-8018-896D0F5CF86F. The UUID rule strips
     // the UUID portion; the prefix is identical across users, so all anon
     // requests to the same endpoint collapse into one issue.
     await ingestNetworkErrors([
-      { url: "https://api.example.com/v1/users/owl_anon_FE631B1B-0F18-4F20-8018-896D0F5CF86F/profile" },
-      { url: "https://api.example.com/v1/users/owl_anon_9512F3B3-1A4C-4EEA-A00F-83B9BFE7C296/profile" },
+      { url: "https://api.example.com/v1/users/pulse_anon_FE631B1B-0F18-4F20-8018-896D0F5CF86F/profile" },
+      { url: "https://api.example.com/v1/users/pulse_anon_9512F3B3-1A4C-4EEA-A00F-83B9BFE7C296/profile" },
     ]);
 
     const result = await runScan();

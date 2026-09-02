@@ -8,7 +8,7 @@ import type {
   CompletionsCountResponse,
   EventsCountResponse,
   ProjectResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { useUser } from "@/hooks/use-user";
 import { useIssueCounts } from "@/hooks/use-issues";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/use-user-preferences";
@@ -22,7 +22,7 @@ import {
   resolveMagnitudeWindowHours,
   formatMagnitudeWindowLabel,
   MAGNITUDE_WINDOW_HOURS,
-} from "@owlmetry/shared/preferences";
+} from "@pubky-pulse/shared/preferences";
 import {
   Select,
   SelectContent,

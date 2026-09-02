@@ -7,23 +7,23 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const dmSans = DM_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://owlmetry.com"),
+  metadataBase: new URL("https://pulse.pubky.org"),
   title: {
-    default: "Owlmetry — Agent-First Observability for Mobile Apps",
-    template: "%s | Owlmetry",
+    default: "Pubky Pulse — Agent-First Observability",
+    template: "%s | Pubky Pulse",
   },
   description:
     "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, in-app questionnaires, and error tracking — purpose-built for AI coding agents.",
   openGraph: {
     type: "website",
-    siteName: "Owlmetry",
-    title: "Owlmetry — Agent-First Observability for Mobile Apps",
+    siteName: "Pubky Pulse",
+    title: "Pubky Pulse — Agent-First Observability",
     description:
       "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, questionnaires, and error tracking.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Owlmetry — Agent-First Observability for Mobile Apps",
+    title: "Pubky Pulse — Agent-First Observability",
     description:
       "Self-hosted observability for web, backend and mobile apps. Events, metrics, funnels, and questionnaires — driven by your coding agent.",
   },

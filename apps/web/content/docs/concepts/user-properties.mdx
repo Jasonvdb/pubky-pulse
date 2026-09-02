@@ -3,7 +3,7 @@ title: User Properties
 description: Attach custom key-value metadata to users — plan tier, account status, cohort, and more.
 ---
 
-User properties are custom key-value pairs stored on each user in Owlmetry. They let you see at a glance what plan a user is on, which cohort they belong to, or any other user-level attribute you care about.
+User properties are custom key-value pairs stored on each user in Pubky Pulse. They let you see at a glance what plan a user is on, which cohort they belong to, or any other user-level attribute you care about.
 
 Properties are stored on each project-level user and displayed in the Users list in the dashboard. Users are unique per project — the same user ID seen from multiple apps (e.g., web and backend) is a single user with one set of properties.
 
@@ -25,20 +25,20 @@ Both the Swift and Node SDKs provide `setUserProperties()`:
 
 ```swift
 // Swift
-Owl.setUserProperties(["plan": "premium", "org": "acme"])
+Pulse.setUserProperties(["plan": "premium", "org": "acme"])
 ```
 
 ```typescript
 // Node.js
-const owl = Owl.withUser("user_123");
-owl.setUserProperties({ plan: "premium", org: "acme" });
+const pulse = Pulse.withUser("user_123");
+pulse.setUserProperties({ plan: "premium", org: "acme" });
 ```
 
 ### Via the API
 
 ```
 POST /v1/identity/properties
-Authorization: Bearer owl_client_...
+Authorization: Bearer pulse_client_...
 
 {
   "user_id": "user_123",
@@ -71,7 +71,7 @@ Use **user properties** for data that describes the user and changes infrequentl
 
 ## Identity Claim Merge
 
-When an anonymous user is claimed (Swift `Owl.setUser()`, or direct `POST /v1/identity/claim`), properties from the anonymous user are merged into the real user. The real user's existing values take precedence on key conflicts.
+When an anonymous user is claimed (Swift `Pulse.setUser()`, or direct `POST /v1/identity/claim`), properties from the anonymous user are merged into the real user. The real user's existing values take precedence on key conflicts.
 
 ## Dashboard columns
 

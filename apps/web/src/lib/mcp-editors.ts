@@ -4,12 +4,12 @@ export const PLACEHOLDER = "YOUR_AGENT_KEY";
 
 export function maskKey(key: string): string {
   if (!key || key === PLACEHOLDER) return PLACEHOLDER;
-  const visible = key.slice(0, 18); // "owl_agent_" + 8 hex chars
+  const visible = key.slice(0, 20); // "pulse_agent_" + 8 hex chars
   return `${visible}${"*".repeat(8)}`;
 }
 export const MCP_URL = `${API_URL}/mcp`;
 const IS_DEV = process.env.NODE_ENV === "development";
-export const SERVER_NAME = IS_DEV ? "owlmetry-local-dev" : "owlmetry";
+export const SERVER_NAME = IS_DEV ? "pubky-pulse-local-dev" : "pubky-pulse";
 
 export interface EditorScope {
   label: string;

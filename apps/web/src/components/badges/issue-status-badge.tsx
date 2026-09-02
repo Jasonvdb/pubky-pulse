@@ -1,4 +1,4 @@
-import type { IssueStatus } from "@owlmetry/shared";
+import type { IssueStatus } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 type Tone = "red" | "blue" | "yellow" | "green" | "gray";

@@ -8,7 +8,7 @@ import type {
   ProjectResponse,
   AppResponse,
   UserLocalesResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { buildQueryString } from "@/lib/query";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";

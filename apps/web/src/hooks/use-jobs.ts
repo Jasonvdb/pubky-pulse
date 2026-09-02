@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { buildQueryString } from "@/lib/query";
-import type { JobRunsResponse, JobRunsQueryParams, JobRunResponse } from "@owlmetry/shared";
+import type { JobRunsResponse, JobRunsQueryParams, JobRunResponse } from "@pubky-pulse/shared";
 
 export function useJobRuns(teamId: string | undefined, filters: Partial<JobRunsQueryParams>) {
   const [extraRuns, setExtraRuns] = useState<JobRunResponse[]>([]);

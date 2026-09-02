@@ -6,7 +6,7 @@ import { LayoutDashboard, FolderOpen, ScrollText, BarChart3, Filter, KeyRound, U
 import { cn } from "@/lib/utils";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
-import { OwlLogo } from "@/components/owl-logo";
+import { PulseLogo } from "@/components/pulse-logo";
 import {
   Select,
   SelectContent,
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { DataMode } from "@owlmetry/shared";
+import type { DataMode } from "@pubky-pulse/shared";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -43,9 +43,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex h-14 items-center border-b px-4 gap-2.5">
-        <OwlLogo className="h-6 w-6" />
+        <PulseLogo className="h-6 w-6" />
         <Link href="/" className="text-lg font-semibold tracking-tight">
-          Owlmetry
+          Pubky Pulse
         </Link>
       </div>
       {currentTeam && (

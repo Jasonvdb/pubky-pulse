@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { QUESTIONNAIRE_RESPONSE_STATUSES } from "@owlmetry/shared";
+import { QUESTIONNAIRE_RESPONSE_STATUSES } from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
 // Structural-only schema for the MCP tool — the server's
@@ -20,7 +20,7 @@ export function registerQuestionnaireTools(
 ): void {
   server.registerTool("list-questionnaires", {
     description:
-      "List structured questionnaire definitions. Questionnaires are multi-question surveys (text, single/multi choice, rating, NPS) shown in-app via the Swift SDK's view modifier — complementary to single-message feedback. Each row carries response_count + last_response_at + project_id. Pass `project_id` for a single project, or `team_id` for every questionnaire across every accessible project in the team (mutually exclusive). `data_mode` filters the response_count + submitted_count + last_response_at rollup by production / development / all.",
+      "List structured questionnaire definitions. Questionnaires are multi-question surveys (text, single/multi choice, rating, NPS) shown in-app by the Swift and Android SDKs — complementary to single-message feedback. Each row carries response_count + last_response_at + project_id. Pass `project_id` for a single project, or `team_id` for every questionnaire across every accessible project in the team (mutually exclusive). `data_mode` filters the response_count + submitted_count + last_response_at rollup by production / development / all.",
     inputSchema: {
       project_id: z.string().uuid().optional().describe("The project ID (mutually exclusive with team_id)"),
       team_id: z.string().uuid().optional().describe("The team ID — lists across all accessible projects (mutually exclusive with project_id)"),

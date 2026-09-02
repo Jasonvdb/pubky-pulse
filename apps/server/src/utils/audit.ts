@@ -1,6 +1,6 @@
-import { auditLogs } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
-import type { AuditAction, AuditResourceType } from "@owlmetry/shared";
+import { auditLogs } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
+import type { AuditAction, AuditResourceType } from "@pubky-pulse/shared";
 import type { AuthContext } from "../types.js";
 
 /**

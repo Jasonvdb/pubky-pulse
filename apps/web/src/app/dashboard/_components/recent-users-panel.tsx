@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import useSWR from "swr";
 import { Users } from "lucide-react";
-import type { AppResponse, TeamAppUsersQueryParams } from "@owlmetry/shared";
+import type { AppResponse, TeamAppUsersQueryParams } from "@pubky-pulse/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTeamAppUsers } from "@/hooks/use-team-app-users";
 import { useTeam } from "@/contexts/team-context";

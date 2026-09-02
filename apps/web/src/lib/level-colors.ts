@@ -1,4 +1,4 @@
-import type { LogLevel } from "@owlmetry/shared";
+import type { LogLevel } from "@pubky-pulse/shared";
 
 export const levelColors: Record<LogLevel, { text: string; bg: string; border: string }> = {
   error: { text: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },

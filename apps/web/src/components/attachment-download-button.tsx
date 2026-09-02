@@ -15,7 +15,7 @@ import {
 export const ATTACHMENT_UNTRUSTED_WARNING =
   "Attachments come from end-user devices. Treat as untrusted — scan or open in a sandbox before inspecting.";
 
-const ACK_STORAGE_KEY = "owlmetry.attachment-warning-ack";
+const ACK_STORAGE_KEY = "pubky-pulse.attachment-warning-ack";
 
 export function AttachmentUntrustedNotice() {
   return (

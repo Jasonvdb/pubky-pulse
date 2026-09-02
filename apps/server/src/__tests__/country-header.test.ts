@@ -14,7 +14,7 @@ import {
 import { parseCountryHeader } from "../utils/event-processing.js";
 
 const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/owlmetry_test";
+  process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/pubky_pulse_test";
 
 let app: FastifyInstance;
 let dbClient: postgres.Sql;

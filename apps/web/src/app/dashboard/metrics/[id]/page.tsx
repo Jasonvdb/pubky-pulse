@@ -3,14 +3,14 @@
 import { useEffect, useState, useMemo, useDeferredValue } from "react";
 import { useParams, usePathname } from "next/navigation";
 import useSWR from "swr";
-import { formatDuration } from "@owlmetry/shared/constants";
+import { formatDuration } from "@pubky-pulse/shared/constants";
 import type {
   MetricDefinitionResponse,
   AppResponse,
   MetricPhase,
   ProjectResponse,
   StoredMetricEventResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useUrlFilters } from "@/hooks/use-url-filters";

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import type { AuditLogsQueryParams } from "@owlmetry/shared";
+import type { AuditLogsQueryParams } from "@pubky-pulse/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 import { useTeam } from "@/contexts/team-context";

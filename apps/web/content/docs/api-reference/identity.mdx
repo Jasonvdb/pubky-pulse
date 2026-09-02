@@ -15,20 +15,20 @@ Reassign every row keyed on an anonymous user — events, metric events, funnel 
 
 ```json
 {
-  "anonymous_id": "owl_anon_abc123xyz",
+  "anonymous_id": "pulse_anon_abc123xyz",
   "user_id": "user-456"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `anonymous_id` | string | Yes | The anonymous ID to claim. Must start with `owl_anon_`. |
-| `user_id` | string | Yes | The authenticated user's ID. Must not start with `owl_anon_`. |
+| `anonymous_id` | string | Yes | The anonymous ID to claim. Must start with `pulse_anon_`. |
+| `user_id` | string | Yes | The authenticated user's ID. Must not start with `pulse_anon_`. |
 
 ### Validation rules
 
-- `anonymous_id` must start with the `owl_anon_` prefix.
-- `user_id` must not start with `owl_anon_`.
+- `anonymous_id` must start with the `pulse_anon_` prefix.
+- `user_id` must not start with `pulse_anon_`.
 - The API key must be scoped to an app (client keys only).
 
 ### Behavior
@@ -93,7 +93,7 @@ Set, merge, or delete user properties for a known user. Properties are stored as
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `user_id` | string | Yes | The user to update. May be an anonymous ID (`owl_anon_*`) or a real user ID. |
+| `user_id` | string | Yes | The user to update. May be an anonymous ID (`pulse_anon_*`) or a real user ID. |
 | `properties` | object | Yes | Key-value string pairs to merge. Empty-string values delete the key. |
 
 ### Validation rules

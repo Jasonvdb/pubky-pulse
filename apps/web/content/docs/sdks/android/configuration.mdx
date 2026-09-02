@@ -1,9 +1,9 @@
 ---
 title: Configuration
-description: Configure the Android SDK with Owl.configure() — context, endpoint, API key, and options.
+description: Configure the Android SDK with Pulse.configure() — context, endpoint, API key, and options.
 ---
 
-Call `Owl.configure()` once, as early as possible — in your `Application` subclass's `onCreate()`. This initializes the SDK, starts a new session, and begins capturing events.
+Call `Pulse.configure()` once, as early as possible — in your `Application` subclass's `onCreate()`. This initializes the SDK, starts a new session, and begins capturing events.
 
 ## Basic Setup
 
@@ -11,22 +11,22 @@ Create (or extend) an `Application` subclass and call `configure()` in `onCreate
 
 ```kotlin
 import android.app.Application
-import com.owlmetry.android.Owl
-import com.owlmetry.android.OwlConfigurationError
+import org.pubky.pulse.android.Pulse
+import org.pubky.pulse.android.PulseConfigurationError
 
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         try {
-            Owl.configure(
+            Pulse.configure(
                 context = this,
-                endpoint = "https://ingest.owlmetry.com",
-                apiKey = "owl_client_...",
+                endpoint = "https://ingest.pulse.pubky.org",
+                apiKey = "pulse_client_...",
             )
-        } catch (e: OwlConfigurationError) {
-            android.util.Log.e("Owlmetry", "configuration failed", e)
+        } catch (e: PulseConfigurationError) {
+            android.util.Log.e("PubkyPulse", "configuration failed", e)
         }
-        Owl.info("app_launched")
+        Pulse.info("app_launched")
     }
 }
 ```
@@ -46,8 +46,8 @@ Register the `Application` subclass in your manifest:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `context` | `Context` | required | An Android `Context`. `configure()` uses `applicationContext` internally, so passing `this` from `Application` is correct. |
-| `endpoint` | `String` | required | Your Owlmetry ingest server URL. |
-| `apiKey` | `String` | required | Client API key. Must start with `owl_client_`. |
+| `endpoint` | `String` | required | Your Pubky Pulse ingest server URL. |
+| `apiKey` | `String` | required | Client API key. Must start with `pulse_client_`. |
 | `flushOnBackground` | `Boolean` | `true` | Automatically flush buffered events when the app enters the background. |
 | `compressionEnabled` | `Boolean` | `true` | Gzip-compress request bodies before sending. |
 | `networkTrackingEnabled` | `Boolean` | `true` | Reserved for automatic HTTP request tracking (not yet implemented on Android). |
@@ -56,10 +56,10 @@ Register the `Application` subclass in your manifest:
 ## Full Example with All Options
 
 ```kotlin
-Owl.configure(
+Pulse.configure(
     context = this,
-    endpoint = "https://ingest.owlmetry.com",
-    apiKey = "owl_client_...",
+    endpoint = "https://ingest.pulse.pubky.org",
+    apiKey = "pulse_client_...",
     flushOnBackground = true,
     compressionEnabled = true,
     networkTrackingEnabled = true,
@@ -69,7 +69,7 @@ Owl.configure(
 
 ## What Happens on Configure
 
-1. **Session ID** — a fresh UUID is generated to group all events from this launch. Readable at runtime via `Owl.sessionId`.
+1. **Session ID** — a fresh UUID is generated to group all events from this launch. Readable at runtime via `Pulse.sessionId`.
 2. **Package ID** — automatically read from `context.packageName` (e.g. `com.example.app`).
 3. **Debug mode** — `is_dev` is set to `true` when the host app is debuggable (the `FLAG_DEBUGGABLE` manifest flag — true for debug builds, false for release).
 4. **Launch time** — the SDK measures the time from process start (`Process.getStartUptimeMillis()`) to the `configure()` call and includes it as `_launch_ms` on the `session_started` event. Place `configure()` as early as possible for an accurate cold-start measurement.
@@ -80,19 +80,19 @@ Owl.configure(
 
 ## Configuration Errors
 
-`Owl.configure()` throws `OwlConfigurationError` — a sealed exception hierarchy with three cases:
+`Pulse.configure()` throws `PulseConfigurationError` — a sealed exception hierarchy with three cases:
 
 | Error | When it occurs |
 |-------|---------------|
-| `OwlConfigurationError.InvalidEndpoint` | The endpoint string is not a valid absolute http(s) URL with a host. |
-| `OwlConfigurationError.InvalidApiKey` | The API key does not start with `owl_client_`. |
-| `OwlConfigurationError.MissingBundleId` | The package name could not be determined (rare — empty `context.packageName`). |
+| `PulseConfigurationError.InvalidEndpoint` | The endpoint string is not a valid absolute http(s) URL with a host. |
+| `PulseConfigurationError.InvalidApiKey` | The API key does not start with `pulse_client_`. |
+| `PulseConfigurationError.MissingBundleId` | The package name could not be determined (rare — empty `context.packageName`). |
 
 Wrap the call in `try`/`catch` as shown above.
 
 ## Not yet on Android
 
-**Automatic network-request instrumentation** is not yet provided by the Android SDK — `networkTrackingEnabled` is reserved and currently a no-op. Track HTTP failures explicitly with `Owl.error` in the meantime.
+**Automatic network-request instrumentation** is not yet provided by the Android SDK — `networkTrackingEnabled` is reserved and currently a no-op. Track HTTP failures explicitly with `Pulse.error` in the meantime.
 
 ## Calling Configure More Than Once
 
@@ -103,7 +103,7 @@ Calling `configure()` again is safe. The SDK shuts down the previous transport, 
 In most cases the SDK handles cleanup automatically via background-flush on app background. If you need to guarantee delivery at a specific point (e.g. before a deliberate teardown in a test harness), call `shutdown()`:
 
 ```kotlin
-Owl.shutdown()  // suspend — flushes buffered events and stops the background-flush observer
+Pulse.shutdown()  // suspend — flushes buffered events and stops the background-flush observer
 ```
 
 `shutdown()` is a suspend function; call it from a coroutine. The SDK can be `configure()`d again afterward.

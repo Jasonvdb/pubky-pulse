@@ -1,25 +1,25 @@
 ---
 title: User Feedback
-description: Collect free-text feedback from your users with OwlFeedbackView and Owl.sendFeedback.
+description: Collect free-text feedback from your users with PulseFeedbackView and Pulse.sendFeedback.
 ---
 
-The Swift SDK ships a reusable SwiftUI view (`OwlFeedbackView`) plus a programmatic API (`Owl.sendFeedback`) for gathering free-text feedback from inside your app. Submissions are linked automatically to the current session, user id, app version, device, and environment.
+The Swift SDK ships a reusable SwiftUI view (`PulseFeedbackView`) plus a programmatic API (`Pulse.sendFeedback`) for gathering free-text feedback from inside your app. Submissions are linked automatically to the current session, user id, app version, device, and environment.
 
 See the [Feedback concept page](/docs/concepts/feedback) for what happens after a submission lands.
 
 ## Programmatic API
 
-`Owl.sendFeedback` is synchronous and **not offline-queued** — it returns a receipt on success and throws on failure so you can surface a retry to the user:
+`Pulse.sendFeedback` is synchronous and **not offline-queued** — it returns a receipt on success and throws on failure so you can surface a retry to the user:
 
 ```swift
 do {
-    let receipt = try await Owl.sendFeedback(
+    let receipt = try await Pulse.sendFeedback(
         message: "Love the new import flow!",
         name: currentUser?.displayName,   // optional
         email: currentUser?.email         // optional
     )
     print("Feedback stored: \(receipt.id)")
-} catch let error as OwlFeedbackError {
+} catch let error as PulseFeedbackError {
     // .emptyMessage, .notConfigured, .serverError, .transportFailure
     showAlert(error.localizedDescription)
 }
@@ -27,14 +27,14 @@ do {
 
 ## SwiftUI View
 
-`OwlFeedbackView` is a plain `View` — you pick the presentation. It doesn't set its own `navigationTitle` or wrap itself in a `NavigationStack` on purpose.
+`PulseFeedbackView` is a plain `View` — you pick the presentation. It doesn't set its own `navigationTitle` or wrap itself in a `NavigationStack` on purpose.
 
 ### As a sheet
 
 ```swift
 .sheet(isPresented: $showFeedback) {
     NavigationStack {
-        OwlFeedbackView(
+        PulseFeedbackView(
             name: user?.displayName,
             email: user?.email,
             onSubmitted: { _ in showFeedback = false },
@@ -49,7 +49,7 @@ do {
 
 ```swift
 NavigationLink("Send feedback") {
-    OwlFeedbackView()
+    PulseFeedbackView()
         .navigationTitle("Feedback")
 }
 ```
@@ -61,7 +61,7 @@ When the view has no enclosing toolbar to attach its actions to, pass `actionsPl
 ```swift
 VStack {
     Text("Tell us what you think")
-    OwlFeedbackView(
+    PulseFeedbackView(
         showsContactFields: false,
         actionsPlacement: .inline
     )
@@ -73,11 +73,11 @@ VStack {
 The Submit button (both the toolbar confirm action and the inline `.borderedProminent` variant) reads the SwiftUI environment tint. Override it with `.tint()` at any level in your hierarchy:
 
 ```swift
-OwlFeedbackView(onSubmitted: { _ in }, onCancel: {})
+PulseFeedbackView(onSubmitted: { _ in }, onCancel: {})
     .tint(.orange)
 ```
 
-Or set it once on an ancestor and all `OwlFeedbackView` instances inherit:
+Or set it once on an ancestor and all `PulseFeedbackView` instances inherit:
 
 ```swift
 WindowGroup {
@@ -90,14 +90,14 @@ If you don't apply `.tint()` explicitly, the view inherits the enclosing `Naviga
 
 ## Customizing strings
 
-Every user-facing string is overridable via `OwlFeedbackStrings`. The defaults ship through the SDK's bundled `Localizable.xcstrings` catalog:
+Every user-facing string is overridable via `PulseFeedbackStrings`. The defaults ship through the SDK's bundled `Localizable.xcstrings` catalog:
 
 ```swift
 // Partial override
-OwlFeedbackView(strings: .default.with(header: "How are we doing?"))
+PulseFeedbackView(strings: .default.with(header: "How are we doing?"))
 
 // Point at your app's own string catalog
-OwlFeedbackView(strings: OwlFeedbackStrings(
+PulseFeedbackView(strings: PulseFeedbackStrings(
     header: LocalizedStringResource("feedback.header", table: "MyApp"),
     // …other fields keep defaults
 ))
@@ -111,6 +111,6 @@ OwlFeedbackView(strings: OwlFeedbackStrings(
 | `email` | `nil` | Prefill the Email field (user can still edit). |
 | `showsContactFields` | `true` | Set `false` to hide Name + Email entirely. |
 | `actionsPlacement` | `.toolbar` | `.toolbar` (nav bar) or `.inline` (bottom button). |
-| `strings` | `.default` | `OwlFeedbackStrings` — every label/placeholder/error is overridable. |
-| `onSubmitted` | `nil` | Called with the `OwlFeedbackReceipt` on success (use it to dismiss the sheet). |
+| `strings` | `.default` | `PulseFeedbackStrings` — every label/placeholder/error is overridable. |
+| `onSubmitted` | `nil` | Called with the `PulseFeedbackReceipt` on success (use it to dismiss the sheet). |
 | `onCancel` | `nil` | Called when the user taps Cancel. When `nil`, no Cancel button is shown. |

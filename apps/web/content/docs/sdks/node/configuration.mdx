@@ -1,18 +1,18 @@
 ---
 title: Configuration
-description: Configure the Node.js SDK with Owl.configure() — API key, endpoint, isDev, and flush options.
+description: Configure the Node.js SDK with Pulse.configure() — API key, endpoint, isDev, and flush options.
 ---
 
-Call `Owl.configure()` once at application startup before logging any events.
+Call `Pulse.configure()` once at application startup before logging any events.
 
 ## Basic Configuration
 
 ```typescript
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   serviceName: "payment-service",
   appVersion: "1.4.0",
 });
@@ -22,8 +22,8 @@ Owl.configure({
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `endpoint` | `string` | *required* | Owlmetry server URL. Trailing slashes are stripped automatically. |
-| `apiKey` | `string` | *required* | Client API key for a backend-platform app. Must start with `owl_client_`. |
+| `endpoint` | `string` | *required* | Pubky Pulse server URL. Trailing slashes are stripped automatically. |
+| `apiKey` | `string` | *required* | Client API key for a backend-platform app. Must start with `pulse_client_`. |
 | `serviceName` | `string` | `"unknown"` | Name of this service. Useful for identifying which backend emitted an event when you run multiple services. |
 | `appVersion` | `string` | `undefined` | Version string included on every event. |
 | `debug` | `boolean` | `false` | When `true`, SDK internals log to `console.error` -- failed requests and slug corrections. |
@@ -31,19 +31,19 @@ Owl.configure({
 | `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic buffer flushes. |
 | `flushThreshold` | `number` | `20` | Maximum buffered events before an automatic flush is triggered. |
 | `maxBufferSize` | `number` | `10000` | Hard cap on buffered events. When the buffer is full, the oldest event is dropped. |
-| `consoleLogging` | `boolean` | `true` | Print events to the console. Each line is prefixed with `🦉 Owlmetry` and the log level. Set to `false` to suppress. |
-| `captureUnhandled` | `boolean` | `true` | Auto-capture unhandled errors as `Owl.error` events via `process.on('uncaughtException')` and `process.on('unhandledRejection')` listeners. Crash semantics are preserved — see [Auto-Capture of Unhandled Errors](/docs/sdks/node/events#auto-capture-of-unhandled-errors). Set to `false` to opt out and rely on explicit `Owl.error(err)` calls only. |
+| `consoleLogging` | `boolean` | `true` | Print events to the console. Each line is prefixed with `Pubky Pulse` and the log level. Set to `false` to suppress. |
+| `captureUnhandled` | `boolean` | `true` | Auto-capture unhandled errors as `Pulse.error` events via `process.on('uncaughtException')` and `process.on('unhandledRejection')` listeners. Crash semantics are preserved — see [Auto-Capture of Unhandled Errors](/docs/sdks/node/events#auto-capture-of-unhandled-errors). Set to `false` to opt out and rely on explicit `Pulse.error(err)` calls only. |
 
 ## What Happens on Configure
 
-When `Owl.configure()` is called:
+When `Pulse.configure()` is called:
 
 1. **Validates** the endpoint URL and API key format
-2. **Generates a session ID** -- a fresh UUID that groups all events until the next `configure()` call or `shutdown()`. This is the *default* session ID; for servers that handle many clients, per-request overrides are available via [`Owl.withSession()`](/docs/sdks/node/identity#withsession) and the `options.sessionId` parameter on event methods
+2. **Generates a session ID** -- a fresh UUID that groups all events until the next `configure()` call or `shutdown()`. This is the *default* session ID; for servers that handle many clients, per-request overrides are available via [`Pulse.withSession()`](/docs/sdks/node/identity#withsession) and the `options.sessionId` parameter on event methods
 3. **Starts the flush timer** -- the buffer is flushed every `flushIntervalMs` milliseconds
 4. **Registers a `beforeExit` handler** -- automatically flushes remaining events when the Node.js process exits gracefully
-5. **Installs unhandled-error listeners** -- when `captureUnhandled` is `true` (default), registers `process.on('uncaughtException')` and `process.on('unhandledRejection')` listeners that capture the error as an `Owl.error` event tagged with `_unhandled`. Crash semantics are preserved (see [Auto-Capture of Unhandled Errors](/docs/sdks/node/events#auto-capture-of-unhandled-errors)). `Owl.shutdown()` removes both listeners cleanly
-6. **Prepares the session bracket** -- a `sdk:session_started` event is emitted *lazily*, just before the first user-tracked event. Cold-started processes that never call `Owl.info()` / `Owl.step()` / etc. produce no events at all. The matching `sdk:session_ended` event is emitted on `shutdown()` only if a session ever started
+5. **Installs unhandled-error listeners** -- when `captureUnhandled` is `true` (default), registers `process.on('uncaughtException')` and `process.on('unhandledRejection')` listeners that capture the error as a `Pulse.error` event tagged with `_unhandled`. Crash semantics are preserved (see [Auto-Capture of Unhandled Errors](/docs/sdks/node/events#auto-capture-of-unhandled-errors)). `Pulse.shutdown()` removes both listeners cleanly
+6. **Prepares the session bracket** -- a `sdk:session_started` event is emitted *lazily*, just before the first user-tracked event. Cold-started processes that never call `Pulse.info()` / `Pulse.step()` / etc. produce no events at all. The matching `sdk:session_ended` event is emitted on `shutdown()` only if a session ever started
 
 If you call `configure()` again (for example during hot reload), the previous transport is shut down cleanly before the new one starts.
 
@@ -59,22 +59,22 @@ By default, `isDev` is `true` when `NODE_ENV` is anything other than `"productio
 Override it explicitly if you need different behavior:
 
 ```typescript
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   isDev: false, // always production, regardless of NODE_ENV
 });
 ```
 
 ## Graceful Shutdown
 
-Call `Owl.shutdown()` before your process exits to flush remaining events and stop the background timer:
+Call `Pulse.shutdown()` before your process exits to flush remaining events and stop the background timer:
 
 ```typescript
 process.on("SIGTERM", async () => {
-  await Owl.shutdown();
+  await Pulse.shutdown();
   process.exit(0);
 });
 ```
 
-For serverless environments, see the [serverless guide](/docs/sdks/node/serverless) which covers `Owl.wrapHandler()` as an alternative.
+For serverless environments, see the [serverless guide](/docs/sdks/node/serverless) which covers `Pulse.wrapHandler()` as an alternative.

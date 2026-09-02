@@ -13,7 +13,7 @@ import {
 } from "./setup.js";
 
 const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/owlmetry_test";
+  process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/pubky_pulse_test";
 
 let app: FastifyInstance;
 let dbClient: postgres.Sql;
@@ -163,7 +163,7 @@ describe("POST /v1/feedback", () => {
 
     await dbClient`
       INSERT INTO app_users (project_id, user_id, is_anonymous, claimed_from)
-      VALUES (${projectId}, 'user-42', false, ${dbClient.json(["owl_anon_abc"])})
+      VALUES (${projectId}, 'user-42', false, ${dbClient.json(["pulse_anon_abc"])})
     `;
 
     const res = await app.inject({
@@ -173,7 +173,7 @@ describe("POST /v1/feedback", () => {
       payload: {
         bundle_id: TEST_BUNDLE_ID,
         message: "late feedback after claim",
-        user_id: "owl_anon_abc",
+        user_id: "pulse_anon_abc",
       },
     });
     expect(res.statusCode).toBe(201);

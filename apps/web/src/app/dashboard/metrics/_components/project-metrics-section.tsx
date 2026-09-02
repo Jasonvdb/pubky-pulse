@@ -4,7 +4,7 @@ import type {
   MetricDefinitionResponse,
   MetricStatsEntry,
   TeamMetricStatsEntry,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { ProjectDot } from "@/lib/project-color";
 import { MetricCardGrid } from "./metric-card-grid";
 

@@ -1,13 +1,13 @@
 ---
 title: Screen Tracking
-description: Automatically track screen views with the .owlScreen() SwiftUI view modifier.
+description: Automatically track screen views with the .pulseScreen() SwiftUI view modifier.
 ---
 
-The `.owlScreen()` SwiftUI view modifier automatically tracks screen appearances and time-on-screen with no manual event calls needed.
+The `.pulseScreen()` SwiftUI view modifier automatically tracks screen appearances and time-on-screen with no manual event calls needed.
 
 ## Usage
 
-Attach `.owlScreen()` to the outermost view of each screen:
+Attach `.pulseScreen()` to the outermost view of each screen:
 
 ```swift
 struct HomeView: View {
@@ -15,7 +15,7 @@ struct HomeView: View {
         ScrollView {
             // ...
         }
-        .owlScreen("Home")
+        .pulseScreen("Home")
     }
 }
 
@@ -24,7 +24,7 @@ struct SettingsView: View {
         Form {
             // ...
         }
-        .owlScreen("Settings")
+        .pulseScreen("Settings")
     }
 }
 ```
@@ -40,7 +40,7 @@ Both screen events are debug-level, so they're filtered out of the default produ
 
 ## Placement Guidelines
 
-Apply `.owlScreen()` to the outermost container of each distinct screen in your app. Typical attachment points are `NavigationStack`, `Form`, `ScrollView`, or the root `VStack`:
+Apply `.pulseScreen()` to the outermost container of each distinct screen in your app. Typical attachment points are `NavigationStack`, `Form`, `ScrollView`, or the root `VStack`:
 
 ```swift
 struct ProfileView: View {
@@ -49,7 +49,7 @@ struct ProfileView: View {
             ProfileHeader()
             PostList()
         }
-        .owlScreen("Profile")
+        .pulseScreen("Profile")
     }
 }
 ```
@@ -70,7 +70,7 @@ struct ContentView: View {
             }
             .navigationTitle("Home")
         }
-        .owlScreen("Home")
+        .pulseScreen("Home")
     }
 }
 
@@ -79,7 +79,7 @@ struct ProfileView: View {
         VStack {
             Text("Profile content")
         }
-        .owlScreen("Profile")
+        .pulseScreen("Profile")
         .navigationTitle("Profile")
     }
 }
@@ -91,7 +91,7 @@ struct SettingsView: View {
                 Toggle("Notifications", isOn: .constant(true))
             }
         }
-        .owlScreen("Settings")
+        .pulseScreen("Settings")
         .navigationTitle("Settings")
     }
 }
@@ -111,7 +111,7 @@ The `screenName` value is also available as a filter in the [events](/docs/conce
 
 ## Screen Tracking vs Manual Events
 
-Use `.owlScreen()` for tracking when a screen is viewed and how long a user stays. Use manual `Owl.info()` with the `screenName` parameter for events that happen within a screen (button taps, state changes, errors):
+Use `.pulseScreen()` for tracking when a screen is viewed and how long a user stays. Use manual `Pulse.info()` with the `screenName` parameter for events that happen within a screen (button taps, state changes, errors):
 
 ```swift
 struct CartView: View {
@@ -119,12 +119,12 @@ struct CartView: View {
         VStack {
             // ...
             Button("Place Order") {
-                Owl.info("Order placed", screenName: "Cart", attributes: ["items": "\(cart.count)"])
+                Pulse.info("Order placed", screenName: "Cart", attributes: ["items": "\(cart.count)"])
             }
         }
-        .owlScreen("Cart")
+        .pulseScreen("Cart")
     }
 }
 ```
 
-The `.owlScreen()` modifier handles the screen view tracking, while `Owl.info()` with `screenName: "Cart"` ties the button tap event to the same screen context.
+The `.pulseScreen()` modifier handles the screen view tracking, while `Pulse.info()` with `screenName: "Cart"` ties the button tap event to the same screen context.

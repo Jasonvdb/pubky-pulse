@@ -1,19 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import type { Readable } from "node:stream";
 import { and, eq, isNull } from "drizzle-orm";
-import { apps, eventAttachments, events } from "@owlmetry/db";
+import { apps, eventAttachments, events } from "@pubky-pulse/db";
 import {
   ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS,
   ATTACHMENT_MAX_FILENAME_LENGTH,
   ATTACHMENT_UPLOAD_URL_TTL_SECONDS,
   MAX_ATTACHMENT_USER_QUOTA_BYTES,
   isDisallowedAttachmentContentType,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type {
   AttachmentRejection,
   AttachmentUploadRequest,
   AttachmentUploadResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { attachmentStorage } from "../storage/index.js";

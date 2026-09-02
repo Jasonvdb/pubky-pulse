@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Owlmetry VPS Setup Script
+# Pubky Pulse VPS Setup Script
 # Installs: Node.js 22 LTS, PostgreSQL 16, nginx, pm2, pnpm
 # Target: Ubuntu 24.04 LTS
-# Usage: bash setup-vps.sh
+# Usage: bash setup-ubuntu-vps.sh
 #
 # This script is idempotent — safe to run multiple times.
 
@@ -30,7 +30,7 @@ fi
 
 echo ""
 echo "=============================="
-echo "  Owlmetry VPS Setup"
+echo "  Pubky Pulse VPS Setup"
 echo "=============================="
 echo ""
 
@@ -100,9 +100,9 @@ else
   systemctl enable postgresql
 fi
 
-# --- Create owlmetry database and user ---
-DB_NAME="owlmetry"
-DB_USER="owlmetry"
+# --- Create pubky-pulse database and user ---
+DB_NAME="pubky_pulse"
+DB_USER="pubky_pulse"
 DB_PASS=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
 
 if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
@@ -146,7 +146,7 @@ else
 fi
 
 # --- Create app directory ---
-APP_DIR="/opt/owlmetry"
+APP_DIR="/opt/pubky-pulse"
 if [[ -d "$APP_DIR" ]]; then
   log "App directory $APP_DIR already exists"
 else

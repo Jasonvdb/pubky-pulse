@@ -1,7 +1,7 @@
 import { createDatabaseConnection } from "./index.js";
 import { apps, events, appUsers, appUserApps, metricEvents, funnelEvents } from "./schema.js";
 import { eq, isNull, and } from "drizzle-orm";
-import { parseMetricMessage, parseStepMessage } from "@owlmetry/shared";
+import { parseMetricMessage, parseStepMessage } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
 import "dotenv/config";
 
@@ -10,7 +10,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 // ── Configuration ──────────────────────────────────────────────────────
 
@@ -192,7 +192,7 @@ const BUILD_NUMBERS = ["1", "2", "12", "15", "23", "42"];
 const USER_IDS = [
   "user-1", "user-2", "user-3", "user-7", "user-12",
   "user-42", "user-88", "user-99", "user-150", "user-201",
-  "owl_anon_abc123", "owl_anon_def456", "owl_anon_ghi789",
+  "pulse_anon_abc123", "pulse_anon_def456", "pulse_anon_ghi789",
   null, null, // some events have no user
 ];
 
@@ -370,7 +370,7 @@ async function main() {
           level: "info",
           message: stepMessage,
           screen_name: "OnboardingScreen",
-          source_module: "Owlmetry",
+          source_module: "PubkyPulse",
           environment: session.device.environment,
           os_version: session.device.os_version,
           app_version: session.appVersion,
@@ -439,7 +439,7 @@ async function main() {
     } else {
       projectUserPairs.set(projKey, {
         projectId,
-        isAnon: row.user_id.startsWith("owl_anon_"),
+        isAnon: row.user_id.startsWith("pulse_anon_"),
         earliest: ts,
         latest: ts,
         lastAppVersion: row.app_version ?? null,

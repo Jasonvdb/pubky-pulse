@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useUser } from "@/hooks/use-user";
-import type { AuthTeamMembership } from "@owlmetry/shared";
+import type { AuthTeamMembership } from "@pubky-pulse/shared";
 
-const STORAGE_KEY = "owlmetry:current-team";
+const STORAGE_KEY = "pubky-pulse:current-team";
 
 interface TeamContextValue {
   currentTeam: AuthTeamMembership | null;

@@ -3,14 +3,14 @@ title: Questionnaires
 description: Structured multi-question surveys shown in-app on launch-count, foreground-count, or time-since-install triggers — answers feed into the dashboard with per-question analytics.
 ---
 
-Questionnaires are short, structured surveys you build once on the server and present in-app via the Swift SDK. Where [feedback](./feedback) is a single free-text message, a questionnaire walks the user through a sequence of typed questions — rating scales, NPS, multiple choice, free text — and rolls each answer up in dashboard analytics.
+Questionnaires are short, structured surveys you build once on the server and present in-app via the Swift and Android SDKs. Where [feedback](./feedback) is a single free-text message, a questionnaire walks the user through a sequence of typed questions — rating scales, NPS, multiple choice, free text — and rolls each answer up in dashboard analytics.
 
 ## How It Works
 
 1. Create a questionnaire via the dashboard or the `create-questionnaire` MCP tool. Pick an immutable slug like `post-onboarding`. The schema is JSON: up to 30 questions, mix of `text`, `single_choice`, `multi_choice`, `rating` (1–5), `nps` (0–10).
-2. In your iOS app, add a SwiftUI view modifier referencing the slug — e.g. `.owlQuestionnaire(slug: "post-onboarding", trigger: .afterLaunches(3))`.
+2. In your app, add the SDK's questionnaire gate referencing the slug — in SwiftUI, e.g. `.pulseQuestionnaire(slug: "post-onboarding", trigger: .afterLaunches(3))`.
 3. When the trigger fires, the SDK calls `GET /v1/questionnaires/:slug` to fetch the latest schema and check eligibility for the current user (not already responded, not globally dismissed). If the user has an unsubmitted draft from an earlier session, the response also includes `in_progress: { response_id, answers }` so the SDK can resume.
-4. If eligible, the SDK presents `OwlQuestionnaireView` in a sheet. **Each Next tap saves the current answer set as a draft** (`POST /v1/questionnaires/:slug/responses` with `is_complete: false`). When the user taps Submit on the last question, the final call goes out with `is_complete: true`, which flips `submitted_at` to non-null and fires the team notification exactly once.
+4. If eligible, the SDK presents `PulseQuestionnaireView` in a sheet. **Each Next tap saves the current answer set as a draft** (`POST /v1/questionnaires/:slug/responses` with `is_complete: false`). When the user taps Submit on the last question, the final call goes out with `is_complete: true`, which flips `submitted_at` to non-null and fires the team notification exactly once.
 5. The response (draft or submitted) shows up under `/dashboard/questionnaires/<id>` — drafts carry a **Draft** badge with an `N/M answered` indicator; submitted rows carry **Submitted**. Per-question analytics include drafts by default so abandonment shows up as a natural drop-off curve.
 
 ## Progressive responses
@@ -65,14 +65,14 @@ Both variants share the same 4000-character cap on the server.
 
 ## Triggers
 
-The `.owlQuestionnaire(trigger:)` modifier accepts a composable trigger. Conditions are ANDed — all must be true for the sheet to present.
+The `.pulseQuestionnaire(trigger:)` modifier accepts a composable trigger. Conditions are ANDed — all must be true for the sheet to present.
 
 ```swift
 // Show on third launch
-.owlQuestionnaire(slug: "after-3-launches", trigger: .afterLaunches(3))
+.pulseQuestionnaire(slug: "after-3-launches", trigger: .afterLaunches(3))
 
 // Show after 3 launches AND at least a week since install
-.owlQuestionnaire(
+.pulseQuestionnaire(
     slug: "weekly-checkin",
     trigger: .when(
         .launches(atLeast: 3),
@@ -81,7 +81,7 @@ The `.owlQuestionnaire(trigger:)` modifier accepts a composable trigger. Conditi
 )
 
 // Custom gate — show only to free users
-.owlQuestionnaire(
+.pulseQuestionnaire(
     slug: "free-user-survey",
     trigger: .afterLaunch,
     isEligible: { !user.isPaid }
@@ -141,3 +141,4 @@ Each response gets a comment thread mirroring [feedback comments](./feedback#com
 - [`/dashboard/questionnaires`](/dashboard/questionnaires) — list + analytics UI
 - [`list-questionnaires` (MCP)](/docs/mcp/questionnaires) — agent tooling
 - [Swift SDK questionnaires](/docs/sdks/swift/questionnaires) — view modifier + manual presentation
+- [Android SDK questionnaires](/docs/sdks/android/questionnaires) — Compose gate + manual presentation

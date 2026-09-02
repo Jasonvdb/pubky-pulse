@@ -52,7 +52,7 @@ Verify the code and authenticate. Sets a JWT cookie (`token`, httpOnly, 10-year 
       "name": "User's Team",
       "slug": "user-abc12345",
       "role": "owner",
-      "default_agent_key": "owl_agent_..."
+      "default_agent_key": "pulse_agent_..."
     }
   ],
   "is_new_user": false
@@ -79,7 +79,7 @@ If the user belongs to multiple teams and `team_id` is not specified, returns 40
 
 // Response (201)
 {
-  "api_key": "owl_agent_abc123...",
+  "api_key": "pulse_agent_abc123...",
   "team": {
     "id": "uuid",
     "name": "My Team",
@@ -111,13 +111,13 @@ Lazy-create a default agent key for the team. If an agent key already exists for
 
 // Response — existing key returned (200)
 {
-  "secret": "owl_agent_abc123...",
+  "secret": "pulse_agent_abc123...",
   "created": false
 }
 
 // Response — new key created (201)
 {
-  "secret": "owl_agent_xyz789...",
+  "secret": "pulse_agent_xyz789...",
   "created": true
 }
 ```
@@ -246,7 +246,7 @@ List all API keys for teams the user belongs to.
   "api_keys": [
     {
       "id": "uuid",
-      "secret": "owl_client_abc1",
+      "secret": "pulse_client_abc1",
       "key_type": "client",
       "app_id": "uuid",
       "team_id": "uuid",
@@ -275,7 +275,7 @@ Get a single API key by ID.
 {
   "api_key": {
     "id": "uuid",
-    "secret": "owl_agent_xyz9",
+    "secret": "pulse_agent_xyz9",
     "key_type": "agent",
     "app_id": null,
     "team_id": "uuid",
@@ -311,7 +311,7 @@ Create a new API key. The full key is returned once and cannot be retrieved agai
 {
   "api_key": {
     "id": "uuid",
-    "secret": "owl_agent_full_key...",
+    "secret": "pulse_agent_full_key...",
     "key_type": "agent",
     "app_id": null,
     "team_id": "uuid",

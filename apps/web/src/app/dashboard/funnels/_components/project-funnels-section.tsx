@@ -1,6 +1,6 @@
 "use client";
 
-import type { FunnelDefinitionResponse } from "@owlmetry/shared";
+import type { FunnelDefinitionResponse } from "@pubky-pulse/shared";
 import { ProjectDot } from "@/lib/project-color";
 import { FunnelCardGrid } from "./funnel-card-grid";
 

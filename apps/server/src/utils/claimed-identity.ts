@@ -1,8 +1,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { FastifyBaseLogger } from "fastify";
-import type { Db } from "@owlmetry/db";
-import { appUsers, appUserApps } from "@owlmetry/db";
-import { ANONYMOUS_ID_PREFIX } from "@owlmetry/shared";
+import type { Db } from "@pubky-pulse/db";
+import { appUsers, appUserApps } from "@pubky-pulse/db";
+import { ANONYMOUS_ID_PREFIX } from "@pubky-pulse/shared";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type AppUserRow = typeof appUsers.$inferSelect;

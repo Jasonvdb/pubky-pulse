@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
-import { notifications } from "@owlmetry/db";
+import { notifications } from "@pubky-pulse/db";
 import {
   NOTIFICATION_TYPES,
   type NotificationsListQueryParams,
   type UpdateNotificationRequest,
   type MarkAllReadRequest,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requireUser, userAuth } from "../middleware/auth.js";
 import { encodeKeysetCursor, decodeKeysetCursor, normalizeLimit } from "../utils/pagination.js";
 

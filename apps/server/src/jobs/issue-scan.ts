@@ -1,5 +1,5 @@
 import { eq, and, isNull, inArray, sql } from "drizzle-orm";
-import { projects, apps, issues, jobRuns } from "@owlmetry/db";
+import { projects, apps, issues, jobRuns } from "@pubky-pulse/db";
 import {
   generateIssueFingerprint,
   compareVersions,
@@ -10,7 +10,7 @@ import {
   HTTP_URL_ATTRIBUTE,
   HTTP_METHOD_ATTRIBUTE,
   ERROR_TYPE_ATTRIBUTE,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type { JobHandler } from "../services/job-runner.js";
 import type { NotificationDispatcher } from "../services/notifications/dispatcher.js";
 import { resolveTeamMemberUserIds } from "../utils/team-members.js";
@@ -115,7 +115,7 @@ function discriminatorForEvent(event: ErrorEvent): string | null {
     const parts = parseNetworkRequest(event.custom_attributes);
     return parts ? `${parts.method} ${parts.host}${parts.templatedPath}` : null;
   }
-  // Errors carrying a runtime type (Owl.error(error) extraction in the SDKs)
+  // Errors carrying a runtime type (Pulse.error(error) extraction in the SDKs)
   // split per type so e.g. TypeError vs RangeError with the same wording stay
   // on separate issues. Events without _error_type fall through to the
   // legacy 2-arg fingerprint, so existing rows aren't disturbed.

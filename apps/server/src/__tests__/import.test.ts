@@ -67,7 +67,7 @@ describe("auth & access control", () => {
   });
 
   it("rejects invalid key", async () => {
-    const res = await importEvents([makeEvent()], "owl_import_invalidkey");
+    const res = await importEvents([makeEvent()], "pulse_import_invalidkey");
     expect(res.statusCode).toBe(401);
   });
 
@@ -389,12 +389,12 @@ describe("user upsert", () => {
   });
 
   it("marks anonymous users correctly", async () => {
-    await importEvents([makeEvent({ user_id: "owl_anon_abc123" })]);
+    await importEvents([makeEvent({ user_id: "pulse_anon_abc123" })]);
     await new Promise((r) => setTimeout(r, 200));
 
     const client = postgres(TEST_DB_URL, { max: 1 });
     const rows = await client`
-      SELECT is_anonymous FROM app_users WHERE user_id = 'owl_anon_abc123'
+      SELECT is_anonymous FROM app_users WHERE user_id = 'pulse_anon_abc123'
     `;
     await client.end();
     expect(rows[0].is_anonymous).toBe(true);
@@ -549,7 +549,7 @@ describe("key creation", () => {
       },
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json().api_key.secret).toMatch(/^owl_import_/);
+    expect(res.json().api_key.secret).toMatch(/^pulse_import_/);
     expect(res.json().api_key.key_type).toBe("import");
   });
 
@@ -587,7 +587,7 @@ describe("key creation", () => {
       },
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json().api_key.secret).toMatch(/^owl_import_/);
+    expect(res.json().api_key.secret).toMatch(/^pulse_import_/);
   });
 
   it("agent key cannot create client key", async () => {

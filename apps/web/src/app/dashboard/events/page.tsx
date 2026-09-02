@@ -8,7 +8,7 @@ import type {
   ProjectResponse,
   AppResponse,
   LogLevel,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { TIME_RANGES, ENVIRONMENTS } from "@/lib/time-ranges";
 import { FilterSheet, type FilterChip, resolveEntityName, truncateId } from "@/components/filter-sheet";
 import { formatTimeRangeChip } from "@/lib/time-ranges";
@@ -28,7 +28,7 @@ import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useEvents } from "@/hooks/use-events";
-import { isDefaultColumnOrder } from "@owlmetry/shared/preferences";
+import { isDefaultColumnOrder } from "@pubky-pulse/shared/preferences";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/use-user-preferences";
 import { useProjectColorMap, useAppColorMap } from "@/hooks/use-project-colors";
 import { EventDetailSheet } from "@/components/event-detail-sheet";

@@ -9,10 +9,10 @@ The SDK supports two patterns: **lifecycle operations** for things with a durati
 
 ## Lifecycle Operations
 
-Use `Owl.startOperation()` when you are measuring something that has a start and an end, such as a network request, file upload, or data processing task. The SDK tracks duration automatically.
+Use `Pulse.startOperation()` when you are measuring something that has a start and an end, such as a network request, file upload, or data processing task. The SDK tracks duration automatically.
 
 ```kotlin
-val op = Owl.startOperation("photo-upload", attributes = mapOf("format" to "heic"))
+val op = Pulse.startOperation("photo-upload", attributes = mapOf("format" to "heic"))
 
 try {
     val result = uploadPhoto(image)
@@ -24,20 +24,20 @@ try {
 
 ### Starting an Operation
 
-`Owl.startOperation()` returns an `OwlOperation` and immediately emits a `metric:<slug>:start` event. The operation records its start time (a monotonic `System.nanoTime()` clock, immune to wall-clock changes) and a unique `tracking_id` (UUID) that correlates all phases together.
+`Pulse.startOperation()` returns a `PulseOperation` and immediately emits a `metric:<slug>:start` event. The operation records its start time (a monotonic `System.nanoTime()` clock, immune to wall-clock changes) and a unique `tracking_id` (UUID) that correlates all phases together.
 
 ```kotlin
 public fun startOperation(
     metric: String,
     attributes: Map<String, String?> = emptyMap(),
-): OwlOperation
+): PulseOperation
 ```
 
 Optional values are accepted directly — `null`-valued keys are dropped before the event ships, so you can pass `String?` from your domain code without unwrapping first.
 
 ### Completing an Operation
 
-Call exactly one of three methods on the `OwlOperation` to finish it:
+Call exactly one of three methods on the `PulseOperation` to finish it:
 
 ```kotlin
 // Success — emits metric:<slug>:complete (info level)
@@ -64,15 +64,15 @@ Each completion method automatically includes:
 - **`complete()`** — succeeded and produced its intended result. **`fail(error)`** — attempted work but hit an error. **`cancel()`** — intentionally stopped (user cancelled, screen left, became irrelevant).
 - **Don't start for no-ops** — if the operation is skipped entirely (cache hit, dedup, precondition not met), don't call `startOperation()`.
 - **Don't track duration manually** — `duration_ms` is auto-calculated. Never pass a manual duration attribute.
-- **Long-lived operations** — if the operation outlives the scope where it started, hold the `OwlOperation` handle as state and end it on cleanup (`DisposableEffect` `onDispose`, `ViewModel.onCleared`) if it hasn't ended yet.
+- **Long-lived operations** — if the operation outlives the scope where it started, hold the `PulseOperation` handle as state and end it on cleanup (`DisposableEffect` `onDispose`, `ViewModel.onCleared`) if it hasn't ended yet.
 
 ## Single-Shot Measurements
 
-Use `Owl.recordMetric()` for values that do not have a duration — a point-in-time measurement or a count.
+Use `Pulse.recordMetric()` for values that do not have a duration — a point-in-time measurement or a count.
 
 ```kotlin
-Owl.recordMetric("items-in-cart", attributes = mapOf("count" to "${cart.items.size}"))
-Owl.recordMetric("app-cold-start", attributes = mapOf("screen" to "home"))
+Pulse.recordMetric("items-in-cart", attributes = mapOf("count" to "${cart.items.size}"))
+Pulse.recordMetric("app-cold-start", attributes = mapOf("screen" to "home"))
 ```
 
 This emits a single `metric:<slug>:record` event at info level.
@@ -92,7 +92,7 @@ If you pass an invalid slug, the SDK auto-corrects it by lowercasing, replacing 
 
 ```kotlin
 // "Photo Upload" is auto-corrected to "photo-upload" with a Logcat warning
-val op = Owl.startOperation("Photo Upload")
+val op = Pulse.startOperation("Photo Upload")
 ```
 
 ## Server-Side Metric Definitions
@@ -108,6 +108,6 @@ The metric definition must exist on the server before the SDK emits events for t
 | Use case | Approach |
 |----------|----------|
 | You want aggregated stats (p50, p95, error rates) | Structured metrics |
-| You want a timeline of individual occurrences | Plain events (`Owl.info()`, `Owl.error()`) |
+| You want a timeline of individual occurrences | Plain events (`Pulse.info()`, `Pulse.error()`) |
 | You need to measure how long something takes | Lifecycle operation (`startOperation`) |
 | You want to record a single value at a point in time | Single-shot (`recordMetric`) |

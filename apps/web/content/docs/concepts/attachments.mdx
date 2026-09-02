@@ -51,13 +51,13 @@ Reservations without a `user_id` (common on backends that don't track end-users)
 do {
     try await PhotoConverter.convert(inputURL: url)
 } catch {
-    Owl.error(
+    Pulse.error(
         "image conversion failed",
         screenName: "PhotoConverterView",
         attributes: ["stage": "decode"],
         attachments: [
-            OwlAttachment(fileURL: url),
-            OwlAttachment(data: debugJSON, name: "debug.json",
+            PulseAttachment(fileURL: url),
+            PulseAttachment(data: debugJSON, name: "debug.json",
                           contentType: "application/json"),
         ]
     )
@@ -70,7 +70,7 @@ do {
 try {
   await PdfParser.parse(path);
 } catch (err) {
-  Owl.error('pdf parse failed', { error: String(err) }, {
+  Pulse.error('pdf parse failed', { error: String(err) }, {
     attachments: [
       { path, name: 'input.pdf' },
       { buffer: diagnostics, name: 'debug.json', contentType: 'application/json' },
@@ -101,9 +101,9 @@ Downloads use short-lived (60s) HMAC-signed URLs. In production the server uses 
 
 ## Self-hosting notes
 
-- Attachment bytes live on disk at `OWLMETRY_ATTACHMENTS_PATH` (default `/opt/owlmetry-attachments` in production, `./data/attachments` in dev). **Do not include this path in your `pg_dump` backups.**
+- Attachment bytes live on disk at `PULSE_ATTACHMENTS_PATH` (default `/opt/pubky-pulse-attachments` in production, `./data/attachments` in dev). **Do not include this path in your `pg_dump` backups.**
 - For high-throughput deployments, mount a dedicated volume at this path so disk-full on attachments cannot starve Postgres.
-- When `OWLMETRY_ATTACHMENTS_INTERNAL_URI` is set, the server replies with `X-Accel-Redirect` headers so nginx can serve downloads without streaming through Node. Without it, the server streams bytes directly — fine in dev, avoid in production for any file above a few megabytes.
+- When `PULSE_ATTACHMENTS_INTERNAL_URI` is set, the server replies with `X-Accel-Redirect` headers so nginx can serve downloads without streaming through Node. Without it, the server streams bytes directly — fine in dev, avoid in production for any file above a few megabytes.
 
 ## Security
 

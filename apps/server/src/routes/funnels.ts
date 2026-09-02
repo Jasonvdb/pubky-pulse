@@ -1,15 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, or, inArray, isNull, isNotNull, sql, gte, lte, type SQL } from "drizzle-orm";
-import { funnelDefinitions, funnelEvents, projects, apps } from "@owlmetry/db";
-import { parseTimeParam } from "@owlmetry/shared";
+import { funnelDefinitions, funnelEvents, projects, apps } from "@pubky-pulse/db";
+import { parseTimeParam } from "@pubky-pulse/shared";
 import type {
   CreateFunnelRequest,
   UpdateFunnelRequest,
   FunnelQueryParams,
   FunnelStepAnalytics,
   CompletionsCountQueryParams,
-} from "@owlmetry/shared";
-import { validateFunnelSlug, PG_UNIQUE_VIOLATION } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import { validateFunnelSlug, PG_UNIQUE_VIOLATION } from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";

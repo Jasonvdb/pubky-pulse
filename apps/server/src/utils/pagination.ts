@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@owlmetry/shared";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@pubky-pulse/shared";
 
 export function normalizeLimit(rawLimit: unknown): number {
   return Math.min(

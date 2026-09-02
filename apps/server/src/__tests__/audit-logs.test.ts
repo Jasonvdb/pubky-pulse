@@ -69,7 +69,7 @@ describe("Auth & Permissions", () => {
 
   it("403 for member-role user", async () => {
     const { token: memberToken, userId: memberUserId } =
-      await createUserAndGetToken(app, "member@owlmetry.com");
+      await createUserAndGetToken(app, "member@pulse.pubky.org");
     await addTeamMember(teamId, memberUserId, "member");
 
     const res = await getAuditLogs({
@@ -80,7 +80,7 @@ describe("Auth & Permissions", () => {
 
   it("200 for admin-role user", async () => {
     const { token: adminToken, userId: adminUserId } =
-      await createUserAndGetToken(app, "admin@owlmetry.com");
+      await createUserAndGetToken(app, "admin@pulse.pubky.org");
     await addTeamMember(teamId, adminUserId, "admin");
 
     const res = await getAuditLogs({ authorization: `Bearer ${adminToken}` });
@@ -187,7 +187,7 @@ describe("Filtering", () => {
       payload: {
         name: "Filter App",
         platform: "apple",
-        bundle_id: "com.owlmetry.filter",
+        bundle_id: "org.pubky.pulse.filter",
         project_id: project.id,
       },
     });
@@ -388,7 +388,7 @@ describe("Team Scoping", () => {
     // Create a second user with their own team
     const { token: otherToken } = await createUserAndGetToken(
       app,
-      "other@owlmetry.com",
+      "other@pulse.pubky.org",
     );
 
     // Try to access the seeded team's audit logs
@@ -403,7 +403,7 @@ describe("Team Scoping", () => {
   it("logs are correctly scoped when user is in multiple teams", async () => {
     // Second user creates their own team (auto-created via login)
     const { token: otherToken, teamId: otherTeamId } =
-      await createUserAndGetToken(app, "multi@owlmetry.com");
+      await createUserAndGetToken(app, "multi@pulse.pubky.org");
 
     // Add the second user to our team as admin
     const meRes = await app.inject({

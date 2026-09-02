@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import type { FastifyInstance } from "fastify";
 import postgres from "postgres";
-import { cleanupSoftDeletedResources } from "@owlmetry/db";
+import { cleanupSoftDeletedResources } from "@pubky-pulse/db";
 import {
   buildApp,
   truncateAll,

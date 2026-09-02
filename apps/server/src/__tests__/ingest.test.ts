@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { gzipSync } from "node:zlib";
 import { eq } from "drizzle-orm";
-import { events, metricEvents, funnelEvents, appUsers } from "@owlmetry/db";
+import { events, metricEvents, funnelEvents, appUsers } from "@pubky-pulse/db";
 import {
   buildApp,
   truncateAll,
@@ -80,7 +80,7 @@ describe("POST /v1/ingest", () => {
         environment: "ios",
         os_version: "18.2",
         app_version: "2.1.0",
-        sdk_name: "owlmetry-swift",
+        sdk_name: "pubky-pulse-swift",
         sdk_version: "0.1.0",
         device_model: "iPhone 15 Pro",
         build_number: "142",
@@ -99,7 +99,7 @@ describe("POST /v1/ingest", () => {
         message: "metric:photo-conversion:start",
         session_id: TEST_SESSION_ID,
         user_id: "user-sdk",
-        sdk_name: "owlmetry-swift",
+        sdk_name: "pubky-pulse-swift",
         sdk_version: "0.4.2",
       },
       {
@@ -107,7 +107,7 @@ describe("POST /v1/ingest", () => {
         message: "step:checkout-complete",
         session_id: TEST_SESSION_ID,
         user_id: "user-sdk",
-        sdk_name: "owlmetry-swift",
+        sdk_name: "pubky-pulse-swift",
         sdk_version: "0.4.2",
       },
     ]);
@@ -123,7 +123,7 @@ describe("POST /v1/ingest", () => {
       .from(events)
       .where(eq(events.message, "metric:photo-conversion:start"))
       .limit(1);
-    expect(eventRow.sdk_name).toBe("owlmetry-swift");
+    expect(eventRow.sdk_name).toBe("pubky-pulse-swift");
     expect(eventRow.sdk_version).toBe("0.4.2");
 
     const [metricRow] = await app.db
@@ -145,7 +145,7 @@ describe("POST /v1/ingest", () => {
       .from(appUsers)
       .where(eq(appUsers.user_id, "user-sdk"))
       .limit(1);
-    expect(userRow.last_sdk_name).toBe("owlmetry-swift");
+    expect(userRow.last_sdk_name).toBe("pubky-pulse-swift");
     expect(userRow.last_sdk_version).toBe("0.4.2");
   });
 
@@ -259,7 +259,7 @@ describe("POST /v1/ingest", () => {
   it("rejects invalid API key", async () => {
     const res = await ingest(
       [{ level: "info", message: "test", session_id: TEST_SESSION_ID }],
-      "owl_client_invalidkeyinvalidkeyinvalidkeyinvalidke"
+      "pulse_client_invalidkeyinvalidkeyinvalidkeyinvalidke"
     );
 
     expect(res.statusCode).toBe(401);

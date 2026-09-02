@@ -1,5 +1,5 @@
 import { and, isNotNull, isNull, lt, sql } from "drizzle-orm";
-import { notifications } from "@owlmetry/db";
+import { notifications } from "@pubky-pulse/db";
 import type { JobHandler } from "../services/job-runner.js";
 
 const READ_RETENTION_DAYS = 30;

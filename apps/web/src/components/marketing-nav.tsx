@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { OwlLogo } from "@/components/owl-logo";
+import { PulseLogo } from "@/components/pulse-logo";
 import { Button } from "@/components/ui/button";
 import { useAuthCta } from "@/hooks/use-auth-cta";
 
@@ -11,7 +11,7 @@ const navLinks = [
   { href: "/docs", label: "Docs" },
   { href: "#features", label: "Features" },
   { href: "#how-it-works", label: "How It Works" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "#self-hosted", label: "Self-Hosted" },
 ];
 
 export function MarketingNav() {
@@ -38,8 +38,8 @@ export function MarketingNav() {
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <OwlLogo className="h-7 w-7" />
-          <span className="text-lg font-semibold tracking-tight text-white/90">Owlmetry</span>
+          <PulseLogo className="h-7 w-7" />
+          <span className="text-lg font-semibold tracking-tight text-white/90">Pubky Pulse</span>
         </Link>
 
         {/* Desktop nav */}

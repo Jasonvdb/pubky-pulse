@@ -7,7 +7,7 @@ import type {
   MetricDefinitionResponse,
   MetricStatsEntry,
   ProjectResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
 function validateMetricSlug(slug: string): string | null {

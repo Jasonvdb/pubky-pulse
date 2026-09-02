@@ -7,7 +7,7 @@ import type {
   ProjectResponse,
   FeedbackResponse,
   FeedbackStatus,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useFeedback, useFeedbackDetail, feedbackActions } from "@/hooks/use-feedback";
@@ -397,7 +397,7 @@ export default function FeedbackPage() {
           <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
           <p className="text-muted-foreground">No feedback yet</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Feedback appears here when users submit it via the OwlFeedbackView SwiftUI component or Owl.sendFeedback.
+            Feedback appears here when users submit it via the PulseFeedbackView SwiftUI component or Pulse.sendFeedback.
           </p>
         </div>
       ) : (

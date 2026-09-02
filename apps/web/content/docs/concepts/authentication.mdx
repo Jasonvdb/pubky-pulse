@@ -3,7 +3,7 @@ title: Authentication & API Keys
 description: Passwordless email auth, client vs agent API keys, permissions, and team-based access control.
 ---
 
-Owlmetry uses passwordless email verification for human users and API keys for programmatic access. All resources are scoped to teams with role-based access control.
+Pubky Pulse uses passwordless email verification for human users and API keys for programmatic access. All resources are scoped to teams with role-based access control.
 
 ## Passwordless Email Authentication
 
@@ -18,13 +18,13 @@ The JWT is identity-only (contains `sub` and `email`), has **no expiry** (web se
 
 ## API Keys
 
-API keys are used by SDKs, MCP clients, and automated systems to interact with the Owlmetry API. There are three types:
+API keys are used by SDKs, MCP clients, and automated systems to interact with the Pubky Pulse API. There are three types:
 
 | Type | Prefix | Used By | Purpose |
 |---|---|---|---|
-| Client | `owl_client_` | SDKs | Event ingestion from apps |
-| Agent | `owl_agent_` | MCP clients, automation | Querying data and managing resources |
-| Import | `owl_import_` | Bulk import scripts | Historical data import via `POST /v1/import` (app-scoped) |
+| Client | `pulse_client_` | SDKs | Event ingestion from apps |
+| Agent | `pulse_agent_` | MCP clients, automation | Querying data and managing resources |
+| Import | `pulse_import_` | Bulk import scripts | Historical data import via `POST /v1/import` (app-scoped) |
 
 ### Storage
 
@@ -104,8 +104,8 @@ When a member is removed from a team, their agent API keys for that team are aut
 | Actor | Auth Method | Access Control |
 |---|---|---|
 | Dashboard user | JWT (email verification) | Team role (owner > admin > member) |
-| SDK (client) | `owl_client_` API key | `permissions` array on the key |
-| MCP client / automation (agent) | `owl_agent_` API key | `permissions` array on the key |
-| Bulk import script | `owl_import_` API key | `permissions` array on the key (app-scoped) |
+| SDK (client) | `pulse_client_` API key | `permissions` array on the key |
+| MCP client / automation (agent) | `pulse_agent_` API key | `permissions` array on the key |
+| Bulk import script | `pulse_import_` API key | `permissions` array on the key (app-scoped) |
 
 For agent authentication details, see the [MCP setup guide](/docs/mcp/setup). For API details, see the [authentication API reference](/docs/api-reference/authentication).

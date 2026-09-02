@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
-import { apps, events, eventAttachments, funnelEvents, metricEvents } from "@owlmetry/db";
+import { apps, events, eventAttachments, funnelEvents, metricEvents } from "@pubky-pulse/db";
 import {
   MAX_BATCH_SIZE,
   ALLOWED_ENVIRONMENTS_FOR_PLATFORM,
-} from "@owlmetry/shared";
-import type { IngestRequest, IngestEventPayload } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import type { IngestRequest, IngestEventPayload } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import {

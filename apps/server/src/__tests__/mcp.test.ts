@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { DEFAULT_API_KEY_PERMISSIONS } from "@owlmetry/shared";
+import { DEFAULT_API_KEY_PERMISSIONS } from "@pubky-pulse/shared";
 import {
   buildApp,
   setupTestDb,
@@ -92,7 +92,7 @@ const EXPECTED_TOOLS_BY_DOMAIN = {
   stats: ["query-stats-bucketed"],
 } as const;
 
-const EXPECTED_RESOURCES = ["owlmetry://guide"] as const;
+const EXPECTED_RESOURCES = ["pubky-pulse://guide"] as const;
 
 /**
  * Every feature surface named in `SERVER_INSTRUCTIONS` (apps/server/src/mcp/server.ts).
@@ -220,7 +220,7 @@ describe("MCP endpoint", () => {
         clientInfo: { name: "test", version: "1.0.0" },
       });
       expect(res.statusCode).toBe(200);
-      expect(res.json().result.serverInfo.name).toBe("owlmetry");
+      expect(res.json().result.serverInfo.name).toBe("pubky-pulse");
 
       // SERVER_INSTRUCTIONS is surfaced in every MCP client's initialize handshake —
       // every feature surface in its bullet list must appear here. A missing keyword
@@ -278,11 +278,11 @@ describe("MCP endpoint", () => {
       expect(uris).toEqual([...EXPECTED_RESOURCES].sort());
 
       const readRes = await mcpRequest(TEST_AGENT_KEY, "resources/read", {
-        uri: "owlmetry://guide",
+        uri: "pubky-pulse://guide",
       });
       const contents = readRes.json().result.contents;
       expect(contents[0].mimeType).toBe("text/markdown");
-      expect(contents[0].text).toContain("Owlmetry");
+      expect(contents[0].text).toContain("Pubky Pulse");
       expect(contents[0].text).toContain("Resource Hierarchy");
       expect(contents[0].text).toContain("SDK Integration Guides");
     });
@@ -412,20 +412,20 @@ describe("MCP endpoint", () => {
           name: "MCP iOS App",
           platform: "apple",
           project_id: testData.projectId,
-          bundle_id: "com.owlmetry.mcp.test",
+          bundle_id: "org.pubky.pulse.mcp.test",
         }),
       );
       expect(created.name).toBe("MCP iOS App");
       expect(created.platform).toBe("apple");
       expect(created.client_secret).toBeTruthy();
-      expect(created.client_secret).toMatch(/^owl_client_/);
+      expect(created.client_secret).toMatch(/^pulse_client_/);
 
       // Get
       const { parsed: fetched } = parseToolResult(
         await callTool(key, "get-app", { app_id: created.id }),
       );
       expect(fetched.id).toBe(created.id);
-      expect(fetched.bundle_id).toBe("com.owlmetry.mcp.test");
+      expect(fetched.bundle_id).toBe("org.pubky.pulse.mcp.test");
 
       // Update
       const { parsed: updated } = parseToolResult(
@@ -1024,7 +1024,7 @@ describe("MCP endpoint", () => {
 
   describe("issues", () => {
     async function createMcpIssue(agentKey: string, projectId: string) {
-      const client = (await import("postgres")).default("postgres://localhost:5432/owlmetry_test", { max: 1 });
+      const client = (await import("postgres")).default("postgres://localhost:5432/pubky_pulse_test", { max: 1 });
       const appRows = await client`SELECT id FROM apps WHERE project_id = ${projectId} AND deleted_at IS NULL LIMIT 1`;
       const appId = appRows[0].id;
       const [issue] = await client`
@@ -1159,7 +1159,7 @@ describe("MCP endpoint", () => {
       const issueId = await createMcpIssue(key, project.id);
 
       // Seed three occurrences directly
-      const client = (await import("postgres")).default("postgres://localhost:5432/owlmetry_test", { max: 1 });
+      const client = (await import("postgres")).default("postgres://localhost:5432/pubky_pulse_test", { max: 1 });
       const now = Date.now();
       for (let i = 0; i < 3; i++) {
         await client`
@@ -1204,7 +1204,7 @@ describe("MCP endpoint", () => {
 
   describe("feedback", () => {
     async function seedFeedback(projectId: string, appId: string, message = "MCP test feedback"): Promise<string> {
-      const client = (await import("postgres")).default("postgres://localhost:5432/owlmetry_test", { max: 1 });
+      const client = (await import("postgres")).default("postgres://localhost:5432/pubky_pulse_test", { max: 1 });
       const [row] = await client`
         INSERT INTO feedback (project_id, app_id, message, status, is_dev)
         VALUES (${projectId}, ${appId}, ${message}, 'new', false)

@@ -46,13 +46,13 @@ import type {
   CreateApiKeyResponse,
   GetApiKeyResponse,
   DeleteApiKeyResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import {
   ALLOWED_PERMISSIONS_BY_KEY_TYPE,
   DEFAULT_API_KEY_PERMISSIONS,
   type ApiKeyType,
   type Permission,
-} from "@owlmetry/shared/auth";
+} from "@pubky-pulse/shared/auth";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { TableSkeleton } from "@/components/ui/skeletons";
 

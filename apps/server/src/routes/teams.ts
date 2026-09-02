@@ -1,14 +1,14 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { eq, and, count, isNull, inArray } from "drizzle-orm";
-import { teams, teamMembers, users, apiKeys, auditLogs, projects, apps, metricDefinitions, funnelDefinitions, teamInvitations } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
-import { canManageRole, VALID_TEAM_ROLES, SLUG_REGEX, PG_UNIQUE_VIOLATION } from "@owlmetry/shared";
+import { teams, teamMembers, users, apiKeys, auditLogs, projects, apps, metricDefinitions, funnelDefinitions, teamInvitations } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
+import { canManageRole, VALID_TEAM_ROLES, SLUG_REGEX, PG_UNIQUE_VIOLATION } from "@pubky-pulse/shared";
 import type {
   TeamRole,
   CreateTeamRequest,
   UpdateTeamRequest,
   UpdateTeamMemberRoleRequest,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requireAuth, getTeamRole, assertTeamRole } from "../middleware/auth.js";
 import { getPendingInvitations } from "./invitations.js";
 import { logAuditEvent } from "../utils/audit.js";

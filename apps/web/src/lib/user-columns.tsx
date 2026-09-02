@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { AppUserResponse } from "@owlmetry/shared";
+import type { AppUserResponse } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { VersionBadge, pickLatestForUser } from "@/components/version-badge";

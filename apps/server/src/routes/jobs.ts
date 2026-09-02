@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, lte, desc, lt, or } from "drizzle-orm";
-import { jobRuns } from "@owlmetry/db";
-import { JOB_TYPES, JOB_TYPE_META, parseTimeParam } from "@owlmetry/shared";
-import type { JobRunsQueryParams, JobType } from "@owlmetry/shared";
+import { jobRuns } from "@pubky-pulse/db";
+import { JOB_TYPES, JOB_TYPE_META, parseTimeParam } from "@pubky-pulse/shared";
+import type { JobRunsQueryParams, JobType } from "@pubky-pulse/shared";
 import { requirePermission, assertTeamRole, hasTeamAccess } from "../middleware/auth.js";
 import { resolveProject } from "../utils/project.js";
 import { logAuditEvent } from "../utils/audit.js";

@@ -7,7 +7,6 @@ import {
   Smartphone,
   Shield,
   ArrowRight,
-  Check,
   Bug,
   MessageSquare,
   ClipboardList,
@@ -62,12 +61,12 @@ const features = [
   {
     icon: Smartphone,
     title: "Multi-Platform SDKs",
-    description: "Drop in a Swift, Android, or Node.js SDK and start collecting data in minutes. Batching, compression, and retry happen automatically.",
+    description: "Drop in the Node.js, Swift, or Android SDK and start collecting data in minutes — a Web SDK is coming soon. Batching, compression, and retry happen automatically.",
   },
   {
     icon: Shield,
     title: "Open Source",
-    description: "The entire codebase is open. Use our hosted service or run it on your own infrastructure — same product, your choice.",
+    description: "The entire codebase is open under the MIT license. Run it on your own infrastructure — no hosted tier, no vendor holding your data.",
   },
 ];
 
@@ -150,15 +149,15 @@ export default function LandingPage() {
 
         <div className="relative mx-auto max-w-6xl px-6 pt-28 pb-32 md:pt-36 md:pb-40 lg:pt-44 lg:pb-48">
           <div className="flex flex-col items-center text-center">
-            {/* Owl with ambient glow */}
+            {/* Pulse with ambient glow */}
             <div className="landing-stagger-1 relative">
               <div
                 className="absolute -inset-8 rounded-full blur-2xl opacity-30"
                 style={{ background: "oklch(0.555 0.163 48.998)" }}
               />
               <Image
-                src="/owl-logo.png"
-                alt="Owlmetry — agent-first observability for mobile apps"
+                src="/pulse-logo.png"
+                alt="Pubky Pulse — agent-first observability for web, backend and mobile apps"
                 width={128}
                 height={128}
                 priority
@@ -201,7 +200,7 @@ export default function LandingPage() {
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
               <a
-                href="https://github.com/owlmetry"
+                href="https://github.com/pubky/pubky-pulse"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white/15 px-8 text-sm font-medium text-white/70 transition-all duration-200 hover:border-white/30 hover:bg-white/5 hover:text-white"
@@ -277,7 +276,7 @@ export default function LandingPage() {
                   >
                     3
                   </span>
-                  <span className="text-sm font-medium text-foreground/80">Tell your agent to set up Owlmetry</span>
+                  <span className="text-sm font-medium text-foreground/80">Tell your agent to set up Pubky Pulse</span>
                 </div>
                 <div className="md:pl-11">
                   <div
@@ -298,12 +297,12 @@ export default function LandingPage() {
                         </div>
                         <span className="text-xs font-medium text-white/50 ml-2">Your Agent</span>
                       </div>
-                      <TerminalCopyButton text="Set up Owlmetry for this project and instrument the app with event tracking." />
+                      <TerminalCopyButton text="Set up Pubky Pulse for this project and instrument the app with event tracking." />
                     </div>
                     <pre className="px-5 py-4 text-[13px] leading-relaxed font-mono whitespace-pre-wrap break-words">
                       <code>
                         <span className="text-white/40">&gt;</span>{" "}
-                        <span className="text-white/70">Set up Owlmetry for this project and instrument the app with event tracking.</span>
+                        <span className="text-white/70">Set up Pubky Pulse for this project and instrument the app with event tracking.</span>
                         {"\n\n"}
                         <span className="text-green-400">✓</span>{" "}
                         <span className="text-white/55">Authenticated</span>
@@ -320,7 +319,7 @@ export default function LandingPage() {
                         <span className="text-green-400">✓</span>{" "}
                         <span className="text-white/55">Instrumentation added</span>
                         {"\n\n"}
-                        <span className="text-white/55">Done. Owlmetry is ready.</span>
+                        <span className="text-white/55">Done. Pubky Pulse is ready.</span>
                       </code>
                     </pre>
                   </div>
@@ -343,7 +342,7 @@ export default function LandingPage() {
             </h2>
             <p className="mt-4 text-white/50 max-w-2xl mx-auto">
               Most observability tools are built for humans staring at dashboards.
-              Owlmetry is built for agents making API calls.
+              Pubky Pulse is built for agents making API calls.
             </p>
           </div>
 
@@ -380,7 +379,7 @@ export default function LandingPage() {
                 The boring things, done right
               </h3>
               <p className="mt-4 text-white/50 max-w-2xl mx-auto">
-                Everything you need to run Owlmetry in a real team — without paying for a separate ops tool for each one.
+                Everything you need to run Pubky Pulse in a real team — without paying for a separate ops tool for each one.
               </p>
             </div>
 
@@ -415,7 +414,7 @@ export default function LandingPage() {
               Ask your agent. Get answers.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Your agent uses the Owlmetry MCP server to query events, trace sessions, analyze funnels, and monitor performance &mdash; all from natural language.
+              Your agent uses the Pubky Pulse MCP server to query events, trace sessions, analyze funnels, and monitor performance &mdash; all from natural language.
             </p>
           </div>
 
@@ -542,117 +541,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="py-24 md:py-32">
+      {/* Self-hosted */}
+      <section id="self-hosted" className="py-24 md:py-32">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-4">
-              Pricing
+              Self-hosted
             </p>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Simple pricing. No surprises.
+              Self-hosted, MIT licensed.
             </h2>
-            <p className="mt-4 text-muted-foreground">
-              Start free. Scale when you&apos;re ready.
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+              Pubky Pulse runs on your own infrastructure against a single
+              PostgreSQL database. No hosted tier, no plans, no quotas &mdash;
+              the whole platform is MIT licensed and yours to deploy.
             </p>
-          </div>
-
-          <div className="mt-16 mx-auto max-w-5xl grid gap-5 md:grid-cols-3 items-stretch">
-            {/* Free tier */}
-            <div className="relative flex flex-col rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-              <div className="inline-flex items-center gap-1.5 self-center rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground tracking-wide">
-                Free
-              </div>
-              <p className="mt-6 text-5xl font-bold tracking-tight">$0</p>
-              <p className="mt-1 text-sm text-muted-foreground">forever</p>
-
-              <ul className="mt-8 space-y-3 text-left flex-1">
-                {[
-                  "1 app",
-                  "10,000 events per month",
-                  "Events, metrics & funnels",
-                  "Agent API keys + MCP",
-                  "Web dashboard",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-
-              <AuthCTA
-                className="group mt-8 inline-flex h-11 w-full items-center justify-center rounded-lg border border-border text-sm font-medium text-muted-foreground transition-all duration-200 hover:border-foreground/30 hover:bg-muted hover:text-foreground"
-              />
-            </div>
-
-            {/* Pro tier */}
-            <div className="relative flex flex-col rounded-2xl border-2 border-primary/30 bg-card p-8 text-center shadow-lg md:-my-4 md:py-10">
-              {/* Glow behind card */}
-              <div
-                className="absolute -inset-4 rounded-3xl blur-2xl opacity-[0.1] -z-10"
-                style={{ background: "oklch(0.555 0.163 48.998)" }}
-              />
-              <div className="inline-flex items-center gap-1.5 self-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary tracking-wide">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80 animate-pulse" />
-                Free during alpha
-              </div>
-              <div className="mt-6 flex items-baseline justify-center gap-2">
-                <span className="line-through text-muted-foreground/40 text-2xl font-semibold">$19/mo</span>
-                <span className="text-5xl font-bold tracking-tight">$0</span>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">per month</p>
-
-              <ul className="mt-8 space-y-3 text-left flex-1">
-                {[
-                  "Unlimited apps",
-                  "Unlimited events",
-                  "Events, metrics & funnels",
-                  "Agent API keys + MCP",
-                  "Web dashboard",
-                  "Priority support",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-
-              <AuthCTA
-                className="group mt-8 inline-flex h-11 w-full items-center justify-center rounded-lg text-sm font-medium text-white transition-all duration-200 hover:shadow-[0_0_24px_oklch(0.555_0.163_48.998_/_0.4)] hover:brightness-110"
-                style={{ background: "oklch(0.555 0.163 48.998)" }}
-              />
-            </div>
-
-            {/* Self-hosted tier */}
-            <div className="relative flex flex-col rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-              <div className="inline-flex items-center gap-1.5 self-center rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground tracking-wide">
-                Self-Hosted
-              </div>
-              <p className="mt-6 text-5xl font-bold tracking-tight">$0</p>
-              <p className="mt-1 text-sm text-muted-foreground">forever</p>
-
-              <ul className="mt-8 space-y-3 text-left flex-1">
-                {[
-                  "Unlimited everything",
-                  "Your infrastructure, your data",
-                  "Single Postgres — no infra sprawl",
-                  "Full REST API",
-                  "Open source",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-sm">
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-
+            <div className="mt-10 flex justify-center">
               <a
-                href="https://github.com/owlmetry"
+                href="https://github.com/pubky/pubky-pulse"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group mt-8 inline-flex h-11 w-full items-center justify-center rounded-lg border border-border text-sm font-medium text-muted-foreground transition-all duration-200 hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+                className="group inline-flex h-11 items-center justify-center rounded-lg border border-border px-8 text-sm font-medium text-muted-foreground transition-all duration-200 hover:border-foreground/30 hover:bg-muted hover:text-foreground"
               >
                 View on GitHub
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -696,46 +605,21 @@ export default function LandingPage() {
             {
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "Owlmetry",
+              name: "PubkyPulse",
               applicationCategory: "DeveloperApplication",
-              operatingSystem: "iOS, iPadOS, macOS, Android, Node.js",
+              operatingSystem: "Web, iOS, iPadOS, macOS, Android, Node.js",
               description:
                 "Agent-first observability platform. Events, metrics, funnels, in-app questionnaires, and error tracking — for web, backend and mobile apps.",
-              url: "https://owlmetry.com",
-              image: "https://owlmetry.com/owl-logo.png",
+              url: "https://pulse.pubky.org",
+              image: "https://pulse.pubky.org/pulse-logo.png",
               author: {
                 "@type": "Organization",
-                name: "Adapted Hub LLC",
-                url: "https://owlmetry.com",
-                logo: "https://owlmetry.com/owl-logo.png",
-                email: "jason@owlmetry.com",
-                sameAs: ["https://github.com/owlmetry"],
+                name: "Pubky",
+                url: "https://pulse.pubky.org",
+                logo: "https://pulse.pubky.org/pulse-logo.png",
+                sameAs: ["https://github.com/pubky/pubky-pulse"],
               },
-              offers: [
-                {
-                  "@type": "Offer",
-                  name: "Free",
-                  price: "0",
-                  priceCurrency: "USD",
-                  description: "1 app, 10,000 events per month",
-                },
-                {
-                  "@type": "Offer",
-                  name: "Pro",
-                  price: "0",
-                  priceCurrency: "USD",
-                  description:
-                    "Unlimited apps and events. Free during alpha.",
-                },
-                {
-                  "@type": "Offer",
-                  name: "Self-Hosted",
-                  price: "0",
-                  priceCurrency: "USD",
-                  description:
-                    "Unlimited everything on your own infrastructure",
-                },
-              ],
+              license: "https://opensource.org/licenses/MIT",
               featureList: [
                 "Agent-native API",
                 "Structured event ingestion",
@@ -748,9 +632,10 @@ export default function LandingPage() {
                 "Team management with role-based access",
                 "Audit trail across every resource",
                 "Per-project event, metric, and funnel retention",
+                "Node.js SDK for backends",
                 "Swift SDK for iOS/iPadOS/macOS",
                 "Android SDK for Kotlin / Jetpack Compose",
-                "Node.js SDK for backends",
+                "Web SDK (coming soon)",
                 "MCP server for coding agents",
                 "Self-hosted with single PostgreSQL",
               ],
@@ -759,10 +644,10 @@ export default function LandingPage() {
             {
               "@context": "https://schema.org",
               "@type": "WebSite",
-              name: "Owlmetry",
-              url: "https://owlmetry.com",
+              name: "PubkyPulse",
+              url: "https://pulse.pubky.org",
               description:
-                "Self-hosted observability platform for mobile and backend apps",
+                "Self-hosted observability platform for web, backend and mobile apps",
             },
           ]),
         }}

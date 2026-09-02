@@ -103,7 +103,7 @@ async function waitForMetricEvents(appId: string, expectedCount: number, maxWait
 
 describe("POST /v1/identity/claim", () => {
   it("claims anonymous events and updates user_id", async () => {
-    const anonId = "owl_anon_test-claim-001";
+    const anonId = "pulse_anon_test-claim-001";
 
     // Ingest events with anonymous ID
     await ingest([
@@ -124,7 +124,7 @@ describe("POST /v1/identity/claim", () => {
   });
 
   it("is idempotent — second claim returns success", async () => {
-    const anonId = "owl_anon_test-idempotent";
+    const anonId = "pulse_anon_test-idempotent";
 
     await ingest([
       { level: "info", message: "idem event", user_id: anonId, session_id: TEST_SESSION_ID },
@@ -146,26 +146,26 @@ describe("POST /v1/identity/claim", () => {
   });
 
   it("rejects missing user_id", async () => {
-    const res = await claim({ anonymous_id: "owl_anon_abc" });
+    const res = await claim({ anonymous_id: "pulse_anon_abc" });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/user_id/);
   });
 
-  it("rejects anonymous_id without owl_anon_ prefix", async () => {
+  it("rejects anonymous_id without pulse_anon_ prefix", async () => {
     const res = await claim({ anonymous_id: "not-anon-id", user_id: "user" });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/owl_anon_/);
+    expect(res.json().error).toMatch(/pulse_anon_/);
   });
 
-  it("rejects user_id with owl_anon_ prefix", async () => {
-    const anonId = "owl_anon_test-reject-anon-user";
+  it("rejects user_id with pulse_anon_ prefix", async () => {
+    const anonId = "pulse_anon_test-reject-anon-user";
     await ingest([
       { level: "info", message: "test", user_id: anonId, session_id: TEST_SESSION_ID },
     ]);
 
     const res = await claim({
       anonymous_id: anonId,
-      user_id: "owl_anon_should-not-work",
+      user_id: "pulse_anon_should-not-work",
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/anonymous prefix/);
@@ -177,7 +177,7 @@ describe("POST /v1/identity/claim", () => {
     // (sent by an SDK that beat its own ingest flush — see CLAUDE.md "Identity"
     // section) bypass resolveClaimedUserIds and orphan onto a separate row.
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_nonexistent";
+    const anonId = "pulse_anon_nonexistent";
     const realId = "user";
 
     const res = await claim({ anonymous_id: anonId, user_id: realId });
@@ -194,14 +194,14 @@ describe("POST /v1/identity/claim", () => {
 
   it("rejects agent key (no events:write permission)", async () => {
     const res = await claim(
-      { anonymous_id: "owl_anon_test", user_id: "user" },
+      { anonymous_id: "pulse_anon_test", user_id: "user" },
       TEST_AGENT_KEY
     );
     expect(res.statusCode).toBe(403);
   });
 
   it("does not cross-contaminate between apps", async () => {
-    const anonId = "owl_anon_test-app-scope";
+    const anonId = "pulse_anon_test-app-scope";
 
     // Ingest events under this app's client key
     await ingest([
@@ -215,8 +215,8 @@ describe("POST /v1/identity/claim", () => {
   });
 
   it("does not update events belonging to a different anonymous_id", async () => {
-    const anonId1 = "owl_anon_user-a";
-    const anonId2 = "owl_anon_user-b";
+    const anonId1 = "pulse_anon_user-a";
+    const anonId2 = "pulse_anon_user-b";
 
     await ingest([
       { level: "info", message: "user A event", user_id: anonId1, screen_name: "isolation", session_id: TEST_SESSION_ID },
@@ -237,7 +237,7 @@ describe("POST /v1/identity/claim", () => {
   });
 
   it("creates app_users row on ingest and merges on claim", async () => {
-    const anonId = "owl_anon_test-app-users";
+    const anonId = "pulse_anon_test-app-users";
 
     // Get project_id from test data
     const seedData = await app.inject({
@@ -279,7 +279,7 @@ describe("POST /v1/identity/claim", () => {
   });
 
   it("merges into existing real user on claim", async () => {
-    const anonId = "owl_anon_test-merge";
+    const anonId = "pulse_anon_test-merge";
 
     const seedData = await app.inject({
       method: "GET",
@@ -313,7 +313,7 @@ describe("POST /v1/identity/claim", () => {
   });
 
   it("reassigns metric_events user_id on claim", async () => {
-    const anonId = "owl_anon_test-metric-claim";
+    const anonId = "pulse_anon_test-metric-claim";
     const trackingId = randomUUID();
 
     // Ingest metric events with anonymous user_id
@@ -385,7 +385,7 @@ async function getAppIdForBundle(bundle: string): Promise<string> {
 
 describe("claim + late-arriving ingest race", () => {
   it("rewrites a late anon event to the real user id and does not resurrect the anon app_users row", async () => {
-    const anonId = "owl_anon_late-1";
+    const anonId = "pulse_anon_late-1";
     const realId = "real-late-1";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
 
@@ -419,7 +419,7 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("rewrites late funnel_events and metric_events via claimed_from", async () => {
-    const anonId = "owl_anon_late-funnel-metric";
+    const anonId = "pulse_anon_late-funnel-metric";
     const realId = "real-late-fm";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     const appId = await getAppIdForBundle(TEST_BUNDLE_ID);
@@ -457,8 +457,8 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("only rewrites claimed anon ids in a mixed batch (real + claimed-anon + un-claimed-anon)", async () => {
-    const claimedAnon = "owl_anon_mixed-claimed";
-    const unclaimedAnon = "owl_anon_mixed-unclaimed";
+    const claimedAnon = "pulse_anon_mixed-claimed";
+    const unclaimedAnon = "pulse_anon_mixed-unclaimed";
     const realId = "real-mixed";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
 
@@ -491,8 +491,8 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("resolves multiple distinct claimed anon ids in a single ingest batch", async () => {
-    const anonA = "owl_anon_multi-a";
-    const anonB = "owl_anon_multi-b";
+    const anonA = "pulse_anon_multi-a";
+    const anonB = "pulse_anon_multi-b";
     const realA = "real-multi-a";
     const realB = "real-multi-b";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
@@ -530,13 +530,13 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("resolves across apps within the same project (claim on app A, late event on app B)", async () => {
-    const anonId = "owl_anon_cross-app";
+    const anonId = "pulse_anon_cross-app";
     const realId = "real-cross-app";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
 
     // Create a second app in the same project with its own client key.
-    const APP_B_BUNDLE = "com.owlmetry.test.second";
-    const APP_B_KEY = "owl_client_cccc11111111111111111111111111111111111111ccc";
+    const APP_B_BUNDLE = "org.pubky.pulse.test.second";
+    const APP_B_KEY = "pulse_client_cccc11111111111111111111111111111111111111ccc";
     const client = postgres(TEST_DB_URL, { max: 1 });
     const [teamRow] = await client`
       SELECT team_id FROM projects WHERE id = ${projectId} LIMIT 1
@@ -589,7 +589,7 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("does not rewrite an anon id that has never been claimed (regression guard)", async () => {
-    const anonId = "owl_anon_never-claimed";
+    const anonId = "pulse_anon_never-claimed";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
 
     await ingest([
@@ -610,7 +610,7 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("remains consistent when late ingests race against a claim", async () => {
-    const anonId = "owl_anon_race";
+    const anonId = "pulse_anon_race";
     const realId = "real-race";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
 
@@ -654,7 +654,7 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("attributes a post-claim attachment to the real user via COALESCE backfill", async () => {
-    const anonId = "owl_anon_attach-late";
+    const anonId = "pulse_anon_attach-late";
     const realId = "real-attach-late";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     const clientEventId = randomUUID();
@@ -707,7 +707,7 @@ describe("claim + late-arriving ingest race", () => {
   });
 
   it("GET /v1/events returns late events under the real user, not the anon id", async () => {
-    const anonId = "owl_anon_query-roundtrip";
+    const anonId = "pulse_anon_query-roundtrip";
     const realId = "real-query-roundtrip";
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
 
@@ -745,7 +745,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
     // app_users row before any events were ingested. The claim arrives while
     // the events are still in flight on the SDK side.
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_test-A-zero-events-with-anon-row";
+    const anonId = "pulse_anon_test-A-zero-events-with-anon-row";
     const realId = "real-test-A";
 
     await insertAppUser(projectId, anonId, {
@@ -773,7 +773,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
 
   it("creates a real app_users row with claimed_from when no rows exist at all", async () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_test-B-no-rows";
+    const anonId = "pulse_anon_test-B-no-rows";
     const realId = "real-test-B";
 
     const res = await claim({ anonymous_id: anonId, user_id: realId });
@@ -791,7 +791,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
 
   it("rewrites a late anon ingest to the real user when the claim ran with zero events", async () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_test-C-late-after-zero-claim";
+    const anonId = "pulse_anon_test-C-late-after-zero-claim";
     const realId = "real-test-C";
 
     // Pre-insert anon row only (no events) — same shape as Test A
@@ -819,7 +819,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
 
   it("does not orphan an anon app_users row when ingest and claim run concurrently", async () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_test-D-concurrent";
+    const anonId = "pulse_anon_test-D-concurrent";
     const realId = "real-test-D";
 
     // Anchor: ensure anon row exists via the awaited ingest path so this
@@ -868,7 +868,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
     // claimed_from = null that nothing rewrote before the straggler sweep
     // learned to merge app_users too.
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_test-E-orphan-replay";
+    const anonId = "pulse_anon_test-E-orphan-replay";
     const realId = "real-test-E";
 
     // 1. Anchor ingest creates the anon row the claim will rename in place.
@@ -965,7 +965,7 @@ describe("POST /v1/identity/claim — questionnaire response migration", () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     await seedQuestionnaire(projectId, "onboarding-survey");
 
-    const anonId = "owl_anon_qclaim-1";
+    const anonId = "pulse_anon_qclaim-1";
     const realId = "real-qclaim-1";
 
     const draft = await saveResponse("onboarding-survey", anonId, false, { q1: "in progress" });
@@ -989,7 +989,7 @@ describe("POST /v1/identity/claim — questionnaire response migration", () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     await seedQuestionnaire(projectId, "onboarding-survey");
 
-    const anonId = "owl_anon_qclaim-2";
+    const anonId = "pulse_anon_qclaim-2";
     const realId = "real-qclaim-2";
 
     expect(
@@ -1017,7 +1017,7 @@ describe("POST /v1/identity/claim — questionnaire response migration", () => {
     await seedQuestionnaire(projectId, "slug-a");
     await seedQuestionnaire(projectId, "slug-b");
 
-    const anonId = "owl_anon_qclaim-3";
+    const anonId = "pulse_anon_qclaim-3";
     const realId = "real-qclaim-3";
 
     expect((await saveResponse("slug-a", anonId, false, { q1: "anon-a" })).statusCode).toBe(201);
@@ -1046,7 +1046,7 @@ describe("POST /v1/identity/claim — non-event end-user table rewrites", () => 
   it("reassigns issue_occurrences.user_id on claim, scoped to the project", async () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     const appId = await getAppIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_occ-claim";
+    const anonId = "pulse_anon_occ-claim";
     const realId = "real-occ-claim";
 
     const client = postgres(TEST_DB_URL, { max: 1 });
@@ -1080,7 +1080,7 @@ describe("POST /v1/identity/claim — non-event end-user table rewrites", () => 
   it("reassigns feedback.user_id on claim, leaving soft-deleted rows untouched", async () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     const appId = await getAppIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_fb-claim";
+    const anonId = "pulse_anon_fb-claim";
     const realId = "real-fb-claim";
 
     const client = postgres(TEST_DB_URL, { max: 1 });
@@ -1112,7 +1112,7 @@ describe("POST /v1/identity/claim — non-event end-user table rewrites", () => 
   it("reassigns event_attachments.user_id on claim, leaving soft-deleted rows untouched", async () => {
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
     const appId = await getAppIdForBundle(TEST_BUNDLE_ID);
-    const anonId = "owl_anon_att-claim";
+    const anonId = "pulse_anon_att-claim";
     const realId = "real-att-claim";
     const sha = createHash("sha256").update("test").digest("hex");
 

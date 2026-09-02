@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
 				disallow: ["/dashboard/", "/login", "/invite/"],
 			},
 		],
-		sitemap: "https://owlmetry.com/sitemap.xml",
+		sitemap: "https://pulse.pubky.org/sitemap.xml",
 	};
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useDeferredValue } from "react";
 import { useParams, usePathname } from "next/navigation";
 import useSWR from "swr";
-import type { FunnelDefinitionResponse, AppResponse, ProjectResponse } from "@owlmetry/shared";
+import type { FunnelDefinitionResponse, AppResponse, ProjectResponse } from "@pubky-pulse/shared";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { useUrlFilters } from "@/hooks/use-url-filters";

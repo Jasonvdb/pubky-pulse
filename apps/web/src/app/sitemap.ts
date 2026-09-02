@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { docsSource } from "@/lib/docs-source";
 
-const BASE_URL = "https://owlmetry.com";
+const BASE_URL = "https://pulse.pubky.org";
 
 export default function sitemap(): MetadataRoute.Sitemap {
 	const docPages = docsSource.getPages().map((page) => ({

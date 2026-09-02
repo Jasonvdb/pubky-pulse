@@ -1,11 +1,11 @@
 ---
 title: Android SDK
-description: Integrate Owlmetry into Android apps with the Kotlin SDK and optional Jetpack Compose UI.
+description: Integrate Pubky Pulse into Android apps with the Kotlin SDK and optional Jetpack Compose UI.
 ---
 
-The Owlmetry Android SDK captures events from Android apps and delivers them to your Owlmetry server. It mirrors the [Swift SDK](/docs/sdks/swift) feature-for-feature with Android-native idioms — an `Application` subclass instead of an iOS `@main App`, Compose modifiers instead of SwiftUI view modifiers. The core module has a single runtime dependency (`kotlinx-coroutines`, the Kotlin analog of Swift Concurrency) and handles buffering, delivery, and retry automatically.
+The Pubky Pulse Android SDK captures events from Android apps and delivers them to your Pubky Pulse server. It mirrors the [Swift SDK](/docs/sdks/swift) feature-for-feature with Android-native idioms — an `Application` subclass instead of an iOS `@main App`, Compose modifiers instead of SwiftUI view modifiers. The core module has a single runtime dependency (`kotlinx-coroutines`, the Kotlin analog of Swift Concurrency) and handles buffering, delivery, and retry automatically.
 
-The SDK is a static `Owl` object (`com.owlmetry.android.Owl`). All calls are non-blocking — events are buffered in memory and flushed in batches. A single `Owl.configure()` call initializes everything.
+The SDK is a static `Pulse` object (`org.pubky.pulse.android.Pulse`). All calls are non-blocking — events are buffered in memory and flushed in batches. A single `Pulse.configure()` call initializes everything.
 
 ## Modules
 
@@ -13,8 +13,8 @@ The SDK ships as two Maven artifacts. Add the core module always; add the Compos
 
 | Artifact | Purpose |
 |----------|---------|
-| `com.owlmetry:owlmetry-android` | Core SDK — analytics, metrics, funnels, identity, plus the programmatic feedback and questionnaire APIs. Framework-only + coroutines, no Compose. |
-| `com.owlmetry:owlmetry-android-compose` | Optional Jetpack Compose UI — `OwlFeedbackView`, `OwlQuestionnaireGate` / `OwlQuestionnaireView`, and the `Modifier.owlScreen` screen-tracking modifier. |
+| `org.pubky.pulse:pulse-android` | Core SDK — analytics, metrics, funnels, identity, plus the programmatic feedback and questionnaire APIs. Framework-only + coroutines, no Compose. |
+| `org.pubky.pulse:pulse-android-compose` | Optional Jetpack Compose UI — `PulseFeedbackView`, `PulseQuestionnaireGate` / `PulseQuestionnaireView`, and the `Modifier.pulseScreen` screen-tracking modifier. |
 
 ## Platform Support
 
@@ -27,13 +27,13 @@ The SDK ships as two Maven artifacts. Add the core module always; add the Compos
 
 ## Features
 
-- **[Event logging](/docs/sdks/android/events)** — four log levels (info, debug, warn, error) with optional screen name and custom attributes. `Owl.error` is overloaded — pass a `String` (logger-style) or pass any `Throwable` (exception-style; the SDK extracts the runtime type, the JVM stack trace, and the `Throwable.cause` chain into reserved `_error_*` attributes). Source file, function, and line are best-effort captured from the call stack.
+- **[Event logging](/docs/sdks/android/events)** — four log levels (info, debug, warn, error) with optional screen name and custom attributes. `Pulse.error` is overloaded — pass a `String` (logger-style) or pass any `Throwable` (exception-style; the SDK extracts the runtime type, the JVM stack trace, and the `Throwable.cause` chain into reserved `_error_*` attributes). Source file, function, and line are best-effort captured from the call stack.
 - **[Structured metrics](/docs/sdks/android/metrics)** — lifecycle operations (`startOperation` / `complete` / `fail` / `cancel`) with automatic duration tracking, and single-shot measurements via `recordMetric`.
-- **[Funnel tracking](/docs/sdks/android/funnels)** — track user progression through multi-step flows with `Owl.step()`.
-- **[Screen tracking](/docs/sdks/android/screen-tracking)** — `Modifier.owlScreen()` Compose modifier for automatic screen view and time-on-screen tracking.
+- **[Funnel tracking](/docs/sdks/android/funnels)** — track user progression through multi-step flows with `Pulse.step()`.
+- **[Screen tracking](/docs/sdks/android/screen-tracking)** — `Modifier.pulseScreen()` Compose modifier for automatic screen view and time-on-screen tracking.
 - **[Identity management](/docs/sdks/android/identity)** — anonymous IDs generated and persisted in private `SharedPreferences`, with server-side claim to link anonymous events to real users after login.
-- **[User properties](/docs/sdks/android/user-properties)** — attach custom key-value metadata to the current user with `Owl.setUserProperties()`.
-- **File attachments** — attach files (logs, failed inputs, binaries) to `Owl.error()` events via `OwlAttachment`. See [Attachments](/docs/concepts/attachments).
+- **[User properties](/docs/sdks/android/user-properties)** — attach custom key-value metadata to the current user with `Pulse.setUserProperties()`.
+- **File attachments** — attach files (logs, failed inputs, binaries) to `Pulse.error()` events via `PulseAttachment`. See [Attachments](/docs/concepts/attachments).
 - **Offline queue** — events are persisted to disk when the network is unavailable and retried automatically when connectivity returns.
 - **Gzip compression** — request bodies are compressed before sending to reduce bandwidth usage.
 - **Automatic lifecycle events** — `session_started`, `app_foregrounded`, and `app_backgrounded` are emitted without any manual calls.
@@ -48,7 +48,7 @@ Every event automatically includes:
 - `is_dev` — `true` when the host app is debuggable (debug builds), `false` for release
 - `_connection` — current network type (wifi, cellular, offline)
 - `environment` — `android`
-- `sdk_name` (`owlmetry-android`) and `sdk_version` — auto-stamped on every event
+- `sdk_name` (`pubky-pulse-android`) and `sdk_version` — auto-stamped on every event
 
 ## Not yet on Android
 
@@ -58,7 +58,7 @@ One Swift SDK feature has no Android analog yet:
 
 ## Getting Started
 
-Add the SDK via Gradle, then call `Owl.configure()` in your `Application.onCreate()`.
+Add the SDK via Gradle, then call `Pulse.configure()` in your `Application.onCreate()`.
 
 - [Installation](/docs/sdks/android/installation)
 - [Configuration](/docs/sdks/android/configuration)

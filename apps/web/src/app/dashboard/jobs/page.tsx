@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 // Deep imports bypass the barrel export which pulls in node:crypto
-import type { JobRunResponse, JobRunsQueryParams, TriggerJobRequest, JobType, ProjectResponse } from "@owlmetry/shared";
-import { JOB_TYPE_META } from "@owlmetry/shared/jobs";
-import { formatDuration as formatMs } from "@owlmetry/shared/constants";
+import type { JobRunResponse, JobRunsQueryParams, TriggerJobRequest, JobType, ProjectResponse } from "@pubky-pulse/shared";
+import { JOB_TYPE_META } from "@pubky-pulse/shared/jobs";
+import { formatDuration as formatMs } from "@pubky-pulse/shared/constants";
 import useSWR from "swr";
 import { formatDateTime, formatCompactDateTime } from "@/lib/format-date";
 

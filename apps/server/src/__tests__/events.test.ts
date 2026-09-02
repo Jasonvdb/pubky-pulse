@@ -364,7 +364,7 @@ describe("GET /v1/events/:id", () => {
     const eventId = listRes.json().events[0].id;
 
     // Create second user (gets own team)
-    const { token: otherToken, teamId: otherTeamId } = await createUserAndGetToken(app, "other@owlmetry.com", "Other");
+    const { token: otherToken, teamId: otherTeamId } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
     const otherAgentKey = await createAgentKey(app, otherToken, otherTeamId, ["events:read"]);
 
     // Team B's agent key should not see Team A's event

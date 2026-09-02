@@ -7,25 +7,25 @@ Production deployment with pm2, nginx, Cloudflare, and firewall. This guide assu
 
 ## pm2 process manager
 
-Create the pm2 ecosystem file at `/opt/owlmetry/ecosystem.config.cjs`:
+Create the pm2 ecosystem file at `/opt/pubky-pulse/ecosystem.config.cjs`:
 
 ```javascript
 module.exports = {
   apps: [
     {
-      name: "owlmetry-api",
+      name: "pulse-api",
       script: "apps/server/dist/index.js",
-      cwd: "/opt/owlmetry",
+      cwd: "/opt/pubky-pulse",
       max_memory_restart: "300M",
       env: {
         NODE_ENV: "production",
       },
     },
     {
-      name: "owlmetry-web",
+      name: "pulse-web",
       script: "node_modules/.bin/next",
       args: "start",
-      cwd: "/opt/owlmetry/apps/web",
+      cwd: "/opt/pubky-pulse/apps/web",
       max_memory_restart: "300M",
       env: {
         NODE_ENV: "production",
@@ -41,7 +41,7 @@ The `max_memory_restart: "300M"` cap auto-restarts a service if it balloons — 
 Start the services, persist them across reboots, and enable log rotation:
 
 ```bash
-cd /opt/owlmetry
+cd /opt/pubky-pulse
 pm2 start ecosystem.config.cjs
 pm2 save
 
@@ -56,22 +56,22 @@ Verify both services are running:
 
 ```bash
 pm2 status
-# owlmetry-api    online
-# owlmetry-web    online
+# pulse-api    online
+# pulse-web    online
 ```
 
 ### Useful pm2 commands
 
 ```bash
-pm2 logs owlmetry-api --lines 50    # View recent API server logs
-pm2 logs owlmetry-web --lines 50    # View recent web dashboard logs
+pm2 logs pulse-api --lines 50    # View recent API server logs
+pm2 logs pulse-web --lines 50    # View recent web dashboard logs
 pm2 restart all                      # Restart both services
 pm2 reload all                       # Zero-downtime reload
 ```
 
 ## nginx reverse proxy
 
-Create the nginx config at `/etc/nginx/sites-available/owlmetry`:
+Create the nginx config at `/etc/nginx/sites-available/pubky-pulse`:
 
 ```nginx
 # API server (agent keys, dashboard API, auth, attachment uploads/downloads)
@@ -98,7 +98,7 @@ server {
     # Full snippet: deploy/attachments-nginx-snippet.conf
     location /_attachments/ {
         internal;
-        alias /opt/owlmetry-attachments/;
+        alias /opt/pubky-pulse-attachments/;
         types { }
         default_type application/octet-stream;
         add_header X-Content-Type-Options nosniff always;
@@ -146,7 +146,7 @@ server {
 Enable and test:
 
 ```bash
-ln -sf /etc/nginx/sites-available/owlmetry /etc/nginx/sites-enabled/owlmetry
+ln -sf /etc/nginx/sites-available/pubky-pulse /etc/nginx/sites-enabled/pubky-pulse
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
@@ -156,13 +156,13 @@ The ingest server block sets `client_max_body_size 2m` to allow compressed event
 
 ### Attachments
 
-The config above already includes the `/_attachments/` internal location and a 260 MB `client_max_body_size` to allow SDK attachment uploads. Downloads are served via nginx `X-Accel-Redirect`, which maps the internal URI prefix (`OWLMETRY_ATTACHMENTS_INTERNAL_URI=/_attachments/`) to the on-disk directory (`OWLMETRY_ATTACHMENTS_PATH=/opt/owlmetry-attachments`). The full reference snippet with comments lives at `deploy/attachments-nginx-snippet.conf` in the repo.
+The config above already includes the `/_attachments/` internal location and a 260 MB `client_max_body_size` to allow SDK attachment uploads. Downloads are served via nginx `X-Accel-Redirect`, which maps the internal URI prefix (`PULSE_ATTACHMENTS_INTERNAL_URI=/_attachments/`) to the on-disk directory (`PULSE_ATTACHMENTS_PATH=/opt/pubky-pulse-attachments`). The full reference snippet with comments lives at `deploy/attachments-nginx-snippet.conf` in the repo.
 
 The directory must be writable by the user running pm2 (`root` in the default setup):
 
 ```bash
-mkdir -p /opt/owlmetry-attachments
-chown -R root:root /opt/owlmetry-attachments
+mkdir -p /opt/pubky-pulse-attachments
+chown -R root:root /opt/pubky-pulse-attachments
 ```
 
 ## Cloudflare setup (recommended)
@@ -230,11 +230,11 @@ ufw allow 443/tcp
 Pull the latest code, rebuild, run migrations, and restart:
 
 ```bash
-cd /opt/owlmetry
+cd /opt/pubky-pulse
 git pull
 pnpm install
 pnpm build
-DATABASE_URL='postgresql://owlmetry:yourpassword@localhost:5432/owlmetry' pnpm db:migrate
+DATABASE_URL='postgresql://pubky_pulse:yourpassword@localhost:5432/pubky_pulse' pnpm db:migrate
 pm2 restart all
 ```
 
@@ -267,8 +267,8 @@ pm2 status
 ### Logs
 
 ```bash
-pm2 logs owlmetry-api --lines 50 --nostream   # Last 50 lines, no follow
-pm2 logs owlmetry-web --lines 50 --nostream
+pm2 logs pulse-api --lines 50 --nostream   # Last 50 lines, no follow
+pm2 logs pulse-web --lines 50 --nostream
 ```
 
 ### Disk and memory
@@ -281,8 +281,8 @@ free -h         # Memory usage
 ### Database size
 
 ```bash
-PGPASSWORD='yourpassword' psql -U owlmetry -h 127.0.0.1 -d owlmetry \
-  -c "SELECT pg_size_pretty(pg_database_size('owlmetry'));"
+PGPASSWORD='yourpassword' psql -U pubky_pulse -h 127.0.0.1 -d pubky_pulse \
+  -c "SELECT pg_size_pretty(pg_database_size('pubky_pulse'));"
 ```
 
 ## Database maintenance
@@ -290,14 +290,14 @@ PGPASSWORD='yourpassword' psql -U owlmetry -h 127.0.0.1 -d owlmetry \
 - **Partitions** are auto-created on server startup (current month plus 2 months ahead). No manual intervention required.
 - **Auto-pruning** runs hourly when `MAX_DATABASE_SIZE_GB` is set. It drops the oldest monthly partitions first.
 - **Per-project retention** is enforced by the `retention_cleanup` background job (daily at 2am UTC) using the `retention_days_events`, `retention_days_metrics`, and `retention_days_funnels` columns on `projects`.
-- **Size check:** `psql -c "SELECT pg_size_pretty(pg_database_size('owlmetry'));"`
+- **Size check:** `psql -c "SELECT pg_size_pretty(pg_database_size('pubky_pulse'));"`
 
 ### Backups
 
-Dump the Postgres database only — attachment bytes live on disk under `OWLMETRY_ATTACHMENTS_PATH` and must **not** be included in `pg_dump`:
+Dump the Postgres database only — attachment bytes live on disk under `PULSE_ATTACHMENTS_PATH` and must **not** be included in `pg_dump`:
 
 ```bash
-pg_dump --no-owner owlmetry | gzip > /opt/owlmetry-backups/owlmetry-$(date +%F).sql.gz
+pg_dump --no-owner pubky_pulse | gzip > /opt/pubky-pulse-backups/pubky-pulse-$(date +%F).sql.gz
 ```
 
 If you need to back up attachment files too, sync them separately (e.g. with `rsync` or an object-storage mirror) — do not try to tar them into the SQL dump.
@@ -305,8 +305,8 @@ If you need to back up attachment files too, sync them separately (e.g. with `rs
 A simple daily backup cron that runs at 3am UTC with 7-day rotation:
 
 ```bash
-# /etc/cron.d/owlmetry-backup
-0 3 * * * root PGPASSWORD='yourpassword' pg_dump -U owlmetry -h 127.0.0.1 --no-owner owlmetry | gzip > /opt/owlmetry-backups/owlmetry-$(date +\%F).sql.gz && find /opt/owlmetry-backups -name 'owlmetry-*.sql.gz' -mtime +7 -delete
+# /etc/cron.d/pubky-pulse-backup
+0 3 * * * root PGPASSWORD='yourpassword' pg_dump -U pubky_pulse -h 127.0.0.1 --no-owner pubky_pulse | gzip > /opt/pubky-pulse-backups/pubky-pulse-$(date +\%F).sql.gz && find /opt/pubky-pulse-backups -name 'pubky-pulse-*.sql.gz' -mtime +7 -delete
 ```
 
 ### Health checks
@@ -314,9 +314,9 @@ A simple daily backup cron that runs at 3am UTC with 7-day rotation:
 A simple health-check cron auto-restarts a service if it stops responding. Runs every 5 minutes against the API `/health` endpoint and the web dashboard root:
 
 ```bash
-# /etc/cron.d/owlmetry-healthcheck
-*/5 * * * * root (curl -sf http://127.0.0.1:4000/health > /dev/null || pm2 restart owlmetry-api) >> /opt/owlmetry-backups/healthcheck.log 2>&1
-*/5 * * * * root (curl -sf http://127.0.0.1:3000/ > /dev/null || pm2 restart owlmetry-web) >> /opt/owlmetry-backups/healthcheck.log 2>&1
+# /etc/cron.d/pubky-pulse-healthcheck
+*/5 * * * * root (curl -sf http://127.0.0.1:4000/health > /dev/null || pm2 restart pulse-api) >> /opt/pubky-pulse-backups/healthcheck.log 2>&1
+*/5 * * * * root (curl -sf http://127.0.0.1:3000/ > /dev/null || pm2 restart pulse-web) >> /opt/pubky-pulse-backups/healthcheck.log 2>&1
 ```
 
 The log file stays empty when both services respond. Entries appear only when a restart was triggered.
@@ -328,7 +328,7 @@ The log file stays empty when both services respond. Entries appear only when a 
 pm2 status
 
 # Check service logs for errors
-pm2 logs owlmetry-api --lines 100
+pm2 logs pulse-api --lines 100
 
 # Validate nginx config
 nginx -t

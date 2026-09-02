@@ -2,13 +2,13 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "Owlmetry — Agent-first observability. Set up in one prompt.";
+export const alt = "Pubky Pulse — Agent-first observability. Set up in one prompt.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OGImage() {
 	const logoData = await readFile(
-		join(process.cwd(), "public", "owl-logo.png")
+		join(process.cwd(), "public", "pulse-logo.png")
 	);
 	const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
 
@@ -72,7 +72,7 @@ export default async function OGImage() {
 						display: "flex",
 					}}
 				>
-					Owlmetry
+					Pubky Pulse
 				</div>
 
 				{/* Tagline */}
@@ -84,7 +84,7 @@ export default async function OGImage() {
 						display: "flex",
 					}}
 				>
-					Agent-first observability for mobile apps
+					Agent-first observability for web, backend and mobile
 				</div>
 
 				{/* Feature pills */}
@@ -126,7 +126,7 @@ export default async function OGImage() {
 						letterSpacing: "1px",
 					}}
 				>
-					owlmetry.com
+					pulse.pubky.org
 				</div>
 			</div>
 		),

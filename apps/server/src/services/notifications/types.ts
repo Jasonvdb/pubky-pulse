@@ -1,15 +1,15 @@
-import type { Db } from "@owlmetry/db";
-import type { NotificationChannel, NotificationType } from "@owlmetry/shared";
+import type { Db } from "@pubky-pulse/db";
+import type { NotificationChannel, NotificationType } from "@pubky-pulse/shared";
 
 /**
  * Pre-rendered content the dispatcher writes into the inbox row + hands to
  * channel adapters. `title`/`body` are short summaries; richer formatting per
- * channel (HTML email, push alert) is handled by the adapter.
+ * channel (HTML email) is handled by the adapter.
  */
 export interface NotificationPayload {
   title: string;
   body?: string;
-  /** Deep link path. e.g. "/dashboard/issues/<id>" — same string for web + iOS. */
+  /** Deep link path. e.g. "/dashboard/issues/<id>" — same string for every client. */
   link?: string;
   /** Structured data forwarded to clients for rich rendering and to email adapter for HTML. */
   data?: Record<string, unknown>;

@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { ListApiKeysResponse } from "@owlmetry/shared";
+import type { ListApiKeysResponse } from "@pubky-pulse/shared";
 
 export function useApiKeys(teamId: string | null) {
   const key = teamId ? `/v1/auth/keys?team_id=${teamId}` : null;

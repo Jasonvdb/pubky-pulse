@@ -9,7 +9,7 @@ Bulk-import historical event data from external systems. Unlike `/v1/ingest` (de
 
 Import a batch of events for a specific app.
 
-**Auth required:** Yes (import API key `owl_import_*` with `events:write` permission)
+**Auth required:** Yes (import API key `pulse_import_*` with `events:write` permission)
 
 **Rate limited:** No
 
@@ -33,7 +33,7 @@ Import a batch of events for a specific app.
       "environment": "ios",
       "os_version": "16.2",
       "app_version": "2.1.0",
-      "sdk_name": "owlmetry-swift",
+      "sdk_name": "pubky-pulse-swift",
       "sdk_version": "0.1.0",
       "build_number": "85",
       "device_model": "iPhone14,5",
@@ -49,7 +49,7 @@ Import a batch of events for a specific app.
 
 | Feature | /v1/ingest | /v1/import |
 |---------|-----------|-----------|
-| Key type | `owl_client_*` | `owl_import_*` |
+| Key type | `pulse_client_*` | `pulse_import_*` |
 | Max batch size | 100 | 1,000 |
 | Timestamp restriction | 30 days past — 5 min future | Any past date — 5 min future |
 | Bundle ID validation | Required for non-backend apps | Not required |
@@ -103,14 +103,14 @@ Same as `/v1/ingest` — events matching `metric:<slug>:<phase>` are written to 
 
 ## Creating an import key
 
-Import keys are app-scoped (like client keys) but use the `owl_import_` prefix.
+Import keys are app-scoped (like client keys) but use the `pulse_import_` prefix.
 
 **Via dashboard:** Go to API Keys → New Key → select "Import" type → choose the target app.
 
 **Via API:**
 
 ```bash
-curl -X POST https://api.owlmetry.com/v1/auth/keys \
+curl -X POST https://api.yourdomain.com/v1/auth/keys \
   -H "Authorization: Bearer <your-jwt-or-agent-key>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -124,16 +124,16 @@ Agent keys with `apps:write` permission can create import keys. This enables AI 
 
 ## Migration guide
 
-When migrating from another analytics system, map your existing fields to Owlmetry's event schema:
+When migrating from another analytics system, map your existing fields to Pubky Pulse's event schema:
 
-| Common source field | Owlmetry field | Notes |
+| Common source field | Pubky Pulse field | Notes |
 |-------------------|---------------|-------|
 | `body`, `event_name` | `message` | Required. |
 | `log_level`, `severity` | `level` | Must be `info`, `debug`, `warn`, or `error`. |
 | `source`, `platform` | `environment` | Must be `ios`, `ipados`, `macos`, `watchos`, `android`, `web`, or `backend`. |
 | `meta`, `metadata`, `properties` | `custom_attributes` | Key-value string pairs. Values truncated to 200 chars. |
 | `isDebug`, `debug` | `is_dev` | Boolean. |
-| `userId`, `user_id` | `user_id` | String. Anonymous users should use `owl_anon_` prefix. |
+| `userId`, `user_id` | `user_id` | String. Anonymous users should use `pulse_anon_` prefix. |
 | `sessionId`, `session_id` | `session_id` | Required. Generate one if your source doesn't have sessions. |
 | `created_at`, `timestamp` | `timestamp` | ISO 8601. Any historical date is accepted. |
 | `unique_id`, `event_id` | `client_event_id` | UUID. Critical for safe re-runs. |
@@ -143,8 +143,8 @@ When migrating from another analytics system, map your existing fields to Owlmet
 ```bash
 #!/bin/bash
 # Simple import script using curl
-IMPORT_KEY="owl_import_..."
-API_URL="https://api.owlmetry.com/v1/import"
+IMPORT_KEY="pulse_import_..."
+API_URL="https://api.yourdomain.com/v1/import"
 
 # Read events from a JSON file (array of event objects)
 curl -X POST "$API_URL" \

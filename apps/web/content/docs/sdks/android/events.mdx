@@ -3,7 +3,7 @@ title: Events
 description: Log events at different levels (info, debug, warn, error) with custom attributes and screen context.
 ---
 
-Events are the core unit of data in Owlmetry. The Android SDK provides four log levels, each designed for a different class of information. For a broader overview of the event model, see [Events](/docs/concepts/events).
+Events are the core unit of data in Pubky Pulse. The Android SDK provides four log levels, each designed for a different class of information. For a broader overview of the event model, see [Events](/docs/concepts/events).
 
 ## Log Levels
 
@@ -12,7 +12,7 @@ Events are the core unit of data in Owlmetry. The Android SDK provides four log 
 Normal operations worth recording: user actions, feature usage, successful completions. This is the default level for most instrumentation.
 
 ```kotlin
-Owl.info("User tapped checkout", screenName = "Cart")
+Pulse.info("User tapped checkout", screenName = "Cart")
 ```
 
 ### Debug
@@ -20,7 +20,7 @@ Owl.info("User tapped checkout", screenName = "Cart")
 Verbose detail useful only during development: cache hits, state transitions, intermediate values. Debug events are filtered out when viewing production data.
 
 ```kotlin
-Owl.debug("Cache hit for user preferences", screenName = "Home", attributes = mapOf("key" to "user_prefs"))
+Pulse.debug("Cache hit for user preferences", screenName = "Home", attributes = mapOf("key" to "user_prefs"))
 ```
 
 ### Warn
@@ -28,7 +28,7 @@ Owl.debug("Cache hit for user preferences", screenName = "Home", attributes = ma
 Something unexpected that the app recovered from: slow responses, fallback paths, retries needed.
 
 ```kotlin
-Owl.warn("Slow network response", attributes = mapOf("latency_ms" to "1200", "endpoint" to "/api/feed"))
+Pulse.warn("Slow network response", attributes = mapOf("latency_ms" to "1200", "endpoint" to "/api/feed"))
 ```
 
 ### Error
@@ -36,7 +36,7 @@ Owl.warn("Slow network response", attributes = mapOf("latency_ms" to "1200", "en
 Something failed: network errors, parse failures, missing data, caught exceptions.
 
 ```kotlin
-Owl.error("Failed to load profile image", screenName = "Profile", attributes = mapOf("reason" to "timeout"))
+Pulse.error("Failed to load profile image", screenName = "Profile", attributes = mapOf("reason" to "timeout"))
 ```
 
 ### Error from a caught `Throwable`
@@ -47,7 +47,7 @@ If you have a `Throwable` from a `try`/`catch` (or any other source), pass it di
 try {
     upload()
 } catch (e: Exception) {
-    Owl.error(e, message = "while uploading photos", screenName = "PhotoConverterScreen")
+    Pulse.error(e, message = "while uploading photos", screenName = "PhotoConverterScreen")
 }
 ```
 
@@ -68,11 +68,11 @@ When you have a `Throwable` from a `catch`, prefer the `Throwable` form over the
 All four methods share the same shape:
 
 ```kotlin
-Owl.info(
+Pulse.info(
     message: String,
     screenName: String? = null,
     attributes: Map<String, String?> = emptyMap(),
-    attachments: List<OwlAttachment>? = null,
+    attachments: List<PulseAttachment>? = null,
 )
 ```
 
@@ -81,7 +81,7 @@ Owl.info(
 | `message` | A descriptive string for the event. Choose messages that are specific and searchable. Long content belongs in `attributes`, not `message`. |
 | `screenName` | The screen where the event occurred. Ties the event to a location in the UI. Pass it only for events that originate from a specific screen — omit it in repositories, services, `ViewModel`s decoupled from a screen, and background work. |
 | `attributes` | Key-value pairs of additional structured data. Values are `String?` so optional values pass through directly — `null`-valued keys are silently dropped before the event ships. |
-| `attachments` | Optional file attachments (logs, screenshots, etc.). Most useful on `Owl.error()`. See [File Attachments](#file-attachments). |
+| `attachments` | Optional file attachments (logs, screenshots, etc.). Most useful on `Pulse.error()`. See [File Attachments](#file-attachments). |
 
 ### Optional attribute values
 
@@ -89,13 +89,13 @@ Because `attributes` accepts nullable values, a `String?` from your domain code 
 
 ```kotlin
 val contractId: String? = session.draftId  // may be null
-Owl.info("Draft created", attributes = mapOf(
+Pulse.info("Draft created", attributes = mapOf(
     "context" to "createDraft",
     "contractId" to contractId,
 ))
 ```
 
-If `contractId` is `null`, only `context` reaches the dashboard. The same applies to every `Owl` / `OwlOperation` method that takes `attributes`.
+If `contractId` is `null`, only `context` reaches the dashboard. The same applies to every `Pulse` / `PulseOperation` method that takes `attributes`.
 
 ## Auto-Captured Source Info
 
@@ -107,19 +107,19 @@ Each event's `country_code` is resolved server-side from the Cloudflare `CF-IPCo
 
 ## File Attachments
 
-You can attach files to any event via the `attachments` parameter, but in practice this is almost always used with `Owl.error()` to capture the exact input bytes that triggered a failure (a media file that failed to decode, a document that failed to parse, etc.).
+You can attach files to any event via the `attachments` parameter, but in practice this is almost always used with `Pulse.error()` to capture the exact input bytes that triggered a failure (a media file that failed to decode, a document that failed to parse, etc.).
 
-`OwlAttachment` has two factory entry points:
+`PulseAttachment` has two factory entry points:
 
 ```kotlin
-import com.owlmetry.android.OwlAttachment
+import org.pubky.pulse.android.PulseAttachment
 import java.io.File
 
 // From a file on disk (name defaults to the file's own name)
-OwlAttachment.file(inputFile, name = "input.heic", contentType = "image/heic")
+PulseAttachment.file(inputFile, name = "input.heic", contentType = "image/heic")
 
 // From in-memory bytes (name is required)
-OwlAttachment.bytes(debugJson, name = "debug.json", contentType = "application/json")
+PulseAttachment.bytes(debugJson, name = "debug.json", contentType = "application/json")
 ```
 
 `contentType` is optional — when null, the uploader infers a MIME type from the file extension, falling back to `application/octet-stream`.
@@ -128,19 +128,19 @@ OwlAttachment.bytes(debugJson, name = "debug.json", contentType = "application/j
 try {
     PhotoConverter.convert(inputFile)
 } catch (e: Throwable) {
-    Owl.error(
+    Pulse.error(
         e,
         message = "image conversion failed",
         screenName = "PhotoConverterScreen",
         attributes = mapOf("stage" to "decode"),
-        attachments = listOf(OwlAttachment.file(inputFile)),
+        attachments = listOf(PulseAttachment.file(inputFile)),
     )
 }
 ```
 
 Uploads run on a separate coroutine so a large file never blocks event batching. Upload behaviour is strictly non-fatal: if the device is offline, the per-user bucket (default 250 MB per user) or project quota (default 5 GB) is exhausted, or the server otherwise rejects the file, the event itself still posts and the attachment is dropped silently (with a warning logged to Logcat). There is no offline queue for attachments — if the device is offline when the error fires, the attachment is discarded but the event queues normally.
 
-The SDK automatically tags each attachment with the currently identified user (`Owl.setUser()`) so per-user quotas apply correctly. See [Attachments](/docs/concepts/attachments) for a deeper overview.
+The SDK automatically tags each attachment with the currently identified user (`Pulse.setUser()`) so per-user quotas apply correctly. See [Attachments](/docs/concepts/attachments) for a deeper overview.
 
 ## Automatic Lifecycle Events
 
@@ -148,26 +148,26 @@ The SDK emits several events automatically without any manual calls:
 
 | Event | Level | When |
 |-------|-------|------|
-| `sdk:session_started` | info | On `Owl.configure()`. Includes `_launch_ms` (process start → configure). |
+| `sdk:session_started` | info | On `Pulse.configure()`. Includes `_launch_ms` (process start → configure). |
 | `sdk:app_foregrounded` | info | When the app enters the foreground. |
 | `sdk:app_backgrounded` | info | When the app enters the background. |
-| `sdk:screen_appeared` | debug | When a composable with `Modifier.owlScreen()` enters the composition. See [Screen Tracking](/docs/sdks/android/screen-tracking). |
+| `sdk:screen_appeared` | debug | When a composable with `Modifier.pulseScreen()` enters the composition. See [Screen Tracking](/docs/sdks/android/screen-tracking). |
 | `sdk:screen_disappeared` | debug | When it leaves the composition. Includes `_duration_ms`. |
 
 You do **not** need to manually track app launch, foreground/background, session start, network type, or device info — these are already covered.
 
 ## Linking Client and Backend Events
 
-Every event the Android SDK emits is stamped with a session ID generated on `Owl.configure()` and accessible via `Owl.sessionId`. When the app calls your backend, forward this value as a request header so events logged by the backend can be tagged with the same session ID:
+Every event the Android SDK emits is stamped with a session ID generated on `Pulse.configure()` and accessible via `Pulse.sessionId`. When the app calls your backend, forward this value as a request header so events logged by the backend can be tagged with the same session ID:
 
 ```kotlin
-val sessionId = Owl.sessionId
+val sessionId = Pulse.sessionId
 if (sessionId != null) {
-    requestBuilder.addHeader("X-Owl-Session-Id", sessionId)
+    requestBuilder.addHeader("X-Pulse-Session-Id", sessionId)
 }
 ```
 
-On a Node.js backend using `@owlmetry/node`, read the header and scope the handler with [`Owl.withSession()`](/docs/sdks/node/identity#withsession). Events from both sides of the request then share the same `session_id` and line up in the dashboard's session view.
+On a Node.js backend using `@synonymdev/pubky-pulse-node`, read the header and scope the handler with [`Pulse.withSession()`](/docs/sdks/node/identity#withsession). Events from both sides of the request then share the same `session_id` and line up in the dashboard's session view.
 
 ## Best Practices
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { MetricDefinitionResponse, MetricStatsEntry } from "@owlmetry/shared";
+import type { MetricDefinitionResponse, MetricStatsEntry } from "@pubky-pulse/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProjectDot } from "@/lib/project-color";
 import { StaggerItem } from "@/components/ui/animated-page";

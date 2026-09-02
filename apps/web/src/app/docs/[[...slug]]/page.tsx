@@ -12,7 +12,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { McpSetupInstructions } from "@/components/mcp-setup-instructions";
 
-const BASE = "https://owlmetry.com";
+const BASE = "https://pulse.pubky.org";
 
 function buildBreadcrumbItems(slugParts: string[], pageTitle: string) {
   const items: { position: number; name: string; item?: string }[] = [
@@ -57,16 +57,16 @@ export default async function Page(props: {
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
-      headline: `${page.data.title} — Owlmetry Docs`,
+      headline: `${page.data.title} — Pubky Pulse Docs`,
       description: page.data.description,
       url: `${BASE}/docs${slugParts.length ? `/${slugParts.join("/")}` : ""}`,
       publisher: {
         "@type": "Organization",
-        name: "Adapted Hub LLC",
+        name: "Pubky",
         url: BASE,
-        logo: `${BASE}/owl-logo.png`,
+        logo: `${BASE}/pulse-logo.png`,
       },
-      isPartOf: { "@type": "WebSite", name: "Owlmetry", url: BASE },
+      isPartOf: { "@type": "WebSite", name: "PubkyPulse", url: BASE },
       inLanguage: "en",
     },
   ];
@@ -93,7 +93,7 @@ export default async function Page(props: {
                 Get Started
               </Link>
               <Link
-                href="https://github.com/owlmetry/owlmetry"
+                href="https://github.com/pubky/pubky-pulse"
                 className="inline-flex h-9 items-center rounded-md border border-fd-border px-4 text-sm font-medium text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground"
               >
                 GitHub
@@ -123,7 +123,7 @@ export async function generateMetadata(props: {
 
   const slug = params.slug?.join("/") ?? "";
   const url = `/docs${slug ? `/${slug}` : ""}`;
-  const title = `${page.data.title} — Owlmetry Docs`;
+  const title = `${page.data.title} — Pubky Pulse Docs`;
   return {
     title: { absolute: title },
     description: page.data.description,

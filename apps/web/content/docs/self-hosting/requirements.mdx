@@ -1,9 +1,9 @@
 ---
 title: Requirements
-description: Server requirements for self-hosting Owlmetry — OS, Node.js, PostgreSQL, and hardware.
+description: Server requirements for self-hosting Pubky Pulse — OS, Node.js, PostgreSQL, and hardware.
 ---
 
-Server requirements for self-hosting Owlmetry.
+Server requirements for self-hosting Pubky Pulse.
 
 ## Operating system
 
@@ -21,7 +21,7 @@ The setup script creates a 2 GB swap file if one does not already exist, which h
 
 Disk usage depends on event volume. The `MAX_DATABASE_SIZE_GB` environment variable enables automatic pruning of old event partitions when the database exceeds a size threshold.
 
-If you plan to use [event attachments](/docs/concepts/attachments) (SDK file uploads like logs or screenshots), budget additional disk for `OWLMETRY_ATTACHMENTS_PATH` (default `/opt/owlmetry-attachments`). Attachment bytes live on disk, not in Postgres, and are governed by per-project and per-user quotas — default 5 GB per project ceiling and 250 MB per user bucket.
+If you plan to use [event attachments](/docs/concepts/attachments) (SDK file uploads like logs or screenshots), budget additional disk for `PULSE_ATTACHMENTS_PATH` (default `/opt/pubky-pulse-attachments`). Attachment bytes live on disk, not in Postgres, and are governed by per-project and per-user quotas — default 5 GB per project ceiling and 250 MB per user bucket.
 
 ## Software dependencies
 
@@ -29,7 +29,7 @@ If you plan to use [event attachments](/docs/concepts/attachments) (SDK file upl
 |------------|---------|-------|
 | Node.js | 22 LTS | Installed via NodeSource repository by the setup script |
 | pnpm | Latest | Installed globally via `npm install -g pnpm` |
-| pm2 | Latest | Installed globally via `npm install -g pm2`. Process manager for the `owlmetry-api` and `owlmetry-web` services |
+| pm2 | Latest | Installed globally via `npm install -g pm2`. Process manager for the `pulse-api` and `pulse-web` services |
 | PostgreSQL | 16 | Installed from the Ubuntu 24.04 apt repository |
 | nginx | Latest | Reverse proxy for the API and web dashboard |
 | git | Latest | Required to clone the repository onto the VPS |
@@ -53,7 +53,7 @@ Two options:
 
 ## Email (optional)
 
-Owlmetry uses email to send verification codes for passwordless authentication. You have two options:
+Pubky Pulse uses email to send verification codes for passwordless authentication. You have two options:
 
 - **Resend API key:** Set `RESEND_API_KEY` in your environment to send real emails via [Resend](https://resend.com).
 - **Console mode:** If no Resend key is configured, verification codes are printed to the server console. This is fine for single-user or development setups.

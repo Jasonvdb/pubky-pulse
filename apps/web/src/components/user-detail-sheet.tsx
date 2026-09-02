@@ -19,7 +19,7 @@ import { ArrowRight } from "lucide-react";
 import { formatDateTime } from "@/lib/format-date";
 import { ProjectDot } from "@/lib/project-color";
 import { countryFlag } from "@/lib/country-flag";
-import type { AppUserResponse } from "@owlmetry/shared";
+import type { AppUserResponse } from "@pubky-pulse/shared";
 
 interface UserDetailSheetProps {
   user: AppUserResponse | null;

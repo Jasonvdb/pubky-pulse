@@ -62,7 +62,7 @@ Constraints:
 ## Typical workflow
 
 1. **Create a survey definition** — `create-questionnaire` with a slug + schema (agent-friendly: agents can build short market-research surveys autonomously).
-2. **Wait for responses** — the iOS app's `.owlQuestionnaire(slug:trigger:…)` modifier fetches and presents the survey on the configured trigger, saving a draft after every Next tap.
+2. **Wait for responses** — your app's questionnaire gate (`.pulseQuestionnaire(slug:trigger:…)` in SwiftUI, `PulseQuestionnaireGate` in Compose) fetches and presents the survey on the configured trigger, saving a draft after every Next tap.
 3. **Aggregate analytics** — `get-questionnaire-analytics` returns counts/averages/NPS score per question; the agent can summarize trends without paging through individual responses. Use `submitted_only: true` if you want completion-rate-style headline numbers without draft contributions; leave it off to see where users drop out.
 4. **Drill into interesting answers** — `list-questionnaire-responses` then `get-questionnaire-response` for context. `session_id` on the response links to the user's event timeline — pass it to `investigate-event` to see what they were doing. Filter to drafts (`status: "draft"`) to study abandonment, or pass `submitted_only: true` for completed submissions only.
 5. **Annotate or triage** — `add-questionnaire-response-comment` and `update-questionnaire-response-status` cooperate with human teammates on the dashboard.

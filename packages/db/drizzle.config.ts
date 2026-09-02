@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry",
+    url: process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse",
   },
 });

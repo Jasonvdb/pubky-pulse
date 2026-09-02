@@ -6,11 +6,11 @@ import { setupTestDb } from "./setup.js";
 // Ensure the server config picks up a test-scoped attachments directory before any
 // test code imports config.ts.
 const attachmentsTempDir =
-  process.env.OWLMETRY_ATTACHMENTS_PATH ||
-  mkdtempSync(join(tmpdir(), "owlmetry-attachments-test-"));
-process.env.OWLMETRY_ATTACHMENTS_PATH = attachmentsTempDir;
-process.env.OWLMETRY_ATTACHMENTS_SIGNING_SECRET =
-  process.env.OWLMETRY_ATTACHMENTS_SIGNING_SECRET || "test-attachment-secret";
+  process.env.PULSE_ATTACHMENTS_PATH ||
+  mkdtempSync(join(tmpdir(), "pubky-pulse-attachments-test-"));
+process.env.PULSE_ATTACHMENTS_PATH = attachmentsTempDir;
+process.env.PULSE_ATTACHMENTS_SIGNING_SECRET =
+  process.env.PULSE_ATTACHMENTS_SIGNING_SECRET || "test-attachment-secret";
 
 export async function setup() {
   await setupTestDb();

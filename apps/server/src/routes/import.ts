@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, lte, inArray, isNull } from "drizzle-orm";
 import postgres from "postgres";
-import { apps, events, metricEvents, funnelEvents, ensurePartitionsForDates } from "@owlmetry/db";
+import { apps, events, metricEvents, funnelEvents, ensurePartitionsForDates } from "@pubky-pulse/db";
 import {
   MAX_IMPORT_BATCH_SIZE,
   ALLOWED_ENVIRONMENTS_FOR_PLATFORM,
-} from "@owlmetry/shared";
-import type { IngestRequest, IngestEventPayload } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import type { IngestRequest, IngestEventPayload } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import {
   validateEventPayload,
@@ -39,7 +39,7 @@ export async function importRoutes(app: FastifyInstance) {
       const auth = request.auth;
 
       if (auth.type !== "api_key" || auth.key_type !== "import") {
-        return reply.code(403).send({ error: "This endpoint requires an import API key (owl_import_*)" });
+        return reply.code(403).send({ error: "This endpoint requires an import API key (pulse_import_*)" });
       }
 
       const { events: payloads } = request.body;

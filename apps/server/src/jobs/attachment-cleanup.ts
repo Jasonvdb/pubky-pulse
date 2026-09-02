@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 import { and, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
-import { eventAttachments, events } from "@owlmetry/db";
+import { eventAttachments, events } from "@pubky-pulse/db";
 import {
   ATTACHMENT_ORPHAN_GRACE_HOURS,
   ATTACHMENT_ORPHAN_SWEEP_BATCH_SIZE,
   ATTACHMENT_SOFT_DELETE_GRACE_DAYS,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type { JobHandler } from "../services/job-runner.js";
 import { attachmentStorage } from "../storage/index.js";
 

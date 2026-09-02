@@ -8,10 +8,10 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 // Prefixed so reruns can cleanly delete-and-reinsert these specific users
-// without touching real seed data (user-42, user-99, owl_anon_demo-visitor).
+// without touching real seed data (user-42, user-99, pulse_anon_demo-visitor).
 const USER_ID_PREFIX = "test_variation_";
 
 interface SeededUser {

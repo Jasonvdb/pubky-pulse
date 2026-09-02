@@ -26,7 +26,7 @@ export function createEmailAdapter(emailService: EmailService): ChannelAdapter {
               subject: ctx.payload.title,
               body: ctx.payload.body ?? "",
               link: ctx.payload.link
-                ? `${process.env.WEB_APP_URL ?? "https://owlmetry.com"}${ctx.payload.link}`
+                ? `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}${ctx.payload.link}`
                 : undefined,
               link_text: "View feedback",
             });
@@ -37,7 +37,7 @@ export function createEmailAdapter(emailService: EmailService): ChannelAdapter {
               subject: ctx.payload.title,
               body: ctx.payload.body ?? "",
               link: ctx.payload.link
-                ? `${process.env.WEB_APP_URL ?? "https://owlmetry.com"}${ctx.payload.link}`
+                ? `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}${ctx.payload.link}`
                 : undefined,
               link_text: "View issues",
             });
@@ -71,7 +71,7 @@ function extractIssueDigestParams(ctx: ChannelDeliveryContext): IssueDigestEmail
     dashboard_url:
       typeof data.dashboard_url === "string"
         ? data.dashboard_url
-        : `${process.env.WEB_APP_URL ?? "https://owlmetry.com"}/dashboard/issues`,
+        : `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}/dashboard/issues`,
   };
 }
 

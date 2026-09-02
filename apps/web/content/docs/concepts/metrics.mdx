@@ -6,10 +6,10 @@ description: Track performance with lifecycle operations (start, complete, fail,
 Structured metrics let you measure the performance of specific operations in your app -- network requests, file uploads, checkout flows, or any timed process. Unlike raw events, metrics follow a defined lifecycle and produce aggregated performance data.
 
 ```text title="Add structured metrics with your coding agent"
-Add Owlmetry structured metrics to this project. Connect the Owlmetry MCP
-server first (https://owlmetry.com/docs/mcp) — it exposes its integration
-guide as the owlmetry://guide resource, and the SDK docs are at
-https://owlmetry.com/docs/sdks.
+Add Pubky Pulse structured metrics to this project. Connect the Pubky Pulse MCP
+server first (https://pulse.pubky.org/docs/mcp) — it exposes its integration
+guide as the pubky-pulse://guide resource, and the SDK docs are at
+https://pulse.pubky.org/docs/sdks.
 
 - Identify operations where duration and success rate matter
   (network requests, file processing, data loading).
@@ -71,7 +71,7 @@ Lifecycle operations use a `tracking_id` (UUID) to link the start phase with its
 - Match failures back to their originating start event
 - Detect operations that started but never finished
 
-The SDKs generate and manage tracking IDs automatically via the `OwlOperation` object returned by `startOperation()`.
+The SDKs generate and manage tracking IDs automatically via the `PulseOperation` object returned by `startOperation()`.
 
 ## Duration
 

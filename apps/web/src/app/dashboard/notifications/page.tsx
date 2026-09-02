@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, Trash2 } from "lucide-react";
-import type { NotificationResponse } from "@owlmetry/shared";
+import type { NotificationResponse } from "@pubky-pulse/shared";
 import {
   NOTIFICATION_TYPE_META,
   NOTIFICATION_TYPES,
-} from "@owlmetry/shared/preferences";
+} from "@pubky-pulse/shared/preferences";
 import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

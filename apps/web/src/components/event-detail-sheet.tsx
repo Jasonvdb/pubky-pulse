@@ -24,15 +24,15 @@ import { formatSdkLabel } from "@/lib/format-sdk";
 import { countryFlag } from "@/lib/country-flag";
 import { api } from "@/lib/api";
 // Deep import bypasses the barrel export which pulls in node:crypto
-import { formatBytes } from "@owlmetry/shared/constants";
+import { formatBytes } from "@pubky-pulse/shared/constants";
 import Link from "next/link";
 import { Search, ArrowRight } from "lucide-react";
 import type {
   AttachmentListResponse,
   AttachmentSummary,
   StoredEventResponse,
-} from "@owlmetry/shared";
-import type { LogLevel } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import type { LogLevel } from "@pubky-pulse/shared";
 
 interface EventDetailSheetProps {
   event: StoredEventResponse | null;

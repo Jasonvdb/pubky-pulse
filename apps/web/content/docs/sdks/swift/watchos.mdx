@@ -1,19 +1,19 @@
 ---
 title: Apple Watch
-description: Reliably ship Owlmetry events from a watchOS app, even when the watch is far from its iPhone and has no cellular signal.
+description: Reliably ship Pubky Pulse events from a watchOS app, even when the watch is far from its iPhone and has no cellular signal.
 ---
 
-watchOS is a hostile environment for analytics. Watch apps are suspended within seconds of going to the background, cellular signal is intermittent, and `UIApplication.beginBackgroundTask` doesn't exist. The Owlmetry Swift SDK addresses this with a two-tier delivery pipeline that puts almost all of the work onto the operating system.
+watchOS is a hostile environment for analytics. Watch apps are suspended within seconds of going to the background, cellular signal is intermittent, and `UIApplication.beginBackgroundTask` doesn't exist. The Pubky Pulse Swift SDK addresses this with a two-tier delivery pipeline that puts almost all of the work onto the operating system.
 
 ## How it works
 
-When you call `Owl.track(...)` on the watch, the SDK tries three transports in order. Events flow through **exactly one** destination per attempt — there is no double-delivery.
+When you call `Pulse.track(...)` on the watch, the SDK tries three transports in order. Events flow through **exactly one** destination per attempt — there is no double-delivery.
 
 1. **Direct HTTP to the ingest endpoint** — the existing transport, gated by `NWPathMonitor`. A cellular watch with signal ships events in real time during the workout.
 2. **`WCSession.transferUserInfo` to the paired iPhone** — if the watch is offline (or HTTP exhausts retries) and a paired iPhone is reachable, the batch is handed to WatchConnectivity. The OS holds the payload across watch suspension, watch reboot, and bluetooth disconnection, and wakes the iPhone counterpart app to deliver when the devices come back in range.
 3. **On-disk OfflineQueue** — for standalone watches with no paired iPhone (phone sold, lost, never installed), events persist to disk just like on iOS / macOS.
 
-The clever bit: **`transferUserInfo` is itself a persistent, OS-managed queue.** You don't need to write any "rider returned to phone" detection — the OS handles re-pairing automatically. When events land on the iPhone, your iPhone app's already-running Owlmetry pipeline ships them with the existing batching, retry, and reachability behavior.
+The clever bit: **`transferUserInfo` is itself a persistent, OS-managed queue.** You don't need to write any "rider returned to phone" detection — the OS handles re-pairing automatically. When events land on the iPhone, your iPhone app's already-running Pubky Pulse pipeline ships them with the existing batching, retry, and reachability behavior.
 
 Server-side deduplication on `client_event_id` covers the rare case where direct HTTP succeeds but the response is lost and the batch later retries via WC.
 
@@ -21,18 +21,18 @@ Server-side deduplication on `client_event_id` covers the rare case where direct
 
 ### On the watch
 
-Configure the SDK exactly the same way as on iOS. There is no separate watch API — `Owl.track`, `Owl.error`, `Owl.step`, attachments, everything works identically.
+Configure the SDK exactly the same way as on iOS. There is no separate watch API — `Pulse.track`, `Pulse.error`, `Pulse.step`, attachments, everything works identically.
 
 ```swift
-import Owlmetry
+import PubkyPulse
 import SwiftUI
 
 @main
 struct WorkoutWatchApp: App {
     init() {
-        try? Owl.configure(
-            endpoint: "https://ingest.owlmetry.com",
-            apiKey: "owl_client_..."
+        try? Pulse.configure(
+            endpoint: "https://ingest.pulse.pubky.org",
+            apiKey: "pulse_client_..."
         )
     }
 
@@ -52,15 +52,15 @@ The iPhone-side host app **owns its own `WCSessionDelegate`** — the SDK never 
 
 ```swift
 import WatchConnectivity
-import Owlmetry
+import PubkyPulse
 
 final class PhoneSessionDelegate: NSObject, WCSessionDelegate {
     func session(
         _ session: WCSession,
         didReceiveUserInfo userInfo: [String: Any]
     ) {
-        if Owl.handleWatchUserInfo(userInfo) { return }
-        // ... your existing handling for non-Owlmetry payloads
+        if Pulse.handleWatchUserInfo(userInfo) { return }
+        // ... your existing handling for non-Pulse payloads
     }
 
     func session(
@@ -76,7 +76,7 @@ final class PhoneSessionDelegate: NSObject, WCSessionDelegate {
 }
 ```
 
-`Owl.handleWatchUserInfo(_:)` returns `true` when it recognized and consumed an Owlmetry envelope, `false` otherwise — let the rest of your delegate continue running for payloads that aren't ours.
+`Pulse.handleWatchUserInfo(_:)` returns `true` when it recognized and consumed a Pubky Pulse envelope, `false` otherwise — let the rest of your delegate continue running for payloads that aren't ours.
 
 If your app doesn't use WatchConnectivity for any other feature, add the minimal delegate above in `application(_:didFinishLaunchingWithOptions:)`:
 
@@ -101,9 +101,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 ### Cold-launch race
 
-iOS may launch the iPhone host app cold to deliver a watch `transferUserInfo` payload. If the OS delivers the payload before your app's `Owl.configure(...)` runs, `Owl.handleWatchUserInfo(_:)` buffers the events internally and drains them once `configure(...)` completes. No events are lost.
+iOS may launch the iPhone host app cold to deliver a watch `transferUserInfo` payload. If the OS delivers the payload before your app's `Pulse.configure(...)` runs, `Pulse.handleWatchUserInfo(_:)` buffers the events internally and drains them once `configure(...)` completes. No events are lost.
 
-For this to work, call `Owl.configure(...)` early — in `application(_:didFinishLaunchingWithOptions:)` or your SwiftUI `App.init`. This is the standard guidance anyway.
+For this to work, call `Pulse.configure(...)` early — in `application(_:didFinishLaunchingWithOptions:)` or your SwiftUI `App.init`. This is the standard guidance anyway.
 
 ## What you don't need to think about
 

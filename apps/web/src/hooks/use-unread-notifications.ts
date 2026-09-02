@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { NotificationsUnreadCountResponse } from "@owlmetry/shared";
+import type { NotificationsUnreadCountResponse } from "@pubky-pulse/shared";
 import { useUser } from "./use-user";
 
 const POLL_INTERVAL_MS = 30_000;

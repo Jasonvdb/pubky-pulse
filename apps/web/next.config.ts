@@ -6,7 +6,7 @@ const withMDX = createMDX();
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
-  transpilePackages: ["@owlmetry/shared"],
+  transpilePackages: ["@pubky-pulse/shared"],
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
 };
 

@@ -1,6 +1,6 @@
 import { eq, isNull, and } from "drizzle-orm";
-import { apps } from "@owlmetry/db";
-import { compareVersions } from "@owlmetry/shared";
+import { apps } from "@pubky-pulse/db";
+import { compareVersions } from "@pubky-pulse/shared";
 import type postgres from "postgres";
 import type { JobHandler } from "../services/job-runner.js";
 

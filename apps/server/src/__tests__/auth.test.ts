@@ -34,13 +34,13 @@ describe("POST /v1/auth/send-code", () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "anyone@owlmetry.com" },
+      payload: { email: "anyone@pulse.pubky.org" },
     });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().message).toBe("Verification code sent");
     expect(testEmailService.lastCode).toHaveLength(6);
-    expect(testEmailService.lastEmail).toBe("anyone@owlmetry.com");
+    expect(testEmailService.lastEmail).toBe("anyone@pulse.pubky.org");
   });
 
   it("rejects missing email", async () => {
@@ -64,7 +64,7 @@ describe("POST /v1/auth/send-code", () => {
   });
 
   it("rate limits after 5 requests", async () => {
-    const email = "ratelimit@owlmetry.com";
+    const email = "ratelimit@pulse.pubky.org";
     for (let i = 0; i < 5; i++) {
       await app.inject({
         method: "POST",
@@ -110,19 +110,19 @@ describe("POST /v1/auth/verify-code", () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "newuser@owlmetry.com" },
+      payload: { email: "newuser@pulse.pubky.org" },
     });
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/verify-code",
-      payload: { email: "newuser@owlmetry.com", code: testEmailService.lastCode },
+      payload: { email: "newuser@pulse.pubky.org", code: testEmailService.lastCode },
     });
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.token).toBeDefined();
-    expect(body.user.email).toBe("newuser@owlmetry.com");
+    expect(body.user.email).toBe("newuser@pulse.pubky.org");
     expect(body.user.name).toBe("Newuser");
     expect(body.teams).toHaveLength(1);
     expect(body.teams[0].role).toBe("owner");
@@ -338,7 +338,7 @@ describe("DELETE /v1/auth/keys/:id", () => {
 
   it("returns 404 for key belonging to another team", async () => {
     // Create a second user (gets their own team)
-    const { token: otherToken } = await createUserAndGetToken(app, "other@owlmetry.com");
+    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org");
 
     // Get a key ID from the original team
     const token = await getToken(app);
@@ -471,7 +471,7 @@ describe("GET /v1/auth/keys/:id", () => {
   });
 
   it("returns 404 for key belonging to another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@owlmetry.com");
+    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org");
 
     const token = await getToken(app);
     const listRes = await app.inject({
@@ -515,7 +515,7 @@ describe("POST /v1/auth/keys", () => {
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.api_key.secret).toMatch(/^owl_client_/);
+    expect(body.api_key.secret).toMatch(/^pulse_client_/);
     expect(body.api_key.key_type).toBe("client");
     expect(body.api_key.permissions).toContain("events:write");
   });
@@ -535,7 +535,7 @@ describe("POST /v1/auth/keys", () => {
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.api_key.secret).toMatch(/^owl_agent_/);
+    expect(body.api_key.secret).toMatch(/^pulse_agent_/);
     expect(body.api_key.permissions).toContain("events:read");
   });
 
@@ -590,7 +590,7 @@ describe("POST /v1/auth/keys", () => {
     const token = await getToken(app);
 
     // Create a second user with their own team and app
-    const { token: otherToken, teamId: otherTeamId } = await createUserAndGetToken(app, "other@owlmetry.com", "Other");
+    const { token: otherToken, teamId: otherTeamId } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
 
     // Create a project in the other team
     const projRes = await app.inject({

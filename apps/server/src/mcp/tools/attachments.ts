@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS } from "@owlmetry/shared";
+import { ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS } from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
 export function registerAttachmentsTools(

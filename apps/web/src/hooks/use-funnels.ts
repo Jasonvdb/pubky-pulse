@@ -7,7 +7,7 @@ import type {
   FunnelQueryResponse,
   FunnelQueryParams,
   TeamFunnelListResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 export function useFunnels(projectId: string | null) {
   const key = projectId ? `/v1/projects/${projectId}/funnels` : null;

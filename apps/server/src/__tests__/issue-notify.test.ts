@@ -39,7 +39,7 @@ beforeEach(async () => {
   projectId = proj.id;
   const [appRow] = await dbClient`SELECT id FROM apps WHERE project_id = ${projectId}`;
   appId = appRow.id;
-  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@owlmetry.com'`;
+  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@pulse.pubky.org'`;
   ownerUserId = owner.id;
 });
 
@@ -69,8 +69,8 @@ describe("issue_notify producer", () => {
   it("creates one inbox row per team member with project_id in data", async () => {
     await makeProjectEligible();
     await seedQualifyingIssue();
-    const u2 = await createUserAndGetToken(app, "member-a@owlmetry.com");
-    const u3 = await createUserAndGetToken(app, "member-b@owlmetry.com");
+    const u2 = await createUserAndGetToken(app, "member-a@pulse.pubky.org");
+    const u3 = await createUserAndGetToken(app, "member-b@pulse.pubky.org");
     await addTeamMember(teamId, u2.userId, "member");
     await addTeamMember(teamId, u3.userId, "admin");
 
@@ -89,7 +89,7 @@ describe("issue_notify producer", () => {
   it("respects per-user email-off preference", async () => {
     await makeProjectEligible();
     await seedQualifyingIssue();
-    const u2 = await createUserAndGetToken(app, "muted@owlmetry.com");
+    const u2 = await createUserAndGetToken(app, "muted@pulse.pubky.org");
     await addTeamMember(teamId, u2.userId, "member");
     // issue.digest defaults to email-only; opt in_app on so we can verify
     // email-off is respected without the user falling silent everywhere.

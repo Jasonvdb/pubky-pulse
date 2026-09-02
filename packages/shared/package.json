@@ -1,5 +1,5 @@
 {
-  "name": "@owlmetry/shared",
+  "name": "@pubky-pulse/shared",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import useSWR from "swr";
-import type { NotificationsListResponse } from "@owlmetry/shared";
+import type { NotificationsListResponse } from "@pubky-pulse/shared";
 import { api } from "@/lib/api";
 import { buildQueryString } from "@/lib/query";
 import { useUnreadNotifications } from "./use-unread-notifications";

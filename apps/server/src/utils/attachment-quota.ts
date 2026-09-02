@@ -1,10 +1,10 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { Db } from "@owlmetry/db";
-import { eventAttachments, projects } from "@owlmetry/db";
+import type { Db } from "@pubky-pulse/db";
+import { eventAttachments, projects } from "@pubky-pulse/db";
 import {
   DEFAULT_ATTACHMENT_PROJECT_QUOTA_BYTES,
   DEFAULT_ATTACHMENT_USER_QUOTA_BYTES,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 export interface ResolvedAttachmentLimits {
   projectQuotaBytes: number;

@@ -15,7 +15,7 @@ export const HTTP_URL_ATTRIBUTE = "_http_url";
 export const HTTP_METHOD_ATTRIBUTE = "_http_method";
 
 // Error/exception extraction attributes. SDKs that accept an Error/Exception
-// object (Owl.error(error)) extract structured data into these reserved keys.
+// object (Pulse.error(error)) extract structured data into these reserved keys.
 // _error_type also acts as the issue-fingerprint discriminator so two error
 // classes with identical messages stay on separate issues.
 export const ERROR_TYPE_ATTRIBUTE = "_error_type";

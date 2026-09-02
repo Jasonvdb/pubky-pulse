@@ -1,13 +1,13 @@
 import { eq, sql } from "drizzle-orm";
-import type { Db } from "@owlmetry/db";
-import { apps, events, appUsers, appUserApps, metricEvents, funnelEvents } from "@owlmetry/db";
-import { ANONYMOUS_ID_PREFIX, parseMetricMessage, parseFunnelStepMessage } from "@owlmetry/shared";
+import type { Db } from "@pubky-pulse/db";
+import { apps, events, appUsers, appUserApps, metricEvents, funnelEvents } from "@pubky-pulse/db";
+import { ANONYMOUS_ID_PREFIX, parseMetricMessage, parseFunnelStepMessage } from "@pubky-pulse/shared";
 import {
   MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH,
   LOG_LEVELS,
   RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES,
-} from "@owlmetry/shared";
-import type { IngestEventPayload } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import type { IngestEventPayload } from "@pubky-pulse/shared";
 import type { FastifyBaseLogger } from "fastify";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -315,8 +315,8 @@ export async function upsertAppUsers(
 }
 
 /**
- * Write the app's shipped languages (Bundle.main.localizations, reported by the
- * SDK on the ingest payload) through to apps.supported_languages, but only when
+ * Write the app's shipped languages (reported by the SDK on the ingest
+ * payload) through to apps.supported_languages, but only when
  * the set differs from what's stored. Powers the localization-gap signal. SDK
  * reports are authoritative (source 'sdk') and override a prior 'manual' value.
  * Best-effort — a failure here never fails ingest. App-level, so it's persisted

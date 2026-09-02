@@ -3,7 +3,7 @@ title: Time-Series Rollups
 description: Pre-aggregated daily and hourly count tables that power dashboard sparklines and arbitrary trend queries.
 ---
 
-Owlmetry maintains pre-computed daily and hourly rollup tables for the four event-shaped data sources (`events`, `metric_events`, `funnel_events`, `questionnaire_responses`). These power the subtle sparkline charts on dashboard cards today and any time-range trend query going forward.
+Pubky Pulse maintains pre-computed daily and hourly rollup tables for the four event-shaped data sources (`events`, `metric_events`, `funnel_events`, `questionnaire_responses`). These power the subtle sparkline charts on dashboard cards today and any time-range trend query going forward.
 
 ## Why pre-aggregate?
 
@@ -56,7 +56,7 @@ Two background jobs maintain the tables:
 - `stats_aggregate_hourly` runs every hour at `:05` UTC. Default behavior: re-aggregates the trailing 3 hours.
 - `stats_aggregate_daily` runs every day at `00:30` UTC. Default behavior: re-aggregates the trailing 3 days.
 
-The 3-bucket re-aggregation window absorbs late-arriving events from offline mobile SDKs. Events arriving later than that need a manual backfill (see below).
+The 3-bucket re-aggregation window absorbs late-arriving events from offline SDKs. Events arriving later than that need a manual backfill (see below).
 
 ## Backfill
 

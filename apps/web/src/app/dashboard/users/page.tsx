@@ -7,7 +7,7 @@ import type {
   ProjectResponse,
   AppResponse,
   AppUserResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { UserDetailSheet } from "@/components/user-detail-sheet";
 import { TIME_RANGES } from "@/lib/time-ranges";
 import { FilterSheet, type FilterChip, resolveEntityName, truncateId } from "@/components/filter-sheet";
@@ -16,7 +16,7 @@ import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useTeamAppUsers } from "@/hooks/use-team-app-users";
-import { isDefaultColumnOrder } from "@owlmetry/shared/preferences";
+import { isDefaultColumnOrder } from "@pubky-pulse/shared/preferences";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/use-user-preferences";
 import { useProjectColorMap, useAppColorMap, useProjectInfoMap } from "@/hooks/use-project-colors";
 import { Button } from "@/components/ui/button";

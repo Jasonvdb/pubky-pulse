@@ -43,8 +43,8 @@ import {
   canManageRole,
   meetsMinimumRole,
   VALID_TEAM_ROLES,
-} from "@owlmetry/shared/auth";
-import type { TeamDetailResponse, TeamInvitationResponse, TeamRole } from "@owlmetry/shared";
+} from "@pubky-pulse/shared/auth";
+import type { TeamDetailResponse, TeamInvitationResponse, TeamRole } from "@pubky-pulse/shared";
 import { useRouter } from "next/navigation";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { Skeleton } from "@/components/ui/skeleton";

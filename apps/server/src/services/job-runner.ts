@@ -1,10 +1,10 @@
 import { PgBoss } from "pg-boss";
 import { eq, or } from "drizzle-orm";
 import postgres from "postgres";
-import { jobRuns, users, apiKeys } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
-import type { JobType, JobProgress } from "@owlmetry/shared";
-import { JOB_TYPE_META, formatDuration } from "@owlmetry/shared";
+import { jobRuns, users, apiKeys } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
+import type { JobType, JobProgress } from "@pubky-pulse/shared";
+import { JOB_TYPE_META, formatDuration } from "@pubky-pulse/shared";
 import { jobStatusEmoji, type EmailService } from "./email.js";
 import type { NotificationDispatcher } from "./notifications/dispatcher.js";
 
@@ -321,7 +321,7 @@ export class JobRunner {
     }
 
     // User-notify path: enqueue via dispatcher so the user gets it on every
-    // channel they've enabled (in-app + email + mobile push).
+    // channel they've enabled (in-app + email).
     if (opts.notify) {
       const userId = await this.resolveTriggeredByUserId(opts.triggeredBy);
       if (userId && this.notificationDispatcher) {

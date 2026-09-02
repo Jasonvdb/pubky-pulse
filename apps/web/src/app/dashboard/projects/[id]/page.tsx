@@ -24,10 +24,10 @@ import {
 import { CopyButton } from "@/components/copy-button";
 import { api, ApiError } from "@/lib/api";
 import { ProjectDot } from "@/lib/project-color";
-import type { ProjectDetailResponse, AppResponse } from "@owlmetry/shared";
-import { PROJECT_COLORS, isValidProjectColor } from "@owlmetry/shared/project-colors";
+import type { ProjectDetailResponse, AppResponse } from "@pubky-pulse/shared";
+import { PROJECT_COLORS, isValidProjectColor } from "@pubky-pulse/shared/project-colors";
 
-// Inline to avoid pulling node:crypto via the @owlmetry/shared barrel
+// Inline to avoid pulling node:crypto via the @pubky-pulse/shared barrel
 const DEFAULT_RETENTION_DAYS_EVENTS = 120;
 const DEFAULT_RETENTION_DAYS_METRICS = 365;
 const DEFAULT_RETENTION_DAYS_FUNNELS = 365;
@@ -230,7 +230,7 @@ export default function ProjectDetailPage() {
                 <Label htmlFor="app-name">Name</Label>
                 <Input
                   id="app-name"
-                  placeholder="My iOS App"
+                  placeholder="My App"
                   value={appName}
                   onChange={(e) => setAppName(e.target.value)}
                   required
@@ -442,7 +442,7 @@ function IssueAlertSettings({ project, onSaved }: { project: ProjectDetailRespon
         </div>
         <p className="text-xs text-muted-foreground">
           Controls how often new or regressed issues batch into a notification for this project.
-          Per-channel toggles (in-app, email, mobile push) live on your{" "}
+          Per-channel toggles (in-app, email) live on your{" "}
           <Link href="/dashboard/profile/notifications" className="underline">
             notification preferences
           </Link>{" "}

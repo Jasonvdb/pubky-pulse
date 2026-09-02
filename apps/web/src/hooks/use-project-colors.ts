@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import useSWR from "swr";
-import type { ProjectResponse, AppResponse } from "@owlmetry/shared";
+import type { ProjectResponse, AppResponse } from "@pubky-pulse/shared";
 
 export function useProjectInfoMap(
   teamId: string | null | undefined,

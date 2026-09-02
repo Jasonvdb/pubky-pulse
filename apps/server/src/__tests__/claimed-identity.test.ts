@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import postgres from "postgres";
-import { createDatabaseConnection } from "@owlmetry/db";
+import { createDatabaseConnection } from "@pubky-pulse/db";
 import { resolveClaimedUserIds } from "../utils/claimed-identity.js";
 import { insertAppUser, truncateAll, seedTestData, TEST_DB_URL } from "./setup.js";
 
@@ -37,7 +37,7 @@ describe("resolveClaimedUserIds", () => {
   });
 
   it("returns an empty map when only real (non-anon) ids are provided", async () => {
-    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["owl_anon_A"] });
+    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["pulse_anon_A"] });
     const result = await resolveClaimedUserIds(db, projectId, [
       "real_user_1",
       "another_real",
@@ -46,72 +46,72 @@ describe("resolveClaimedUserIds", () => {
   });
 
   it("returns an empty map when no app_users rows have claimed_from set", async () => {
-    await insertAppUser(projectId, "owl_anon_A", { isAnonymous: true });
-    const result = await resolveClaimedUserIds(db, projectId, ["owl_anon_A"]);
+    await insertAppUser(projectId, "pulse_anon_A", { isAnonymous: true });
+    const result = await resolveClaimedUserIds(db, projectId, ["pulse_anon_A"]);
     expect(result.size).toBe(0);
   });
 
   it("resolves a single claimed anon id to its real user id", async () => {
-    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["owl_anon_A"] });
-    const result = await resolveClaimedUserIds(db, projectId, ["owl_anon_A"]);
-    expect(result.get("owl_anon_A")).toBe("real_user_1");
+    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["pulse_anon_A"] });
+    const result = await resolveClaimedUserIds(db, projectId, ["pulse_anon_A"]);
+    expect(result.get("pulse_anon_A")).toBe("real_user_1");
     expect(result.size).toBe(1);
   });
 
   it("resolves multiple anon ids across multiple real users in a single query", async () => {
-    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["owl_anon_A", "owl_anon_B"] });
-    await insertAppUser(projectId, "real_user_2", { claimedFrom: ["owl_anon_C"] });
+    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["pulse_anon_A", "pulse_anon_B"] });
+    await insertAppUser(projectId, "real_user_2", { claimedFrom: ["pulse_anon_C"] });
     const result = await resolveClaimedUserIds(db, projectId, [
-      "owl_anon_A",
-      "owl_anon_B",
-      "owl_anon_C",
-      "owl_anon_MISSING",
+      "pulse_anon_A",
+      "pulse_anon_B",
+      "pulse_anon_C",
+      "pulse_anon_MISSING",
     ]);
-    expect(result.get("owl_anon_A")).toBe("real_user_1");
-    expect(result.get("owl_anon_B")).toBe("real_user_1");
-    expect(result.get("owl_anon_C")).toBe("real_user_2");
-    expect(result.has("owl_anon_MISSING")).toBe(false);
+    expect(result.get("pulse_anon_A")).toBe("real_user_1");
+    expect(result.get("pulse_anon_B")).toBe("real_user_1");
+    expect(result.get("pulse_anon_C")).toBe("real_user_2");
+    expect(result.has("pulse_anon_MISSING")).toBe(false);
     expect(result.size).toBe(3);
   });
 
   it("does not resolve claimed ids from a different project", async () => {
-    await insertAppUser(otherProjectId, "real_user_1", { claimedFrom: ["owl_anon_A"] });
-    const result = await resolveClaimedUserIds(db, projectId, ["owl_anon_A"]);
+    await insertAppUser(otherProjectId, "real_user_1", { claimedFrom: ["pulse_anon_A"] });
+    const result = await resolveClaimedUserIds(db, projectId, ["pulse_anon_A"]);
     expect(result.size).toBe(0);
   });
 
   it("ignores non-anon ids in the input even when present in claimed_from rows", async () => {
-    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["owl_anon_A"] });
+    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["pulse_anon_A"] });
     const result = await resolveClaimedUserIds(db, projectId, [
       "real_user_1",
       "some_real_id",
-      "owl_anon_A",
+      "pulse_anon_A",
     ]);
     // Only the anon-prefixed id should round-trip.
     expect(result.size).toBe(1);
-    expect(result.get("owl_anon_A")).toBe("real_user_1");
+    expect(result.get("pulse_anon_A")).toBe("real_user_1");
   });
 
   it("deduplicates repeated anon ids in input", async () => {
-    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["owl_anon_A"] });
+    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["pulse_anon_A"] });
     const result = await resolveClaimedUserIds(db, projectId, [
-      "owl_anon_A",
-      "owl_anon_A",
-      "owl_anon_A",
+      "pulse_anon_A",
+      "pulse_anon_A",
+      "pulse_anon_A",
     ]);
     expect(result.size).toBe(1);
-    expect(result.get("owl_anon_A")).toBe("real_user_1");
+    expect(result.get("pulse_anon_A")).toBe("real_user_1");
   });
 
   it("handles null/undefined entries in the input array", async () => {
-    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["owl_anon_A"] });
+    await insertAppUser(projectId, "real_user_1", { claimedFrom: ["pulse_anon_A"] });
     const result = await resolveClaimedUserIds(db, projectId, [
       null,
       undefined,
-      "owl_anon_A",
+      "pulse_anon_A",
       null,
     ]);
     expect(result.size).toBe(1);
-    expect(result.get("owl_anon_A")).toBe("real_user_1");
+    expect(result.get("pulse_anon_A")).toBe("real_user_1");
   });
 });

@@ -9,10 +9,10 @@ The SDK supports two patterns: **lifecycle operations** for things with a durati
 
 ## Lifecycle Operations
 
-Use `Owl.startOperation()` when you are measuring something that has a start and an end, such as a network request, file upload, or data processing task. The SDK tracks duration automatically.
+Use `Pulse.startOperation()` when you are measuring something that has a start and an end, such as a network request, file upload, or data processing task. The SDK tracks duration automatically.
 
 ```swift
-let op = Owl.startOperation("photo-upload", attributes: ["format": "heic"])
+let op = Pulse.startOperation("photo-upload", attributes: ["format": "heic"])
 
 do {
     let result = try await uploadPhoto(image)
@@ -24,20 +24,20 @@ do {
 
 ### Starting an Operation
 
-`Owl.startOperation()` returns an `OwlOperation` object and immediately emits a `metric:<slug>:start` event. The operation records its start time and a unique `tracking_id` (UUID) that correlates all phases together.
+`Pulse.startOperation()` returns a `PulseOperation` object and immediately emits a `metric:<slug>:start` event. The operation records its start time and a unique `tracking_id` (UUID) that correlates all phases together.
 
 ```swift
 public static func startOperation(
     _ metric: String,
     attributes: [String: String?] = [:]
-) -> OwlOperation
+) -> PulseOperation
 ```
 
 Optional values are accepted directly — `nil`-valued keys are dropped before the event ships, so you can pass `String?` from your domain code without unwrapping first.
 
 ### Completing an Operation
 
-Call one of three methods on the `OwlOperation` to finish it:
+Call one of three methods on the `PulseOperation` to finish it:
 
 ```swift
 // Success -- emits metric:<slug>:complete (info level)
@@ -62,7 +62,7 @@ Each completion method automatically includes:
 
 ```swift
 func syncUserData() async {
-    let op = Owl.startOperation("data-sync", attributes: ["source": "cloud"])
+    let op = Pulse.startOperation("data-sync", attributes: ["source": "cloud"])
 
     do {
         let records = try await fetchRecords()
@@ -78,11 +78,11 @@ func syncUserData() async {
 
 ## Single-Shot Measurements
 
-Use `Owl.recordMetric()` for values that do not have a duration -- a point-in-time measurement or a count.
+Use `Pulse.recordMetric()` for values that do not have a duration -- a point-in-time measurement or a count.
 
 ```swift
-Owl.recordMetric("items-in-cart", attributes: ["count": "\(cart.items.count)"])
-Owl.recordMetric("app-cold-start", attributes: ["screen": "home"])
+Pulse.recordMetric("items-in-cart", attributes: ["count": "\(cart.items.count)"])
+Pulse.recordMetric("app-cold-start", attributes: ["screen": "home"])
 ```
 
 This emits a single `metric:<slug>:record` event at info level.
@@ -102,7 +102,7 @@ If you pass an invalid slug, the SDK auto-corrects it by lowercasing, replacing 
 
 ```swift
 // "Photo Upload" is auto-corrected to "photo-upload" with a console warning
-let op = Owl.startOperation("Photo Upload")
+let op = Pulse.startOperation("Photo Upload")
 ```
 
 ## Server-Side Metric Definitions
@@ -114,6 +114,6 @@ You do not need to create a metric definition before emitting events — the ser
 | Use case | Approach |
 |----------|----------|
 | You want aggregated stats (p50, p95, error rates) | Structured metrics |
-| You want a timeline of individual occurrences | Plain events (`Owl.info()`, `Owl.error()`) |
+| You want a timeline of individual occurrences | Plain events (`Pulse.info()`, `Pulse.error()`) |
 | You need to measure how long something takes | Lifecycle operation (`startOperation`) |
 | You want to record a single value at a point in time | Single-shot (`recordMetric`) |

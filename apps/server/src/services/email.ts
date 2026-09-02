@@ -142,7 +142,7 @@ export class ResendEmailService implements EmailService {
   }
 
   async sendVerificationCode(email: string, code: string): Promise<void> {
-    await this.sendEmail(email, "Your Owlmetry verification code", [
+    await this.sendEmail(email, "Your Pubky Pulse verification code", [
       `<p>Your verification code is:</p>`,
       `<p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0;">${code}</p>`,
       `<p>Pass this code to your AI agent to authenticate it, or enter it in the dashboard to sign in.</p>`,
@@ -151,7 +151,7 @@ export class ResendEmailService implements EmailService {
   }
 
   async sendTeamInvitation(email: string, params: TeamInvitationEmailParams): Promise<void> {
-    await this.sendEmail(email, `You've been invited to join ${params.team_name} on Owlmetry`, [
+    await this.sendEmail(email, `You've been invited to join ${params.team_name} on Pubky Pulse`, [
       `<p><strong>${escapeHtml(params.invited_by_name)}</strong> invited you to join <strong>${escapeHtml(params.team_name)}</strong> as <strong>${escapeHtml(params.role)}</strong>.</p>`,
       `<p><a href="${escapeHtml(params.accept_url)}" style="display:inline-block;padding:12px 24px;background:#e8590c;color:#fff;text-decoration:none;border-radius:6px;">Accept Invitation</a></p>`,
       `<p style="color:#888;font-size:13px;">This invitation expires in 7 days.</p>`,
@@ -168,7 +168,7 @@ export class ResendEmailService implements EmailService {
     if (params.error) lines.push(`<p><strong>Error:</strong> ${escapeHtml(params.error)}</p>`);
     if (params.result) lines.push(`<p><strong>Result:</strong></p><pre>${escapeHtml(JSON.stringify(params.result, null, 2))}</pre>`);
 
-    await this.sendEmail(email, `[Owlmetry] ${emoji} Job ${params.status}: ${escapeHtml(params.job_type)}`, lines.join(""));
+    await this.sendEmail(email, `[Pubky Pulse] ${emoji} Job ${params.status}: ${escapeHtml(params.job_type)}`, lines.join(""));
   }
 
   async sendIssueDigest(email: string, params: IssueDigestEmailParams): Promise<void> {
@@ -183,7 +183,7 @@ export class ResendEmailService implements EmailService {
       </tr>`;
     }).join("");
 
-    await this.sendEmail(email, `[Owlmetry] 🐛 ${params.issues.length} issue(s) in ${escapeHtml(params.project_name)}`, [
+    await this.sendEmail(email, `[Pubky Pulse] 🐛 ${params.issues.length} issue(s) in ${escapeHtml(params.project_name)}`, [
       `<p>New issues detected in <strong>${escapeHtml(params.project_name)}</strong>:</p>`,
       `<table style="border-collapse:collapse;width:100%;font-size:14px">`,
       `<thead><tr style="background:#f5f5f5">`,
@@ -203,7 +203,7 @@ export class ResendEmailService implements EmailService {
     const linkHtml = params.link
       ? `<p><a href="${escapeHtml(params.link)}" style="display:inline-block;padding:12px 24px;background:#e8590c;color:#fff;text-decoration:none;border-radius:6px;margin-top:8px">${escapeHtml(params.link_text ?? "Open")}</a></p>`
       : "";
-    await this.sendEmail(email, `[Owlmetry] ${params.subject}`, [
+    await this.sendEmail(email, `[Pubky Pulse] ${params.subject}`, [
       `<p>${escapeHtml(params.body)}</p>`,
       linkHtml,
     ].join(""));
@@ -212,7 +212,7 @@ export class ResendEmailService implements EmailService {
 
 export function createEmailService(resendApiKey?: string, emailFrom?: string): EmailService {
   if (resendApiKey) {
-    return new ResendEmailService(resendApiKey, emailFrom || "noreply@owlmetry.com");
+    return new ResendEmailService(resendApiKey, emailFrom || "noreply@pulse.pubky.org");
   }
   return new ConsoleEmailService();
 }

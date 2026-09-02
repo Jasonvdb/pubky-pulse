@@ -3,7 +3,7 @@ title: Events
 description: Log events at different levels (info, debug, warn, error) with custom attributes and screen context.
 ---
 
-Events are the core unit of data in Owlmetry. The Swift SDK provides four log levels, each designed for a different class of information. For a broader overview of the event model, see [Events](/docs/concepts/events).
+Events are the core unit of data in Pubky Pulse. The Swift SDK provides four log levels, each designed for a different class of information. For a broader overview of the event model, see [Events](/docs/concepts/events).
 
 ## Log Levels
 
@@ -12,7 +12,7 @@ Events are the core unit of data in Owlmetry. The Swift SDK provides four log le
 Normal operations worth recording: user actions, feature usage, successful completions. This is the default level for most instrumentation.
 
 ```swift
-Owl.info("User tapped checkout", screenName: "Cart")
+Pulse.info("User tapped checkout", screenName: "Cart")
 ```
 
 ### Debug
@@ -20,7 +20,7 @@ Owl.info("User tapped checkout", screenName: "Cart")
 Verbose detail useful only during development: cache hits, state transitions, intermediate values. Debug events are filtered out when viewing production data.
 
 ```swift
-Owl.debug("Cache hit for user preferences", screenName: "Home", attributes: ["key": "user_prefs"])
+Pulse.debug("Cache hit for user preferences", screenName: "Home", attributes: ["key": "user_prefs"])
 ```
 
 ### Warn
@@ -28,7 +28,7 @@ Owl.debug("Cache hit for user preferences", screenName: "Home", attributes: ["ke
 Something unexpected that the app recovered from: slow responses, fallback paths, retries needed.
 
 ```swift
-Owl.warn("Slow network response", attributes: ["latency_ms": "1200", "endpoint": "/api/feed"])
+Pulse.warn("Slow network response", attributes: ["latency_ms": "1200", "endpoint": "/api/feed"])
 ```
 
 ### Error
@@ -36,7 +36,7 @@ Owl.warn("Slow network response", attributes: ["latency_ms": "1200", "endpoint":
 Something failed: network errors, parse failures, missing data, caught exceptions.
 
 ```swift
-Owl.error("Failed to load profile image", screenName: "Profile", attributes: ["error": error.localizedDescription])
+Pulse.error("Failed to load profile image", screenName: "Profile", attributes: ["error": error.localizedDescription])
 ```
 
 ### Error from a caught `Error` value
@@ -47,7 +47,7 @@ If you have an `Error` instance from a `do/catch` (or any other source), pass it
 do {
     try await PhotoConverter.convert(inputURL: url)
 } catch {
-    Owl.error(error, "while converting photo", screenName: "PhotoConverterView")
+    Pulse.error(error, "while converting photo", screenName: "PhotoConverterView")
 }
 ```
 
@@ -70,11 +70,11 @@ Caller-provided keys in `attributes` survive untouched; the SDK never overwrites
 All four methods share the same signature:
 
 ```swift
-Owl.info(
+Pulse.info(
     _ message: String,
     screenName: String? = nil,
     attributes: [String: String?] = [:],
-    attachments: [OwlAttachment]? = nil,
+    attachments: [PulseAttachment]? = nil,
     file: String = #file,
     function: String = #function,
     line: Int = #line
@@ -86,7 +86,7 @@ Owl.info(
 | `message` | A descriptive string for the event. Choose messages that are specific and searchable. Truncated to 2000 characters — put long content in `attributes` instead. |
 | `screenName` | The screen where the event occurred. Ties the event to a location in the UI. |
 | `attributes` | Key-value pairs of additional structured data. Values are `String?` so optional values pass through directly — `nil`-valued keys are silently dropped before the event ships. |
-| `attachments` | Optional file attachments (logs, screenshots, etc.). Most useful on `Owl.error()`. See [Attachments](/docs/concepts/attachments). |
+| `attachments` | Optional file attachments (logs, screenshots, etc.). Most useful on `Pulse.error()`. See [Attachments](/docs/concepts/attachments). |
 | `file`, `function`, `line` | Automatically captured from the call site. Do not pass these manually. |
 
 ### Optional attribute values
@@ -96,7 +96,7 @@ Because `attributes` accepts optional values, a `String?` from your domain code 
 ```swift
 let contractId: String? = session.draftId  // may be nil
 let kind: String? = draft?.type            // may be nil
-Owl.info("Draft created", attributes: [
+Pulse.info("Draft created", attributes: [
     "context": "createDraft",
     "contractId": contractId,
     "kind": kind,
@@ -115,16 +115,16 @@ Each event's `country_code` is resolved server-side from the Cloudflare `CF-IPCo
 
 ## File Attachments
 
-You can attach files to any event via the `attachments` parameter, but in practice this is almost always used with `Owl.error()` to capture the exact input bytes that triggered a failure (a media file that failed to decode, a document that failed to parse, etc.).
+You can attach files to any event via the `attachments` parameter, but in practice this is almost always used with `Pulse.error()` to capture the exact input bytes that triggered a failure (a media file that failed to decode, a document that failed to parse, etc.).
 
-`OwlAttachment` supports two sources:
+`PulseAttachment` supports two sources:
 
 ```swift
 // From a file on disk
-OwlAttachment(fileURL: url, name: "input.heic", contentType: "image/heic")
+PulseAttachment(fileURL: url, name: "input.heic", contentType: "image/heic")
 
 // From in-memory bytes
-OwlAttachment(data: debugJSON, name: "debug.json", contentType: "application/json")
+PulseAttachment(data: debugJSON, name: "debug.json", contentType: "application/json")
 ```
 
 Both initializers take an optional `name` (defaults to `fileURL.lastPathComponent`) and an optional `contentType` (MIME type).
@@ -133,12 +133,12 @@ Both initializers take an optional `name` (defaults to `fileURL.lastPathComponen
 do {
     try await PhotoConverter.convert(inputURL: url)
 } catch {
-    Owl.error(
+    Pulse.error(
         "image conversion failed",
         screenName: "PhotoConverterView",
         attributes: ["stage": "decode", "error": "\(error)"],
         attachments: [
-            OwlAttachment(fileURL: url),
+            PulseAttachment(fileURL: url),
         ]
     )
 }
@@ -146,7 +146,7 @@ do {
 
 Uploads run on a separate serial queue so a large file never blocks event batching. Upload behaviour is strictly non-fatal: if the device is offline, the per-user bucket (default 250 MB per user) or project quota (default 5 GB) is exhausted, or the server otherwise rejects the file, the event itself still posts and the attachment is dropped silently (with a warning logged via `OSLog`). There is no offline queue for attachments in v1: if the device is offline when the error fires, the attachment is discarded but the event queues normally.
 
-The SDK automatically tags each attachment with the currently identified user (`Owl.setUser()`) so per-user quotas apply correctly. See [Attachments](/docs/concepts/attachments) for a deeper overview.
+The SDK automatically tags each attachment with the currently identified user (`Pulse.setUser()`) so per-user quotas apply correctly. See [Attachments](/docs/concepts/attachments) for a deeper overview.
 
 ## Automatic Lifecycle Events
 
@@ -154,16 +154,16 @@ The SDK emits several events automatically without any manual calls:
 
 | Event | Level | When |
 |-------|-------|------|
-| `sdk:session_started` | info | On `Owl.configure()`. Includes `_launch_ms` (time from process start to configure). |
+| `sdk:session_started` | info | On `Pulse.configure()`. Includes `_launch_ms` (time from process start to configure). |
 | `sdk:app_foregrounded` | info | When the app enters the foreground. |
 | `sdk:app_backgrounded` | info | When the app enters the background. |
-| `sdk:screen_appeared` | debug | When a view with `.owlScreen()` appears. See [Screen Tracking](/docs/sdks/swift/screen-tracking). |
-| `sdk:screen_disappeared` | debug | When a view with `.owlScreen()` disappears. Includes `_duration_ms`. |
+| `sdk:screen_appeared` | debug | When a view with `.pulseScreen()` appears. See [Screen Tracking](/docs/sdks/swift/screen-tracking). |
+| `sdk:screen_disappeared` | debug | When a view with `.pulseScreen()` disappears. Includes `_duration_ms`. |
 | `sdk:network_request` | debug/warn/error | On URLSession HTTP request completion. See below. |
 
 ## Network Request Tracking
 
-The SDK automatically instruments `URLSession` completion-handler-based requests. This is enabled by default and requires no code beyond `Owl.configure()`.
+The SDK automatically instruments `URLSession` completion-handler-based requests. This is enabled by default and requires no code beyond `Pulse.configure()`.
 
 Each tracked request emits a `sdk:network_request` event with these attributes:
 
@@ -180,28 +180,28 @@ Log levels are assigned based on the response: `debug` for 2xx/3xx, `warn` for 4
 
 Error-level network events are grouped into issues per HTTP method + host + path, so a failure to `api.stripe.com/v1/customers` produces a different issue from a failure to your own backend. Numeric path segments and UUIDs are templated (e.g. `/users/123` and `/users/456` collapse onto the same issue).
 
-The SDK's own requests to the Owlmetry ingest endpoint are automatically excluded. To disable network request tracking entirely:
+The SDK's own requests to the Pubky Pulse ingest endpoint are automatically excluded. To disable network request tracking entirely:
 
 ```swift
-try Owl.configure(
-    endpoint: "https://ingest.owlmetry.com",
-    apiKey: "owl_client_...",
+try Pulse.configure(
+    endpoint: "https://ingest.pulse.pubky.org",
+    apiKey: "pulse_client_...",
     networkTrackingEnabled: false
 )
 ```
 
 ## Linking Client and Backend Events
 
-Every event the Swift SDK emits is stamped with a session ID that's generated on `Owl.configure()` and accessible via `Owl.sessionId`. When the app calls your backend, forward this value as a request header so that events logged by the backend can be tagged with the same session ID:
+Every event the Swift SDK emits is stamped with a session ID that's generated on `Pulse.configure()` and accessible via `Pulse.sessionId`. When the app calls your backend, forward this value as a request header so that events logged by the backend can be tagged with the same session ID:
 
 ```swift
 var request = URLRequest(url: apiURL)
-if let sessionId = Owl.sessionId {
-    request.setValue(sessionId, forHTTPHeaderField: "X-Owl-Session-Id")
+if let sessionId = Pulse.sessionId {
+    request.setValue(sessionId, forHTTPHeaderField: "X-Pulse-Session-Id")
 }
 ```
 
-On a Node.js backend using `@owlmetry/node`, read the header and scope the handler with [`Owl.withSession()`](/docs/sdks/node/identity#withsession). Events from both sides of the request then share the same `session_id` and line up in the dashboard's session view.
+On a Node.js backend using `@synonymdev/pubky-pulse-node`, read the header and scope the handler with [`Pulse.withSession()`](/docs/sdks/node/identity#withsession). Events from both sides of the request then share the same `session_id` and line up in the dashboard's session view.
 
 ## Best Practices
 

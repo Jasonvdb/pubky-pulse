@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { FastifyInstance } from "fastify";
 import postgres from "postgres";
 import { getTableColumns } from "drizzle-orm";
-import { events, metricEvents, funnelEvents } from "@owlmetry/db";
+import { events, metricEvents, funnelEvents } from "@pubky-pulse/db";
 import { buildApp, TEST_DB_URL } from "./setup.js";
 
 // apps/server/src/__tests__/setup.ts and packages/db/src/migrate.ts both hardcode

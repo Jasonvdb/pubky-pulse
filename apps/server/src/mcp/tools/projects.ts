@@ -8,7 +8,7 @@ import {
   MAX_ATTACHMENT_USER_QUOTA_BYTES,
   MIN_ATTACHMENT_PROJECT_QUOTA_BYTES,
   MAX_ATTACHMENT_PROJECT_QUOTA_BYTES,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
 export function registerProjectsTools(server: McpServer, app: FastifyInstance, agentKey: string): void {

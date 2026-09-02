@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { eq, and, inArray, isNull } from "drizzle-orm";
-import { projects, apps } from "@owlmetry/db";
+import { projects, apps } from "@pubky-pulse/db";
 import { getAuthTeamIds } from "../middleware/auth.js";
 import type { AuthContext } from "../types.js";
 

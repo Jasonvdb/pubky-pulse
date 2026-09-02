@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { MeResponse } from "@owlmetry/shared";
+import type { MeResponse } from "@pubky-pulse/shared";
 
 export function useUser() {
   const { data, error, isLoading, mutate } = useSWR<MeResponse>("/v1/auth/me");

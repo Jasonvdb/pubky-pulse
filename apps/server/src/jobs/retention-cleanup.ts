@@ -1,10 +1,10 @@
 import { eq, and, isNull } from "drizzle-orm";
-import { projects, apps, eventDeletions, enforceRetentionForProject } from "@owlmetry/db";
+import { projects, apps, eventDeletions, enforceRetentionForProject } from "@pubky-pulse/db";
 import {
   DEFAULT_RETENTION_DAYS_EVENTS,
   DEFAULT_RETENTION_DAYS_METRICS,
   DEFAULT_RETENTION_DAYS_FUNNELS,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type { JobHandler } from "../services/job-runner.js";
 
 export const retentionCleanupHandler: JobHandler = async (ctx) => {

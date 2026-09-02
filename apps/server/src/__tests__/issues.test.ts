@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { buildApp, truncateAll, seedTestData, getTokenAndTeamId, createAgentKey, createUserAndGetToken, addTeamMember, TEST_CLIENT_KEY, TEST_SESSION_ID, TEST_BUNDLE_ID } from "./setup.js";
 import postgres from "postgres";
 
-const TEST_DB_URL = process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/owlmetry_test";
+const TEST_DB_URL = process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/pubky_pulse_test";
 
 let app: FastifyInstance;
 let token: string;
@@ -1229,7 +1229,7 @@ describe("Issues API", () => {
     });
 
     it("resolved issue stays resolved for same/older app version", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const message = "Resolved error stays AAAA";
       const fp = await generateIssueFingerprint(message, null);
 
@@ -1265,7 +1265,7 @@ describe("Issues API", () => {
     });
 
     it("silenced issue stays silenced but records occurrence", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const message = "Silenced error stays BBBB";
       const fp = await generateIssueFingerprint(message, null);
 
@@ -1297,7 +1297,7 @@ describe("Issues API", () => {
 
     it("regresses a resolved issue when a newer version reports the same error (semver-aware)", async () => {
       // Specifically guards against the lexicographic comparison bug where "1.10.0" < "1.9.0" as strings.
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const message = "Crash on launch GHIJ";
       const fp = await generateIssueFingerprint(message, null);
 
@@ -1414,7 +1414,7 @@ describe("Issues API", () => {
     });
 
     it("burst: conservative — new fingerprint aliases to a co-occurring existing issue", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const existingMessage = "Existing issue BURST3";
       const existingModule = "Existing.swift:1";
       const newMessage = "New cooccurring error BURST3";
@@ -1461,7 +1461,7 @@ describe("Issues API", () => {
     });
 
     it("burst: conservative — two pre-existing issues co-occurring do NOT merge", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const messageA = "Pre-existing A BURST4";
       const moduleA = "PreA.swift:1";
       const messageB = "Pre-existing B BURST4";
@@ -1589,7 +1589,7 @@ describe("Issues API", () => {
     });
 
     it("burst: regression fires when a resolved issue's fingerprint co-occurs with a new fp at a newer app_version", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const resolvedMessage = "Pre-resolved error BURST9";
       const resolvedModule = "Resolved.swift:1";
       const newCoMessage = "Burst companion BURST9";
@@ -1629,7 +1629,7 @@ describe("Issues API", () => {
     });
 
     it("burst: new fingerprint in a burst with two pre-existing issues aliases to the oldest", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const olderMessage = "Older issue BURST10";
       const olderModule = "Older.swift:1";
       const newerMessage = "Newer issue BURST10";
@@ -1725,7 +1725,7 @@ describe("Issues API", () => {
     });
 
     it("merged issue routes new events to surviving issue", async () => {
-      const { generateIssueFingerprint } = await import("@owlmetry/shared");
+      const { generateIssueFingerprint } = await import("@pubky-pulse/shared");
       const messageA = "Surviving issue CCCC";
       const messageB = "Merged away issue DDDD";
       const fpA = await generateIssueFingerprint(messageA, null);

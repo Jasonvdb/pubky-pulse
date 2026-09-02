@@ -1,14 +1,14 @@
 ---
 title: Installation
-description: Add the Owlmetry Android SDK to your project via Gradle and Maven Central.
+description: Add the Pubky Pulse Android SDK to your project via Gradle and Maven Central.
 ---
 
-The Owlmetry Android SDK is published to Maven Central as two artifacts. The core module has a single runtime dependency (`kotlinx-coroutines`); add the optional Compose module only if you want the drop-in UI.
+The Pubky Pulse Android SDK is published to Maven Central as two artifacts. The core module has a single runtime dependency (`kotlinx-coroutines`); add the optional Compose module only if you want the drop-in UI.
 
 | Artifact | When to add |
 |----------|-------------|
-| `com.owlmetry:owlmetry-android` | Always — the core SDK. |
-| `com.owlmetry:owlmetry-android-compose` | Only if you use `OwlFeedbackView`, `OwlQuestionnaireGate` / `OwlQuestionnaireView`, or the `Modifier.owlScreen()` modifier. |
+| `org.pubky.pulse:pulse-android` | Always — the core SDK. |
+| `org.pubky.pulse:pulse-android-compose` | Only if you use `PulseFeedbackView`, `PulseQuestionnaireGate` / `PulseQuestionnaireView`, or the `Modifier.pulseScreen()` modifier. |
 
 ## Version catalog (recommended)
 
@@ -16,20 +16,20 @@ If your project uses a version catalog (`gradle/libs.versions.toml`), add the ve
 
 ```toml
 [versions]
-owlmetry = "0.1.0"
+pulse = "0.1.0"
 
 [libraries]
-owlmetry-android = { module = "com.owlmetry:owlmetry-android", version.ref = "owlmetry" }
-owlmetry-android-compose = { module = "com.owlmetry:owlmetry-android-compose", version.ref = "owlmetry" }
+pulse-android = { module = "org.pubky.pulse:pulse-android", version.ref = "pulse" }
+pulse-android-compose = { module = "org.pubky.pulse:pulse-android-compose", version.ref = "pulse" }
 ```
 
 Then in your app module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation(libs.owlmetry.android)
-    // Optional — only for the drop-in Compose UI and the owlScreen() modifier:
-    implementation(libs.owlmetry.android.compose)
+    implementation(libs.pulse.android)
+    // Optional — only for the drop-in Compose UI and the pulseScreen() modifier:
+    implementation(libs.pulse.android.compose)
 }
 ```
 
@@ -39,9 +39,9 @@ If the project declares dependencies directly (no catalog), add to the app modul
 
 ```kotlin
 dependencies {
-    implementation("com.owlmetry:owlmetry-android:0.1.0")
+    implementation("org.pubky.pulse:pulse-android:0.1.0")
     // Optional Compose UI:
-    implementation("com.owlmetry:owlmetry-android-compose:0.1.0")
+    implementation("org.pubky.pulse:pulse-android-compose:0.1.0")
 }
 ```
 
@@ -49,12 +49,12 @@ The Groovy `build.gradle` equivalent:
 
 ```groovy
 dependencies {
-    implementation 'com.owlmetry:owlmetry-android:0.1.0'
-    implementation 'com.owlmetry:owlmetry-android-compose:0.1.0'
+    implementation 'org.pubky.pulse:pulse-android:0.1.0'
+    implementation 'org.pubky.pulse:pulse-android-compose:0.1.0'
 }
 ```
 
-> For the latest version, see [releases](https://github.com/owlmetry/owlmetry-android/releases/latest). Pin a version for reproducible builds.
+> For the latest version, see [releases](https://github.com/pubky/pubky-pulse-android/releases/latest). Pin a version for reproducible builds.
 
 Make sure Maven Central is a configured repository — it almost always already is, in `settings.gradle.kts` under `dependencyResolutionManagement { repositories { mavenCentral() } }`.
 
@@ -69,7 +69,7 @@ After editing the Gradle files, sync and build:
 ```bash
 ./gradlew :app:assembleDebug --quiet
 # or, to just resolve dependencies without a full build:
-./gradlew :app:dependencies --configuration debugRuntimeClasspath | grep owlmetry
+./gradlew :app:dependencies --configuration debugRuntimeClasspath | grep pulse-android
 ```
 
 Adjust `:app` to the actual application module name if it differs. Unresolved-import warnings in the editor before the first Gradle sync are expected.

@@ -1,9 +1,9 @@
 ---
 title: Installation
-description: Add the Owlmetry Swift SDK to your project via Swift Package Manager.
+description: Add the Pubky Pulse Swift SDK to your project via Swift Package Manager.
 ---
 
-The Owlmetry Swift SDK is distributed as a Swift Package. It has zero external dependencies.
+The Pubky Pulse Swift SDK is distributed as a Swift Package. It has zero external dependencies.
 
 ## Xcode (recommended)
 
@@ -11,23 +11,23 @@ The Owlmetry Swift SDK is distributed as a Swift Package. It has zero external d
 2. Go to **File > Add Package Dependencies**.
 3. Enter the repository URL:
    ```
-   https://github.com/owlmetry/owlmetry-swift.git
+   https://github.com/pubky/pubky-pulse-swift.git
    ```
 4. Set the dependency rule to **Branch** and enter `main`.
 5. Click **Add Package**.
-6. Select the **Owlmetry** library and add it to your app target.
+6. Select the **PubkyPulse** library and add it to your app target.
 
 ## Package.swift
 
-If you manage dependencies through a `Package.swift` file, add Owlmetry to the `dependencies` array:
+If you manage dependencies through a `Package.swift` file, add Pubky Pulse to the `dependencies` array:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/owlmetry/owlmetry-swift.git", branch: "main")
+    .package(url: "https://github.com/pubky/pubky-pulse-swift.git", branch: "main")
 ]
 ```
 
-> For stable releases, pin to a version instead: `.package(url: "…", from: "X.Y.Z")`. See [releases](https://github.com/owlmetry/owlmetry-swift/releases/latest) for the latest.
+> For stable releases, pin to a version instead: `.package(url: "…", from: "X.Y.Z")`. See [releases](https://github.com/pubky/pubky-pulse-swift/releases/latest) for the latest.
 
 Then add the product to your target's `dependencies`:
 
@@ -35,7 +35,7 @@ Then add the product to your target's `dependencies`:
 .target(
     name: "YourApp",
     dependencies: [
-        .product(name: "Owlmetry", package: "owlmetry-swift")
+        .product(name: "PubkyPulse", package: "pubky-pulse-swift")
     ]
 )
 ```
@@ -45,10 +45,10 @@ Then add the product to your target's `dependencies`:
 Build your project and confirm the import compiles without errors:
 
 ```swift
-import Owlmetry
+import PubkyPulse
 ```
 
-If you see a "No such module 'Owlmetry'" error in your editor, this is a known SourceKit issue -- the error should resolve when you perform an actual build with Xcode or `xcodebuild`.
+If you see a "No such module 'PubkyPulse'" error in your editor, this is a known SourceKit issue -- the error should resolve when you perform an actual build with Xcode or `xcodebuild`.
 
 ## Requirements
 

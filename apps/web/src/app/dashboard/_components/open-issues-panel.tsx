@@ -8,7 +8,7 @@ import { useIssues } from "@/hooks/use-issues";
 import { useProjectColorMap } from "@/hooks/use-project-colors";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
-import type { IssueStatus } from "@owlmetry/shared";
+import type { IssueStatus } from "@pubky-pulse/shared";
 import { DashboardSection } from "./dashboard-section";
 import { EmptyState } from "./empty-state";
 import { timeAgo } from "./time-ago";

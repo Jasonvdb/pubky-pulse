@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { levelColors } from "@/lib/level-colors";
 import { cn } from "@/lib/utils";
-import type { EventsResponse, StoredEventResponse, LogLevel } from "@owlmetry/shared";
+import type { EventsResponse, StoredEventResponse, LogLevel } from "@pubky-pulse/shared";
 import { formatShortDate, formatTime } from "@/lib/format-date";
 import { CountryEmoji } from "@/components/country-flag";
 

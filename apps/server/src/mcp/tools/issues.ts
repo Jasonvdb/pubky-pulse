@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ISSUE_STATUSES } from "@owlmetry/shared";
+import { ISSUE_STATUSES } from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
 export function registerIssuesTools(server: McpServer, app: FastifyInstance, agentKey: string): void {

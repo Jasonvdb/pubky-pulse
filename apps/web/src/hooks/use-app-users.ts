@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { buildQueryString } from "@/lib/query";
-import type { AppUsersResponse, AppUsersQueryParams, AppUserResponse } from "@owlmetry/shared";
+import type { AppUsersResponse, AppUsersQueryParams, AppUserResponse } from "@pubky-pulse/shared";
 
 export function useAppUsers(appId: string, filters: AppUsersQueryParams) {
   const [extraUsers, setExtraUsers] = useState<AppUserResponse[]>([]);

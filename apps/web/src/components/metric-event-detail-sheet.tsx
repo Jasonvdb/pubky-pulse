@@ -23,13 +23,13 @@ import { formatSdkLabel } from "@/lib/format-sdk";
 import { countryFlag } from "@/lib/country-flag";
 import { buildQueryString } from "@/lib/query";
 // Deep import bypasses the barrel export which pulls in node:crypto
-import { formatDuration } from "@owlmetry/shared/constants";
+import { formatDuration } from "@pubky-pulse/shared/constants";
 import type {
   DataMode,
   MetricEventsResponse,
   MetricPhase,
   StoredMetricEventResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 interface MetricEventDetailSheetProps {
   trackingId: string | null;

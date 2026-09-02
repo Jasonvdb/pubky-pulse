@@ -1,6 +1,6 @@
-import type { Db } from "@owlmetry/db";
+import type { Db } from "@pubky-pulse/db";
 import type { FastifyInstance } from "fastify";
-import type { TeamRole, Permission, ApiKeyType } from "@owlmetry/shared";
+import type { TeamRole, Permission, ApiKeyType } from "@pubky-pulse/shared";
 import type { EmailService } from "./services/email.js";
 import type { JobRunner } from "./services/job-runner.js";
 import type { NotificationDispatcher } from "./services/notifications/dispatcher.js";

@@ -15,7 +15,7 @@ import type {
   IssueStatus,
   IssuesQueryParams,
   IssuesResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 
 /**
  * Authoritative per-status issue counts from `/v1/issues/count`. Use this for

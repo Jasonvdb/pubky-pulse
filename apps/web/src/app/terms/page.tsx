@@ -2,9 +2,9 @@ import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
 
 export const metadata = {
-  title: "Terms of Service — Owlmetry",
+  title: "Terms of Service — Pubky Pulse",
   description:
-    "Terms of Service for Owlmetry, the agent-first observability platform for mobile and backend applications.",
+    "Terms of Service for Pubky Pulse, the agent-first observability platform for web, backend and mobile apps.",
 };
 
 export default function TermsPage() {
@@ -21,25 +21,24 @@ export default function TermsPage() {
 
             <h2>Agreement to Terms</h2>
             <p>
-              By accessing or using Owlmetry (the hosted service at owlmetry.com
-              or the self-hosted software), you agree to be bound by these Terms
-              of Service. If you do not agree to these terms, do not use the
-              service.
+              By accessing or using Pubky Pulse, you agree to be bound by these
+              Terms of Service. If you do not agree to these terms, do not use
+              the software.
             </p>
             <p>
               &ldquo;We,&rdquo; &ldquo;us,&rdquo; and &ldquo;our&rdquo; refer
-              to Adapted Hub LLC. &ldquo;You&rdquo; and &ldquo;your&rdquo; refer
-              to the person or entity using the service.
+              to Pubky. &ldquo;You&rdquo; and &ldquo;your&rdquo; refer
+              to the person or entity using the software.
             </p>
 
             <h2>Service Description</h2>
             <p>
-              Owlmetry is an analytics platform for mobile and backend
-              applications. It includes a hosted service at owlmetry.com,
-              self-hosted open-source software, client SDKs (Swift, Android,
-              Node.js), a Model Context Protocol (MCP) server, and an API.
-              These terms govern your use of all Owlmetry products and
-              services.
+              Pubky Pulse is an observability platform for web, backend and
+              mobile apps. It is self-hosted open-source software, and includes
+              client SDKs (Node.js, Swift, Android), a Model Context Protocol
+              (MCP) server, and an API. There is no hosted service &mdash; you
+              run your own deployment. These terms govern your use of the Pubky
+              Pulse software.
             </p>
 
             <h2>Accounts</h2>
@@ -81,7 +80,7 @@ export default function TermsPage() {
 
             <h2>Your Data</h2>
             <p>
-              You retain all ownership rights to data you submit to Owlmetry.
+              You retain all ownership rights to data you submit to Pubky Pulse.
               You grant us a limited, non-exclusive license to process your data
               solely to provide the service. We will not sell, share, or use your
               data for any purpose other than operating the service.
@@ -98,50 +97,42 @@ export default function TermsPage() {
 
             <h2>Open Source Software</h2>
             <p>
-              The Owlmetry platform (server, MCP server, web dashboard,
-              database layer) is released under the GNU Affero General Public
-              License v3.0 (AGPL-3.0). The Owlmetry SDKs are released under the
-              MIT License. Your use of the self-hosted software is governed by those
-              licenses. Your use of the hosted service at owlmetry.com is
-              governed by these Terms of Service.
+              Pubky Pulse &mdash; the server, MCP server, web dashboard,
+              database layer, and the SDKs &mdash; is released under the MIT
+              License. Your use of the software is governed by that license.
             </p>
 
             <h2>Intellectual Property</h2>
             <p>
-              The Owlmetry name, logo, and branding are the property of Adapted
-              Hub LLC. The open-source code is licensed under the applicable
-              open-source license. Nothing in these terms grants you rights to
-              our trademarks or branding.
+              The Pubky Pulse name, logo, and branding are the property of
+              Pubky. The source code is licensed under the MIT License. Nothing
+              in these terms grants you rights to our trademarks or branding.
             </p>
 
             <h2>API and Rate Limits</h2>
             <p>
-              Access to the Owlmetry API is subject to rate limits. We may
-              throttle or suspend access if we determine that usage is abusive or
-              places an unreasonable burden on the service. Current rate limits
-              are documented in our API documentation.
+              The Pubky Pulse API applies rate limits, configured by the
+              operator of the deployment. Default limits are documented in the
+              API documentation.
             </p>
 
-            <h2>Service Availability</h2>
+            <h2>Availability</h2>
             <p>
-              We strive to maintain high availability but do not guarantee
-              uninterrupted or error-free service. The service is provided on an
-              &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. We may
-              perform maintenance, updates, or modifications that temporarily
-              affect availability. We will make reasonable efforts to provide
-              advance notice of planned downtime.
+              Pubky Pulse is provided on an &ldquo;as is&rdquo; and
+              &ldquo;as available&rdquo; basis. Availability of any given
+              deployment is the responsibility of whoever operates it. We do not
+              guarantee uninterrupted or error-free software.
             </p>
 
             <h2>Termination</h2>
             <p>
-              You may stop using the service at any time. To delete your account,
-              contact{" "}
-              <a href="mailto:privacy@owlmetry.com">privacy@owlmetry.com</a>.
+              You may stop using the software at any time. Account deletion is
+              handled by the operator of the deployment you signed in to.
             </p>
             <p>
-              We may suspend or terminate your access if you violate these terms,
-              if your use poses a security risk, or if required by law. Upon
-              termination, your right to use the service ceases immediately.
+              The operator of a deployment may suspend or terminate your access
+              to it at any time, including if your use poses a security risk or
+              if required by law.
             </p>
 
             <h2>Disclaimer of Warranties</h2>
@@ -155,7 +146,7 @@ export default function TermsPage() {
 
             <h2>Limitation of Liability</h2>
             <p className="uppercase">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, ADAPTED HUB LLC SHALL NOT
+              TO THE MAXIMUM EXTENT PERMITTED BY LAW, PUBKY SHALL NOT
               BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR
               PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, DATA, OR GOODWILL,
               ARISING FROM YOUR USE OF THE SERVICE. OUR TOTAL LIABILITY FOR ANY
@@ -166,7 +157,7 @@ export default function TermsPage() {
 
             <h2>Indemnification</h2>
             <p>
-              You agree to indemnify and hold harmless Adapted Hub LLC from any
+              You agree to indemnify and hold harmless Pubky from any
               claims, damages, losses, or expenses (including reasonable
               attorneys&apos; fees) arising from your use of the service, your
               violation of these terms, or your collection and processing of
@@ -193,8 +184,14 @@ export default function TermsPage() {
 
             <h2>Contact</h2>
             <p>
-              If you have questions about these terms, contact us at:{" "}
-              <a href="mailto:privacy@owlmetry.com">privacy@owlmetry.com</a>
+              If you have questions about these terms, open an issue at{" "}
+              <a
+                href="https://github.com/pubky/pubky-pulse"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                github.com/pubky/pubky-pulse
+              </a>
             </p>
           </article>
         </div>

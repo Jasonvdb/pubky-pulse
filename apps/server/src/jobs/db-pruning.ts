@@ -1,4 +1,4 @@
-import { dropOldestEventPartitions } from "@owlmetry/db";
+import { dropOldestEventPartitions } from "@pubky-pulse/db";
 import type { JobHandler } from "../services/job-runner.js";
 
 export const dbPruningHandler: JobHandler = async (ctx, params) => {

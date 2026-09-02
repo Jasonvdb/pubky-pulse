@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import useSWR from "swr";
-import type { ProjectResponse, IssueResponse, IssueStatus, AppResponse } from "@owlmetry/shared";
+import type { ProjectResponse, IssueResponse, IssueStatus, AppResponse } from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useIssuesByStatus, useIssueCounts, useIssue, issueActions } from "@/hooks/use-issues";
@@ -11,7 +11,7 @@ import { useProjectColorMap } from "@/hooks/use-project-colors";
 import { formatDateTime } from "@/lib/format-date";
 import { CountryEmoji } from "@/components/country-flag";
 // Deep import bypasses the barrel export which pulls in node:crypto
-import { formatBytes } from "@owlmetry/shared/constants";
+import { formatBytes } from "@pubky-pulse/shared/constants";
 import {
   AttachmentDownloadButton,
   AttachmentUntrustedNotice,

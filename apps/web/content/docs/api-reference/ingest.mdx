@@ -3,7 +3,7 @@ title: Ingest
 description: POST /v1/ingest — send events from SDKs and backends. Supports gzip compression and batch payloads.
 ---
 
-Send events from SDKs and backends. This is the primary endpoint used by Owlmetry SDKs.
+Send events from SDKs and backends. This is the primary endpoint used by Pubky Pulse SDKs.
 
 ## POST /v1/ingest
 
@@ -22,7 +22,7 @@ Accept a batch of events for a specific app.
     {
       "client_event_id": "550e8400-e29b-41d4-a716-446655440000",
       "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "user_id": "owl_anon_xyz789",
+      "user_id": "pulse_anon_xyz789",
       "level": "info",
       "message": "screen_viewed",
       "source_module": "HomeViewController",
@@ -33,7 +33,7 @@ Accept a batch of events for a specific app.
       "environment": "ios",
       "os_version": "17.4",
       "app_version": "1.2.0",
-      "sdk_name": "owlmetry-swift",
+      "sdk_name": "pubky-pulse-swift",
       "sdk_version": "0.1.0",
       "build_number": "42",
       "device_model": "iPhone15,2",
@@ -60,15 +60,15 @@ Accept a batch of events for a specific app.
 | `level` | string | Yes | One of: `info`, `debug`, `warn`, `error`. |
 | `session_id` | string | Yes | UUID generated per SDK session. |
 | `client_event_id` | string | No | UUID for deduplication. Events with duplicate IDs (within 48h) are silently skipped. |
-| `user_id` | string | No | User identifier. Anonymous IDs use `owl_anon_` prefix. |
+| `user_id` | string | No | User identifier. Anonymous IDs use `pulse_anon_` prefix. |
 | `source_module` | string | No | Module or class that emitted the event. |
 | `screen_name` | string | No | Current screen/page name. |
 | `custom_attributes` | object | No | Key-value string pairs. Values truncated to 200 characters. |
 | `environment` | string | No | Runtime environment. Must match the app's platform. See table below. |
 | `os_version` | string | No | Operating system version. |
 | `app_version` | string | No | Application version string. |
-| `sdk_name` | string | No | Identifier of the Owlmetry SDK that produced the event (e.g. `owlmetry-swift`, `owlmetry-node`). Auto-set by official SDKs. |
-| `sdk_version` | string | No | Version of the Owlmetry SDK that produced the event. Auto-set by official SDKs. |
+| `sdk_name` | string | No | Identifier of the Pubky Pulse SDK that produced the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`). Auto-set by official SDKs. |
+| `sdk_version` | string | No | Version of the Pubky Pulse SDK that produced the event. Auto-set by official SDKs. |
 | `build_number` | string | No | Build number. |
 | `device_model` | string | No | Device model identifier. |
 | `locale` | string | No | User locale (e.g., `en_US`). |

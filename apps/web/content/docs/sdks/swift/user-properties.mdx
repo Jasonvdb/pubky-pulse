@@ -7,10 +7,10 @@ User properties let you attach custom key-value data to the current user. Proper
 
 ## Setting Properties
 
-Call `Owl.setUserProperties()` after the user is identified:
+Call `Pulse.setUserProperties()` after the user is identified:
 
 ```swift
-Owl.setUserProperties([
+Pulse.setUserProperties([
     "plan": "premium",
     "org": "acme",
 ])
@@ -25,7 +25,7 @@ Set properties whenever user-level data changes:
 ```swift
 // After a successful purchase
 func handlePurchaseComplete(product: Product) {
-    Owl.setUserProperties([
+    Pulse.setUserProperties([
         "subscriber": "true",
         "subscription_product": product.id,
     ])
@@ -33,7 +33,7 @@ func handlePurchaseComplete(product: Product) {
 
 // After profile update
 func handleProfileSaved(user: User) {
-    Owl.setUserProperties([
+    Pulse.setUserProperties([
         "company": user.company,
         "role": user.role,
     ])
@@ -45,7 +45,7 @@ func handleProfileSaved(user: User) {
 Set a value to an empty string to delete it:
 
 ```swift
-Owl.setUserProperties(["temporary_flag": ""])
+Pulse.setUserProperties(["temporary_flag": ""])
 ```
 
 ## Merge Behavior
@@ -54,17 +54,17 @@ Properties are merged server-side. Only the keys you send are updated; other key
 
 ```swift
 // First call
-Owl.setUserProperties(["plan": "free", "org": "acme"])
+Pulse.setUserProperties(["plan": "free", "org": "acme"])
 // Server state: { plan: "free", org: "acme" }
 
 // Second call
-Owl.setUserProperties(["plan": "premium"])
+Pulse.setUserProperties(["plan": "premium"])
 // Server state: { plan: "premium", org: "acme" }
 ```
 
 ## With Identity
 
-Properties follow the current user identity. If the user is anonymous, properties are set on the anonymous user. When the user is later identified via `Owl.setUser()`, properties are automatically merged into the real user.
+Properties follow the current user identity. If the user is anonymous, properties are set on the anonymous user. When the user is later identified via `Pulse.setUser()`, properties are automatically merged into the real user.
 
 ## Limits
 

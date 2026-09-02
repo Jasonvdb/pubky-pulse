@@ -8,23 +8,23 @@ The SDK provides four logging methods corresponding to the standard [log levels]
 ## Log Levels
 
 ```typescript
-Owl.info("Order placed", { order_id: "abc-123" });
-Owl.debug("Cache miss for user lookup", { cache_key: "user:42" });
-Owl.warn("Retry attempt on payment gateway", { attempt: "2" });
-Owl.error("Failed to send notification email", { email: "user@example.com" });
+Pulse.info("Order placed", { order_id: "abc-123" });
+Pulse.debug("Cache miss for user lookup", { cache_key: "user:42" });
+Pulse.warn("Retry attempt on payment gateway", { attempt: "2" });
+Pulse.error("Failed to send notification email", { email: "user@example.com" });
 ```
 
 ## Reporting an `Error` Value
 
-`Owl.error` is overloaded — pass a string message (logger-style) or pass an `Error` value (exception-style). When given an Error, the SDK extracts the type name, full stack, `Error.cause` chain, `AggregateError` children, and Node `code/syscall/path` fields into reserved `_error_*` attributes. The server's issue tracker uses `_error_type` as a fingerprint discriminator so different error classes with the same wording stay on separate issues.
+`Pulse.error` is overloaded — pass a string message (logger-style) or pass an `Error` value (exception-style). When given an Error, the SDK extracts the type name, full stack, `Error.cause` chain, `AggregateError` children, and Node `code/syscall/path` fields into reserved `_error_*` attributes. The server's issue tracker uses `_error_type` as a fingerprint discriminator so different error classes with the same wording stay on separate issues.
 
 ```typescript
 try {
   await processOrder(req.body);
 } catch (err) {
-  Owl.error(err);                                 // auto-derives message
-  Owl.error(err, "while processing order");       // caller-supplied context
-  Owl.error(err, "while processing order", {      // + extra attributes
+  Pulse.error(err);                                 // auto-derives message
+  Pulse.error(err, "while processing order");       // caller-supplied context
+  Pulse.error(err, "while processing order", {      // + extra attributes
     order_id: req.body.id,
   });
 }
@@ -42,14 +42,14 @@ The Error overload accepts `unknown`, so `throw "boom"` / `throw 42` patterns ar
 
 ## Auto-Capture of Unhandled Errors
 
-By default the SDK installs `process.on('uncaughtException')` and `process.on('unhandledRejection')` listeners that capture and forward unhandled errors as `Owl.error` events tagged with `_unhandled = "uncaught_exception" | "unhandled_rejection"`. Crash semantics are preserved: a crashing app stays crashing, your own listeners still run, and any failure inside the SDK's listener is swallowed so it never compounds the original crash.
+By default the SDK installs `process.on('uncaughtException')` and `process.on('unhandledRejection')` listeners that capture and forward unhandled errors as `Pulse.error` events tagged with `_unhandled = "uncaught_exception" | "unhandled_rejection"`. Crash semantics are preserved: a crashing app stays crashing, your own listeners still run, and any failure inside the SDK's listener is swallowed so it never compounds the original crash.
 
 To opt out:
 
 ```typescript
-Owl.configure({
+Pulse.configure({
   endpoint: "...",
-  apiKey: "owl_client_...",
+  apiKey: "pulse_client_...",
   captureUnhandled: false,
 });
 ```
@@ -82,7 +82,7 @@ No configuration is required -- this works out of the box.
 Attributes are key-value pairs attached to an event. Pass any object as the second argument -- values are stringified automatically:
 
 ```typescript
-Owl.info("Request completed", {
+Pulse.info("Request completed", {
   method: "POST",
   path: "/api/orders",
   status: 201,
@@ -100,7 +100,7 @@ The third `options` argument of every log method accepts an `attachments` array.
 try {
   await PdfParser.parse(inputPath);
 } catch (err) {
-  Owl.error("pdf parse failed", { error: String(err) }, {
+  Pulse.error("pdf parse failed", { error: String(err) }, {
     attachments: [
       { path: inputPath, name: "input.pdf" },                                     // from disk
       { buffer: diagnosticsJson, name: "debug.json", contentType: "application/json" }, // in memory
@@ -118,16 +118,16 @@ Each attachment supports these fields:
 | `name` | `string` | Filename shown in the dashboard. Required for `buffer`; defaults to the basename of `path`. |
 | `contentType` | `string` | Overrides the inferred content type (inferred from file extension otherwise). |
 
-Uploads run on a serial queue and are awaited by `Owl.flush()` and `Owl.shutdown()`. Use attachments sparingly -- each project has a default 5 GB storage quota with a 250 MB per-user bucket. See [Attachments](/docs/concepts/attachments) for details on quotas and viewing attached files.
+Uploads run on a serial queue and are awaited by `Pulse.flush()` and `Pulse.shutdown()`. Use attachments sparingly -- each project has a default 5 GB storage quota with a 250 MB per-user bucket. See [Attachments](/docs/concepts/attachments) for details on quotas and viewing attached files.
 
 ## User-Scoped Events
 
-Use `Owl.withUser()` to create a scoped instance that tags every event with a user ID:
+Use `Pulse.withUser()` to create a scoped instance that tags every event with a user ID:
 
 ```typescript
-const owl = Owl.withUser("user_42");
-owl.info("Profile updated");
-owl.warn("Rate limit approaching", { requests: "95" });
+const pulse = Pulse.withUser("user_42");
+pulse.info("Profile updated");
+pulse.warn("Rate limit approaching", { requests: "95" });
 ```
 
 This is particularly useful in request handlers where you know the authenticated user. See the [Identity guide](/docs/sdks/node/identity) for the full pattern.
@@ -139,14 +139,14 @@ In a typical HTTP server, create a scoped instance at the start of each request:
 ```typescript
 app.use((req, res, next) => {
   const userId = req.auth?.userId;
-  req.owl = userId ? Owl.withUser(userId) : Owl;
+  req.pulse = userId ? Pulse.withUser(userId) : Pulse;
   next();
 });
 
 app.post("/api/orders", (req, res) => {
-  req.owl.info("Creating order", { items: String(req.body.items.length) });
+  req.pulse.info("Creating order", { items: String(req.body.items.length) });
   // ...
-  req.owl.info("Order created", { order_id: order.id });
+  req.pulse.info("Order created", { order_id: order.id });
   res.json(order);
 });
 ```
@@ -155,9 +155,9 @@ app.post("/api/orders", (req, res) => {
 
 Events are not sent immediately. They are buffered in memory and flushed in batches:
 
-1. Calling `Owl.info()` (or any log method) creates an event and adds it to the buffer
+1. Calling `Pulse.info()` (or any log method) creates an event and adds it to the buffer
 2. When the buffer reaches `flushThreshold` (default 20) or the flush timer fires (default every 5 seconds), the batch is sent to the server
 3. If the request fails, it retries with exponential backoff up to 5 times
 4. Payloads over 512 bytes are gzip-compressed automatically
 
-For serverless functions where the process may terminate before the timer fires, use [`Owl.wrapHandler()`](/docs/sdks/node/serverless) to flush after each invocation.
+For serverless functions where the process may terminate before the timer fires, use [`Pulse.wrapHandler()`](/docs/sdks/node/serverless) to flush after each invocation.

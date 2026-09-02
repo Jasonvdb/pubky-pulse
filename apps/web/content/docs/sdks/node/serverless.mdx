@@ -3,7 +3,7 @@ title: Serverless
 description: Use wrapHandler() to guarantee event flush in Lambda, Vercel Serverless Functions, Firebase Cloud Functions, and other serverless environments.
 ---
 
-In serverless environments, your function may terminate before the SDK's background flush timer fires. `Owl.wrapHandler()` solves this by flushing all buffered events after every invocation.
+In serverless environments, your function may terminate before the SDK's background flush timer fires. `Pulse.wrapHandler()` solves this by flushing all buffered events after every invocation.
 
 The SDK targets the Node.js runtime (AWS Lambda, Vercel Serverless Functions on Node, Firebase Cloud Functions v2, etc.). It is **not** compatible with Edge runtimes such as Vercel Edge Functions or Cloudflare Workers -- it depends on Node built-ins like `node:crypto`, `node:zlib`, and `node:fs`.
 
@@ -17,21 +17,21 @@ The SDK buffers events and flushes them on a timer (default every 5 seconds) or 
 
 ## wrapHandler
 
-`Owl.wrapHandler()` wraps an async function so that `Owl.flush()` is called automatically after every invocation, regardless of whether it succeeded or threw:
+`Pulse.wrapHandler()` wraps an async function so that `Pulse.flush()` is called automatically after every invocation, regardless of whether it succeeded or threw:
 
 ```typescript
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   serviceName: "order-lambda",
 });
 
-export const handler = Owl.wrapHandler(async (event, context) => {
-  Owl.info("Processing order", { order_id: event.orderId });
+export const handler = Pulse.wrapHandler(async (event, context) => {
+  Pulse.info("Processing order", { order_id: event.orderId });
 
-  const op = Owl.startOperation("process-order");
+  const op = Pulse.startOperation("process-order");
   try {
     const result = await processOrder(event.orderId);
     op.complete();
@@ -45,7 +45,7 @@ export const handler = Owl.wrapHandler(async (event, context) => {
 
 The wrapper preserves the return value and re-throws any exceptions after flushing. It works with any async function signature -- Lambda handlers, Vercel serverless functions, or custom wrappers.
 
-`Owl.flush()` also awaits any pending [file attachments](/docs/concepts/attachments), so `wrapHandler()` delivers attached files before the runtime freezes.
+`Pulse.flush()` also awaits any pending [file attachments](/docs/concepts/attachments), so `wrapHandler()` delivers attached files before the runtime freezes.
 
 ### Firebase Cloud Functions
 
@@ -53,12 +53,12 @@ Firebase's `onCall` (and similar wrappers) expect a strongly-typed callback. Bec
 
 ```typescript
 import { onCall, type CallableRequest } from "firebase-functions/v2/https";
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 export const myFunction = onCall(
-  Owl.wrapHandler(async (request: CallableRequest) => {
+  Pulse.wrapHandler(async (request: CallableRequest) => {
     const { data, auth } = request;
-    Owl.info("Function invoked", { uid: auth?.uid });
+    Pulse.info("Function invoked", { uid: auth?.uid });
     // ...
     return { ok: true };
   })
@@ -67,24 +67,24 @@ export const myFunction = onCall(
 
 ## beforeExit Handler
 
-When you call `Owl.configure()`, the SDK registers a `process.on("beforeExit")` handler that flushes any remaining buffered events. This is a safety net for graceful process shutdown but should not be relied on in serverless -- use `wrapHandler()` instead.
+When you call `Pulse.configure()`, the SDK registers a `process.on("beforeExit")` handler that flushes any remaining buffered events. This is a safety net for graceful process shutdown but should not be relied on in serverless -- use `wrapHandler()` instead.
 
 The handler is registered once and does not prevent the process from exiting (the flush timer uses `unref()` to avoid keeping the event loop alive).
 
 ## Graceful Shutdown
 
-For long-running servers, call `Owl.shutdown()` to flush events and stop the background timer:
+For long-running servers, call `Pulse.shutdown()` to flush events and stop the background timer:
 
 ```typescript
 process.on("SIGTERM", async () => {
   console.log("Shutting down...");
-  await Owl.shutdown();
+  await Pulse.shutdown();
   server.close();
   process.exit(0);
 });
 ```
 
-`Owl.shutdown()` emits a `sdk:session_ended` event, flushes all buffered events, and clears internal state.
+`Pulse.shutdown()` emits a `sdk:session_ended` event, flushes all buffered events, and clears internal state.
 
 ## Express Middleware
 
@@ -92,11 +92,11 @@ In Express, you can use `wrapHandler()` per route or build middleware that flush
 
 ```typescript
 import express from "express";
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   serviceName: "express-api",
 });
 
@@ -105,13 +105,13 @@ const app = express();
 // Flush after every request
 app.use((req, res, next) => {
   res.on("finish", () => {
-    Owl.flush().catch(() => {});
+    Pulse.flush().catch(() => {});
   });
   next();
 });
 
 app.post("/api/orders", async (req, res) => {
-  Owl.info("Order received");
+  Pulse.info("Order received");
   // ...
   res.json({ ok: true });
 });
@@ -123,22 +123,22 @@ In Fastify, use the `onResponse` hook to flush after each request:
 
 ```typescript
 import Fastify from "fastify";
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   serviceName: "fastify-api",
 });
 
 const app = Fastify();
 
 app.addHook("onResponse", async () => {
-  await Owl.flush();
+  await Pulse.flush();
 });
 
 app.addHook("onClose", async () => {
-  await Owl.shutdown();
+  await Pulse.shutdown();
 });
 ```
 
@@ -147,26 +147,26 @@ app.addHook("onClose", async () => {
 An AWS Lambda function with user scoping, operation tracking, and automatic flush:
 
 ```typescript
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
-Owl.configure({
-  endpoint: "https://ingest.owlmetry.com",
-  apiKey: "owl_client_...",
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
   serviceName: "checkout-lambda",
   appVersion: "2.1.0",
 });
 
-export const handler = Owl.wrapHandler(async (event) => {
+export const handler = Pulse.wrapHandler(async (event) => {
   const body = JSON.parse(event.body);
-  const owl = Owl.withUser(body.userId);
+  const pulse = Pulse.withUser(body.userId);
 
-  const op = owl.startOperation("checkout", {
+  const op = pulse.startOperation("checkout", {
     item_count: String(body.items.length),
   });
 
   try {
     const charge = await processPayment(body);
-    owl.step("payment-completed");
+    pulse.step("payment-completed");
     op.complete({ charge_id: charge.id });
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };

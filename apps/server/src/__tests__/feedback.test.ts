@@ -14,7 +14,7 @@ import {
 } from "./setup.js";
 
 const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/owlmetry_test";
+  process.env.TEST_DATABASE_URL || "postgresql://localhost:5432/pubky_pulse_test";
 
 let app: FastifyInstance;
 let token: string;
@@ -205,7 +205,7 @@ describe("GET /v1/projects/:projectId/feedback", () => {
   });
 
   it("non-dev feedback fans out feedback.new notifications to team members", async () => {
-    const u2 = await createUserAndGetToken(app, "fb-member@owlmetry.com");
+    const u2 = await createUserAndGetToken(app, "fb-member@pulse.pubky.org");
     await addTeamMember(teamId, u2.userId, "member");
 
     const id = await ingestFeedback({ message: "hello prod" });
@@ -222,7 +222,7 @@ describe("GET /v1/projects/:projectId/feedback", () => {
   });
 
   it("dev feedback does NOT fan out notifications", async () => {
-    const u2 = await createUserAndGetToken(app, "fb-dev-member@owlmetry.com");
+    const u2 = await createUserAndGetToken(app, "fb-dev-member@pulse.pubky.org");
     await addTeamMember(teamId, u2.userId, "member");
     await ingestFeedback({ message: "dev only", is_dev: true });
     await new Promise((r) => setTimeout(r, 150));

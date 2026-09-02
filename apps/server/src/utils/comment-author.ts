@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { users, apiKeys } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
+import { users, apiKeys } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 import type { AuthContext } from "../types.js";
 
 export interface CommentAuthor {

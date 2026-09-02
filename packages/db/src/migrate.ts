@@ -4,7 +4,7 @@ import postgres from "postgres";
 import { ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "./partitions.js";
 import "dotenv/config";
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 async function main() {
   const client = postgres(url, { max: 1 });

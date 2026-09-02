@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import type { MeResponse, UserPreferences } from "@owlmetry/shared";
-import { mergeUserPreferences } from "@owlmetry/shared/preferences";
+import type { MeResponse, UserPreferences } from "@pubky-pulse/shared";
+import { mergeUserPreferences } from "@pubky-pulse/shared/preferences";
 import { useUser } from "./use-user";
 import { api } from "@/lib/api";
 
-const CACHE_KEY = "owlmetry:prefs:v1";
+const CACHE_KEY = "pubky-pulse:prefs:v1";
 
 function readCache(): UserPreferences | null {
   if (typeof window === "undefined") return null;

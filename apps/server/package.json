@@ -1,5 +1,5 @@
 {
-  "name": "@owlmetry/server",
+  "name": "@pubky-pulse/server",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -13,8 +13,8 @@
     "@fastify/cors": "^11.0.0",
     "@fastify/jwt": "^9.0.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
-    "@owlmetry/db": "workspace:*",
-    "@owlmetry/shared": "workspace:*",
+    "@pubky-pulse/db": "workspace:*",
+    "@pubky-pulse/shared": "workspace:*",
     "dotenv": "^16.6.1",
     "drizzle-orm": "^0.39.0",
     "fastify": "^5.2.0",

@@ -1,12 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { FEEDBACK_STATUSES } from "@owlmetry/shared";
+import { FEEDBACK_STATUSES } from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
 export function registerFeedbackTools(server: McpServer, app: FastifyInstance, agentKey: string): void {
   server.registerTool("list-feedback", {
-    description: "List user feedback for a project. Feedback is free-text input submitted by end users via the SDK's OwlFeedbackView or Owl.sendFeedback API. Sorted by most recent first.",
+    description: "List user feedback for a project. Feedback is free-text input submitted by end users via the SDKs' PulseFeedbackView or Pulse.sendFeedback API. Sorted by most recent first.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       status: z.enum(FEEDBACK_STATUSES).optional().describe("Filter by status"),

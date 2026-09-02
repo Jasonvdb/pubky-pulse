@@ -1,4 +1,4 @@
-import type { AuditAction } from "@owlmetry/shared";
+import type { AuditAction } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 const ACTION_META: Record<AuditAction, { emoji: string; variant: "default" | "secondary" | "destructive" }> = {

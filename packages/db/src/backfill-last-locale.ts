@@ -15,7 +15,7 @@
 import postgres from "postgres";
 import "dotenv/config";
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 async function main() {
   const sql = postgres(url, { max: 4 });

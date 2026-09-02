@@ -54,7 +54,7 @@ describe("GET /v1/apps/:id/users", () => {
   it("returns users after ingest", async () => {
     await ingest([
       { level: "info", message: "test", user_id: "user-1", session_id: TEST_SESSION_ID },
-      { level: "info", message: "test", user_id: "owl_anon_abc", session_id: TEST_SESSION_ID },
+      { level: "info", message: "test", user_id: "pulse_anon_abc", session_id: TEST_SESSION_ID },
     ]);
 
     // Wait for fire-and-forget upsert
@@ -69,20 +69,20 @@ describe("GET /v1/apps/:id/users", () => {
     const realUser = body.users.find((u: any) => u.user_id === "user-1");
     expect(realUser.is_anonymous).toBe(false);
 
-    const anonUser = body.users.find((u: any) => u.user_id === "owl_anon_abc");
+    const anonUser = body.users.find((u: any) => u.user_id === "pulse_anon_abc");
     expect(anonUser.is_anonymous).toBe(true);
   });
 
   it("filters by is_anonymous", async () => {
     await ingest([
       { level: "info", message: "test", user_id: "user-1", session_id: TEST_SESSION_ID },
-      { level: "info", message: "test", user_id: "owl_anon_abc", session_id: TEST_SESSION_ID },
+      { level: "info", message: "test", user_id: "pulse_anon_abc", session_id: TEST_SESSION_ID },
     ]);
     await new Promise((r) => setTimeout(r, 100));
 
     const anonRes = await getUsers(appId, { is_anonymous: "true" });
     expect(anonRes.json().users).toHaveLength(1);
-    expect(anonRes.json().users[0].user_id).toBe("owl_anon_abc");
+    expect(anonRes.json().users[0].user_id).toBe("pulse_anon_abc");
 
     const realRes = await getUsers(appId, { is_anonymous: "false" });
     expect(realRes.json().users).toHaveLength(1);

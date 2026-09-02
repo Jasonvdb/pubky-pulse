@@ -1,5 +1,5 @@
 {
-  "name": "@owlmetry/db",
+  "name": "@pubky-pulse/db",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -26,7 +26,7 @@
     "cleanup-stranded-anons": "tsx src/cleanup-stranded-anons.ts"
   },
   "dependencies": {
-    "@owlmetry/shared": "workspace:*",
+    "@pubky-pulse/shared": "workspace:*",
     "drizzle-orm": "^0.39.0",
     "postgres": "^3.4.0"
   },

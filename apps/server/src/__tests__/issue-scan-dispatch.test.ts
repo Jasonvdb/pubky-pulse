@@ -118,7 +118,7 @@ describe("issue_scan → issue.new dispatch", () => {
       VALUES (${appId}, ${projectId}, 'resolved', 'Old bug returns', 'OldModule', false, '1.0.0', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
       RETURNING id
     `;
-    const fingerprint = await import("@owlmetry/shared").then((m) =>
+    const fingerprint = await import("@pubky-pulse/shared").then((m) =>
       m.generateIssueFingerprint("Old bug returns", "OldModule")
     );
     await dbClient`
@@ -146,7 +146,7 @@ describe("issue_scan → issue.new dispatch", () => {
       VALUES (${appId}, ${projectId}, 'snoozed', 'Maybe a one-off', 'FlakyMod', false, NOW() - INTERVAL '1 day', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
       RETURNING id
     `;
-    const fingerprint = await import("@owlmetry/shared").then((m) =>
+    const fingerprint = await import("@pubky-pulse/shared").then((m) =>
       m.generateIssueFingerprint("Maybe a one-off", "FlakyMod")
     );
     await dbClient`
@@ -182,7 +182,7 @@ describe("issue_scan → issue.new dispatch", () => {
       VALUES (${appId}, ${projectId}, 'snoozed', 'Dev flake', 'DevMod', true, NOW(), NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day')
       RETURNING id
     `;
-    const fingerprint = await import("@owlmetry/shared").then((m) =>
+    const fingerprint = await import("@pubky-pulse/shared").then((m) =>
       m.generateIssueFingerprint("Dev flake", "DevMod")
     );
     await dbClient`
@@ -212,7 +212,7 @@ describe("issue_scan → issue.new dispatch", () => {
       VALUES (${appId}, ${projectId}, 'resolved', 'Re-emerged', 'OldMod', false, '1.0.0', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
       RETURNING id
     `;
-    const fingerprint = await import("@owlmetry/shared").then((m) =>
+    const fingerprint = await import("@pubky-pulse/shared").then((m) =>
       m.generateIssueFingerprint("Re-emerged", "OldMod")
     );
     await dbClient`

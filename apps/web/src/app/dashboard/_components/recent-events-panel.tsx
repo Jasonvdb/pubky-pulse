@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import useSWR from "swr";
 import { ScrollText } from "lucide-react";
-import type { AppResponse, LogLevel } from "@owlmetry/shared";
+import type { AppResponse, LogLevel } from "@pubky-pulse/shared";
 import { EventLevelBadge } from "@/components/event-level-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppBadge } from "@/components/badges/app-badge";

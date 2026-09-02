@@ -12,7 +12,7 @@
  */
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { schema } from "@owlmetry/db";
+import { schema } from "@pubky-pulse/db";
 import { statsAggregateDailyHandler, statsAggregateHourlyHandler } from "../jobs/stats-aggregate.js";
 import type { JobContext } from "../services/job-runner.js";
 

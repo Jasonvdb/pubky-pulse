@@ -7,12 +7,12 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RoleBadge } from "@/components/badges/role-badge";
-import { OwlLogo } from "@/components/owl-logo";
+import { PulseLogo } from "@/components/pulse-logo";
 import type {
   TeamInvitationPublicResponse,
   AcceptInvitationResponse,
   MeResponse,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { formatFullDate } from "@/lib/format-date";
 
 export default function AcceptInvitationPage() {
@@ -124,14 +124,14 @@ function AcceptInvitationContent() {
         />
         <div className="relative z-10 text-center space-y-6 px-12 animate-fade-in">
           <div className="text-primary mx-auto">
-            <OwlLogo className="h-36 w-36 mx-auto" />
+            <PulseLogo className="h-36 w-36 mx-auto" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white/90 tracking-tight">
-              Owlmetry
+              Pubky Pulse
             </h1>
             <p className="text-white/40 mt-2 text-sm">
-              Self-hosted metrics tracking for mobile apps
+              Self-hosted observability for web, backend and mobile apps
             </p>
           </div>
         </div>
@@ -141,8 +141,8 @@ function AcceptInvitationContent() {
       <div className="flex flex-1 items-center justify-center px-6">
         <div className="w-full max-w-md animate-fade-in-up">
           <div className="lg:hidden flex items-center gap-2.5 justify-center mb-8">
-            <OwlLogo className="h-7 w-7 text-primary" />
-            <span className="text-xl font-bold tracking-tight">Owlmetry</span>
+            <PulseLogo className="h-7 w-7 text-primary" />
+            <span className="text-xl font-bold tracking-tight">Pubky Pulse</span>
           </div>
 
           {inviteError ? (
@@ -181,7 +181,7 @@ function AcceptInvitationContent() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium text-foreground">{invite.invited_by_name}</span>{" "}
-                  invited you to join a team on Owlmetry
+                  invited you to join a team on Pubky Pulse
                 </p>
               </div>
 

@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { apps, questionnaires, questionnaireResponses, appUsers } from "@owlmetry/db";
+import { apps, questionnaires, questionnaireResponses, appUsers } from "@pubky-pulse/db";
 import {
   ALLOWED_ENVIRONMENTS_FOR_PLATFORM,
   QUESTIONNAIRES_DISMISSED_PROPERTY,
   pruneUnknownAnswerKeys,
   validateAnswers,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type {
   IngestQuestionnaireFetchResponse,
   IngestQuestionnaireSubmitRequest,
@@ -14,7 +14,7 @@ import type {
   IngestQuestionnaireDismissRequest,
   QuestionnaireAnswers,
   QuestionnaireSchema,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { resolveIngestCountryCode } from "../utils/event-processing.js";

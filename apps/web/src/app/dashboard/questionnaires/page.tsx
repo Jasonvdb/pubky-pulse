@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import type { ProjectResponse, QuestionnaireSchema } from "@owlmetry/shared";
+import type { ProjectResponse, QuestionnaireSchema } from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import {
@@ -165,7 +165,7 @@ export default function QuestionnairesPage() {
                   ? "No active questionnaires. Toggle \"Hide inactive\" off to see paused ones."
                   : <>
                       No questionnaires yet. Create one above and reference it from your SDK code with{" "}
-                      <code className="text-foreground">.owlQuestionnaire(slug:&hellip;)</code>.
+                      <code className="text-foreground">.pulseQuestionnaire(slug:&hellip;)</code>.
                     </>}
               </p>
             </CardContent>
@@ -268,7 +268,7 @@ function CreateQuestionnaireDialog({
           <DialogTitle>Create questionnaire</DialogTitle>
           <DialogDescription>
             Slug is immutable after creation — the SDK references it directly via{" "}
-            <code>.owlQuestionnaire(slug: &quot;&hellip;&quot;)</code>.
+            <code>.pulseQuestionnaire(slug: &quot;&hellip;&quot;)</code>.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

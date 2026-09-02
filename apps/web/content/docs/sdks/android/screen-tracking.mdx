@@ -1,27 +1,27 @@
 ---
 title: Screen Tracking
-description: Automatically track screen views with the Modifier.owlScreen() Compose modifier.
+description: Automatically track screen views with the Modifier.pulseScreen() Compose modifier.
 ---
 
-The `Modifier.owlScreen()` Compose modifier automatically tracks screen appearances and time-on-screen with no manual event calls needed. It is the Android analog of SwiftUI's `.owlScreen(_:)` view modifier and lives in the `owlmetry-android-compose` artifact.
+The `Modifier.pulseScreen()` Compose modifier automatically tracks screen appearances and time-on-screen with no manual event calls needed. It is the Android analog of SwiftUI's `.pulseScreen(_:)` view modifier and lives in the `pulse-android-compose` artifact.
 
 ## Usage
 
-Attach `Modifier.owlScreen()` to the outermost composable of each screen:
+Attach `Modifier.pulseScreen()` to the outermost composable of each screen:
 
 ```kotlin
-import com.owlmetry.android.compose.owlScreen
+import org.pubky.pulse.android.compose.pulseScreen
 
 @Composable
 fun HomeScreen() {
-    Column(modifier = Modifier.owlScreen("Home")) {
+    Column(modifier = Modifier.pulseScreen("Home")) {
         // ...
     }
 }
 
 @Composable
 fun SettingsScreen() {
-    LazyColumn(modifier = Modifier.owlScreen("Settings")) {
+    LazyColumn(modifier = Modifier.pulseScreen("Settings")) {
         // ...
     }
 }
@@ -40,12 +40,12 @@ The appear/disappear pair is bound to the composition lifetime of the node the m
 
 ## Placement Guidelines
 
-Apply `Modifier.owlScreen()` to the outermost container of each distinct screen — typically the root `Column`, `Scaffold` content, `LazyColumn`, or `Box`:
+Apply `Modifier.pulseScreen()` to the outermost container of each distinct screen — typically the root `Column`, `Scaffold` content, `LazyColumn`, or `Box`:
 
 ```kotlin
 @Composable
 fun ProfileScreen() {
-    Column(modifier = Modifier.owlScreen("Profile")) {
+    Column(modifier = Modifier.pulseScreen("Profile")) {
         ProfileHeader()
         PostList()
     }
@@ -66,15 +66,15 @@ The `screenName` value is also available as a filter in the [events](/docs/conce
 
 ## Screen Tracking vs Manual Events
 
-Use `Modifier.owlScreen()` for tracking when a screen is viewed and how long a user stays. Use manual `Owl.info()` with the `screenName` parameter for events that happen *within* a screen (button taps, state changes, errors):
+Use `Modifier.pulseScreen()` for tracking when a screen is viewed and how long a user stays. Use manual `Pulse.info()` with the `screenName` parameter for events that happen *within* a screen (button taps, state changes, errors):
 
 ```kotlin
 @Composable
 fun CartScreen(cart: Cart) {
-    Column(modifier = Modifier.owlScreen("Cart")) {
+    Column(modifier = Modifier.pulseScreen("Cart")) {
         // ...
         Button(onClick = {
-            Owl.info("Order placed", screenName = "Cart", attributes = mapOf("items" to "${cart.count}"))
+            Pulse.info("Order placed", screenName = "Cart", attributes = mapOf("items" to "${cart.count}"))
         }) {
             Text("Place Order")
         }
@@ -82,4 +82,4 @@ fun CartScreen(cart: Cart) {
 }
 ```
 
-The `Modifier.owlScreen()` modifier handles the screen view tracking, while `Owl.info()` with `screenName = "Cart"` ties the button-tap event to the same screen context. **Prefer `Modifier.owlScreen()` over a manual `Owl.info("Screen viewed")`** — it covers appear, disappear, and duration in one modifier per screen, and don't supplement it with extra `Owl.info("Screen appeared")` calls.
+The `Modifier.pulseScreen()` modifier handles the screen view tracking, while `Pulse.info()` with `screenName = "Cart"` ties the button-tap event to the same screen context. **Prefer `Modifier.pulseScreen()` over a manual `Pulse.info("Screen viewed")`** — it covers appear, disappear, and duration in one modifier per screen, and don't supplement it with extra `Pulse.info("Screen appeared")` calls.

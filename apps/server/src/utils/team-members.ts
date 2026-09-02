@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { teamMembers } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
+import { teamMembers } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 
 /** All user_ids who are members of a team, including owners and admins. */
 export async function resolveTeamMemberUserIds(db: Db, teamId: string): Promise<string[]> {

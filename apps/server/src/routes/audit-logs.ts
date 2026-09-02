@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, lte, desc, lt, or } from "drizzle-orm";
-import { auditLogs } from "@owlmetry/db";
-import { AUDIT_ACTIONS, parseTimeParam } from "@owlmetry/shared";
-import type { AuditLogsQueryParams, AuditAction } from "@owlmetry/shared";
+import { auditLogs } from "@pubky-pulse/db";
+import { AUDIT_ACTIONS, parseTimeParam } from "@pubky-pulse/shared";
+import type { AuditLogsQueryParams, AuditAction } from "@pubky-pulse/shared";
 import { requirePermission, assertTeamRole, hasTeamAccess } from "../middleware/auth.js";
 import { serializeAuditLog } from "../utils/serialize.js";
 import { normalizeLimit } from "../utils/pagination.js";

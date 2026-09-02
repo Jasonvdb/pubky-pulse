@@ -3,20 +3,20 @@ title: Identity
 description: Manage anonymous and known user identities in the Node.js SDK.
 ---
 
-The Node.js SDK provides `Owl.withUser()` to associate events with a specific user. This is the primary mechanism for per-user analytics, funnel tracking, and session tracing.
+The Node.js SDK provides `Pulse.withUser()` to associate events with a specific user. This is the primary mechanism for per-user analytics, funnel tracking, and session tracing.
 
 ## withUser
 
-`Owl.withUser(userId)` returns a `ScopedOwl` instance. Every event emitted through this instance includes the given `user_id`:
+`Pulse.withUser(userId)` returns a `ScopedPulse` instance. Every event emitted through this instance includes the given `user_id`:
 
 ```typescript
-const owl = Owl.withUser("user_42");
-owl.info("Profile updated");
-owl.warn("Rate limit approaching");
-owl.step("onboarding-complete");
+const pulse = Pulse.withUser("user_42");
+pulse.info("Profile updated");
+pulse.warn("Rate limit approaching");
+pulse.step("onboarding-complete");
 ```
 
-The returned `ScopedOwl` has the same API as `Owl` -- `info()`, `debug()`, `warn()`, `error()`, `step()`, `startOperation()`, `recordMetric()`, and `setUserProperties()`. It can be further narrowed with `.withSession(sessionId)` for session scoping.
+The returned `ScopedPulse` has the same API as `Pulse` -- `info()`, `debug()`, `warn()`, `error()`, `step()`, `startOperation()`, `recordMetric()`, and `setUserProperties()`. It can be further narrowed with `.withSession(sessionId)` for session scoping.
 
 ## Middleware Pattern
 
@@ -26,13 +26,13 @@ In HTTP servers, create a scoped instance per request based on the authenticated
 
 ```typescript
 import express from "express";
-import { Owl, type ScopedOwl } from "@owlmetry/node";
+import { Pulse, type ScopedPulse } from "@synonymdev/pubky-pulse-node";
 
 // Extend the Request type
 declare global {
   namespace Express {
     interface Request {
-      owl: typeof Owl | ScopedOwl;
+      pulse: typeof Pulse | ScopedPulse;
     }
   }
 }
@@ -40,19 +40,19 @@ declare global {
 const app = express();
 
 app.use((req, res, next) => {
-  req.owl = req.auth?.userId
-    ? Owl.withUser(req.auth.userId)
-    : Owl;
+  req.pulse = req.auth?.userId
+    ? Pulse.withUser(req.auth.userId)
+    : Pulse;
   next();
 });
 
 app.get("/api/profile", (req, res) => {
-  req.owl.info("Viewed profile");
+  req.pulse.info("Viewed profile");
   res.json(req.user);
 });
 
 app.post("/api/settings", (req, res) => {
-  req.owl.info("Updated settings", { theme: req.body.theme });
+  req.pulse.info("Updated settings", { theme: req.body.theme });
   res.json({ ok: true });
 });
 ```
@@ -61,20 +61,20 @@ app.post("/api/settings", (req, res) => {
 
 ```typescript
 import Fastify from "fastify";
-import { Owl } from "@owlmetry/node";
+import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 const app = Fastify();
 
-app.decorateRequest("owl", null);
+app.decorateRequest("pulse", null);
 
 app.addHook("onRequest", async (request) => {
-  request.owl = request.user?.id
-    ? Owl.withUser(request.user.id)
-    : Owl;
+  request.pulse = request.user?.id
+    ? Pulse.withUser(request.user.id)
+    : Pulse;
 });
 
 app.get("/api/orders", async (request, reply) => {
-  request.owl.info("Listing orders");
+  request.pulse.info("Listing orders");
   const orders = await getOrders(request.user.id);
   return orders;
 });
@@ -82,36 +82,36 @@ app.get("/api/orders", async (request, reply) => {
 
 ## withSession
 
-By default, a Node SDK process generates one session ID in `Owl.configure()` and stamps every event with it. That works for a single long-running worker, but it isn't useful for a web server that handles many clients — all backend events end up in one giant session that doesn't line up with any client session.
+By default, a Node SDK process generates one session ID in `Pulse.configure()` and stamps every event with it. That works for a single long-running worker, but it isn't useful for a web server that handles many clients — all backend events end up in one giant session that doesn't line up with any client session.
 
-`Owl.withSession(sessionId)` returns a `ScopedOwl` that overrides the session ID for every event it emits:
+`Pulse.withSession(sessionId)` returns a `ScopedPulse` that overrides the session ID for every event it emits:
 
 ```typescript
-const owl = Owl.withSession("client-session-abc123");
-owl.info("Processed request");
+const pulse = Pulse.withSession("client-session-abc123");
+pulse.info("Processed request");
 ```
 
 This is most commonly paired with `withUser` to scope a full request handler:
 
 ```typescript
-const owl = Owl.withSession(clientSessionId).withUser(userId);
-owl.info("Order created", { orderId });
+const pulse = Pulse.withSession(clientSessionId).withUser(userId);
+pulse.info("Order created", { orderId });
 ```
 
-The scopes chain in either order — `Owl.withUser(uid).withSession(sid)` produces the same result.
+The scopes chain in either order — `Pulse.withUser(uid).withSession(sid)` produces the same result.
 
-`sessionId` should be a UUID string (the Swift SDK's `Owl.sessionId` already is). Non-UUID values are silently ignored and the scope falls back to the SDK's default session ID — so a malformed or missing header from a client will never crash the request handler. Enable `debug: true` on `Owl.configure()` to see warnings when invalid values are received.
+`sessionId` should be a UUID string (the Swift SDK's `Pulse.sessionId` already is). Non-UUID values are silently ignored and the scope falls back to the SDK's default session ID — so a malformed or missing header from a client will never crash the request handler. Enable `debug: true` on `Pulse.configure()` to see warnings when invalid values are received.
 
 ### Cross-SDK Session Correlation
 
-The typical use case is linking backend events to the session of the client that triggered them. Swift clients expose their current session ID via `Owl.sessionId`; have the client send it as a request header, then scope the handler on the server:
+The typical use case is linking backend events to the session of the client that triggered them. Swift clients expose their current session ID via `Pulse.sessionId`; have the client send it as a request header, then scope the handler on the server:
 
 Swift client:
 
 ```swift
 var request = URLRequest(url: apiURL)
-if let sessionId = Owl.sessionId {
-    request.setValue(sessionId, forHTTPHeaderField: "X-Owl-Session-Id")
+if let sessionId = Pulse.sessionId {
+    request.setValue(sessionId, forHTTPHeaderField: "X-Pulse-Session-Id")
 }
 ```
 
@@ -119,37 +119,37 @@ Node server (Fastify):
 
 ```typescript
 app.addHook("onRequest", async (request) => {
-  const clientSessionId = request.headers["x-owl-session-id"] as string | undefined;
-  const base = request.user?.id ? Owl.withUser(request.user.id) : Owl;
-  request.owl = clientSessionId ? base.withSession(clientSessionId) : base;
+  const clientSessionId = request.headers["x-pulse-session-id"] as string | undefined;
+  const base = request.user?.id ? Pulse.withUser(request.user.id) : Pulse;
+  request.pulse = clientSessionId ? base.withSession(clientSessionId) : base;
 });
 ```
 
-Every event emitted through `request.owl` — plus any operations or funnel steps started from it — now shares the client's session ID, so the dashboard's session view shows both sides of the transaction together.
+Every event emitted through `request.pulse` — plus any operations or funnel steps started from it — now shares the client's session ID, so the dashboard's session view shows both sides of the transaction together.
 
 ### Per-call override
 
-For callers that can't scope (e.g. a utility that's handed a sessionId but not a ScopedOwl), `info/debug/warn/error` accept a `sessionId` in their options:
+For callers that can't scope (e.g. a utility that's handed a sessionId but not a ScopedPulse), `info/debug/warn/error` accept a `sessionId` in their options:
 
 ```typescript
-Owl.info("Webhook received", { provider: "stripe" }, { sessionId: clientSessionId });
+Pulse.info("Webhook received", { provider: "stripe" }, { sessionId: clientSessionId });
 ```
 
 When both a scope and a per-call `options.sessionId` are present, the per-call value wins.
 
 ## Anonymous vs Known Users
 
-When no user ID is set (i.e., you use `Owl` directly instead of `Owl.withUser()`), events are emitted without a `user_id` field. They are still grouped by `session_id`, but cannot be attributed to a specific user.
+When no user ID is set (i.e., you use `Pulse` directly instead of `Pulse.withUser()`), events are emitted without a `user_id` field. They are still grouped by `session_id`, but cannot be attributed to a specific user.
 
-For backend services that handle both authenticated and unauthenticated requests, the middleware pattern above handles this naturally -- unauthenticated requests fall through to the base `Owl` instance.
+For backend services that handle both authenticated and unauthenticated requests, the middleware pattern above handles this naturally -- unauthenticated requests fall through to the base `Pulse` instance.
 
 ## User Scoping with Operations
 
 Operations started from a scoped instance carry the user ID across all lifecycle events (start, complete, fail, cancel):
 
 ```typescript
-const owl = Owl.withUser(userId);
-const op = owl.startOperation("data-export");
+const pulse = Pulse.withUser(userId);
+const op = pulse.startOperation("data-export");
 
 try {
   const result = await exportUserData(userId);
@@ -166,11 +166,11 @@ Both the `start` and `complete` (or `fail`) events will have `user_id` set.
 Funnel analytics correlate steps by user ID. Always use a scoped instance when tracking funnel steps:
 
 ```typescript
-const owl = Owl.withUser(userId);
-owl.step("signup-started");
+const pulse = Pulse.withUser(userId);
+pulse.step("signup-started");
 // ... later
-owl.step("email-verified");
-owl.step("first-project-created");
+pulse.step("email-verified");
+pulse.step("first-project-created");
 ```
 
 Without a user ID, the server cannot determine which user completed which steps. See the [Funnels guide](/docs/sdks/node/funnels) for more backend funnel patterns.

@@ -1,10 +1,10 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { eq, and, isNull, inArray } from "drizzle-orm";
-import { apiKeys, teams, teamMembers } from "@owlmetry/db";
+import { apiKeys, teams, teamMembers } from "@pubky-pulse/db";
 
-import type { Db } from "@owlmetry/db";
-import { API_KEY_PREFIX, meetsMinimumRole } from "@owlmetry/shared";
-import type { AuthTeamMembership, TeamRole, Permission, ApiKeyType } from "@owlmetry/shared";
+import type { Db } from "@pubky-pulse/db";
+import { API_KEY_PREFIX, meetsMinimumRole } from "@pubky-pulse/shared";
+import type { AuthTeamMembership, TeamRole, Permission, ApiKeyType } from "@pubky-pulse/shared";
 import type { AuthContext, UserJwtPayload, ApiKeyContext, UserContext } from "../types.js";
 
 declare module "fastify" {

@@ -8,7 +8,7 @@ import type {
   QuestionnaireListResponse,
   QuestionnaireQuestion,
   QuestionnaireQuestionAnalytics,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import {

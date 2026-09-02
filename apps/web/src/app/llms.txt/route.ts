@@ -4,7 +4,7 @@ export function GET() {
   const pages = docsSource.getPages();
 
   const lines = [
-    "# Owlmetry",
+    "# Pubky Pulse",
     "",
     "> Self-hosted observability platform for web, backend and mobile apps. Structured events, performance metrics, and conversion funnels — purpose-built for AI coding agents.",
     "",
@@ -12,7 +12,7 @@ export function GET() {
     "",
     ...pages.map(
       (page) =>
-        `- [${page.data.title}](https://owlmetry.com${page.url})${page.data.description ? `: ${page.data.description}` : ""}`
+        `- [${page.data.title}](https://pulse.pubky.org${page.url})${page.data.description ? `: ${page.data.description}` : ""}`
     ),
   ];
 

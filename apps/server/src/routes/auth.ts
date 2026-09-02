@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, gte, lt, sql } from "drizzle-orm";
-import { users, teams, teamMembers, apiKeys, apps, emailVerificationCodes } from "@owlmetry/db";
-import { API_KEY_PREFIX, DEFAULT_API_KEY_PERMISSIONS, validatePermissionsForKeyType, generateApiKeySecret, generateVerificationCode, hashVerificationCode } from "@owlmetry/shared";
-import type { ApiKeyType } from "@owlmetry/shared";
+import { users, teams, teamMembers, apiKeys, apps, emailVerificationCodes } from "@pubky-pulse/db";
+import { API_KEY_PREFIX, DEFAULT_API_KEY_PERMISSIONS, validatePermissionsForKeyType, generateApiKeySecret, generateVerificationCode, hashVerificationCode } from "@pubky-pulse/shared";
+import type { ApiKeyType } from "@pubky-pulse/shared";
 import type {
   SendCodeRequest,
   VerifyCodeRequest,
@@ -12,9 +12,9 @@ import type {
   UpdateMeRequest,
   Permission,
   UserPreferences,
-} from "@owlmetry/shared";
-import { mergeUserPreferences, NOTIFICATION_TYPES, NOTIFICATION_CHANNELS, SPARKLINE_WINDOW_DAYS, MAGNITUDE_WINDOW_HOURS } from "@owlmetry/shared";
-import type { NotificationChannel } from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
+import { mergeUserPreferences, NOTIFICATION_TYPES, NOTIFICATION_CHANNELS, SPARKLINE_WINDOW_DAYS, MAGNITUDE_WINDOW_HOURS } from "@pubky-pulse/shared";
+import type { NotificationChannel } from "@pubky-pulse/shared";
 import { requireAuth, hasTeamAccess, getAuthTeamIds, getUserTeamMemberships, assertTeamRole } from "../middleware/auth.js";
 import type { UserJwtPayload } from "../types.js";
 import { serializeApiKey } from "../utils/serialize.js";
@@ -588,7 +588,7 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       if (permissions) {
-        const permissionError = validatePermissionsForKeyType(key.key_type as import("@owlmetry/shared").ApiKeyType, permissions);
+        const permissionError = validatePermissionsForKeyType(key.key_type as import("@pubky-pulse/shared").ApiKeyType, permissions);
         if (permissionError) {
           return reply.code(400).send({ error: permissionError });
         }

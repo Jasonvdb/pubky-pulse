@@ -109,8 +109,8 @@ export function serializeJobRun(r: {
 // These avoid duplicating the api_keys query across app/project routes.
 
 import { eq, and, inArray, isNull, or, gt, asc } from "drizzle-orm";
-import { apiKeys } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
+import { apiKeys } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 
 export async function getClientSecret(db: Db, appId: string): Promise<string | null> {
   const now = new Date();

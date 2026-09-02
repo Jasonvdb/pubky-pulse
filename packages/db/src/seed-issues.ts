@@ -1,7 +1,7 @@
 import { createDatabaseConnection } from "./index.js";
 import { apps, projects, users, issues, issueFingerprints, issueOccurrences, issueComments } from "./schema.js";
 import { eq, and, isNull } from "drizzle-orm";
-import { generateIssueFingerprint } from "@owlmetry/shared";
+import { generateIssueFingerprint } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
 import "dotenv/config";
 
@@ -10,7 +10,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 // ── Time helpers ──────────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ const ISSUE_DEFS: IssueDef[] = [
       { userId: "user-42", appVersion: "1.0.0", environment: "ios", timestampOffset: 14 * DAY },
       { userId: "user-150", appVersion: "1.0.0", environment: "ios", timestampOffset: 10 * DAY },
       { userId: "user-1", appVersion: "1.0.1", environment: "ios", timestampOffset: 7 * DAY },
-      { userId: "owl_anon_abc123", appVersion: "1.1.0", environment: "ios", timestampOffset: 5 * DAY },
+      { userId: "pulse_anon_abc123", appVersion: "1.1.0", environment: "ios", timestampOffset: 5 * DAY },
       { userId: "user-99", appVersion: "1.1.0", environment: "ipados", timestampOffset: 3 * DAY },
       { userId: "user-42", appVersion: "1.2.0", environment: "ios", timestampOffset: 2 * DAY },
     ],
@@ -281,7 +281,7 @@ async function main() {
     process.exit(1);
   }
 
-  const [adminUser] = await db.select().from(users).where(eq(users.email, "admin@owlmetry.com"));
+  const [adminUser] = await db.select().from(users).where(eq(users.email, "admin@pulse.pubky.org"));
   if (!adminUser) {
     console.error("Admin user not found. Run `pnpm dev:seed` first.");
     process.exit(1);
@@ -368,7 +368,7 @@ async function main() {
           issue_id: issue.id,
           author_type: c.authorType,
           author_id: c.authorType === "user" ? adminUser.id : agentId,
-          author_name: c.authorType === "user" ? adminUser.name ?? "Admin" : "Owlmetry Agent",
+          author_name: c.authorType === "user" ? adminUser.name ?? "Admin" : "Pubky Pulse Agent",
           body: c.body,
           created_at: ago(c.createdOffset),
         })),

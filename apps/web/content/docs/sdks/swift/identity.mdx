@@ -7,23 +7,23 @@ The Swift SDK manages user identity automatically. Every device starts with an a
 
 ## Anonymous Identity
 
-On first launch, the SDK generates a unique anonymous ID with the prefix `owl_anon_` followed by a UUID:
+On first launch, the SDK generates a unique anonymous ID with the prefix `pulse_anon_` followed by a UUID:
 
 ```
-owl_anon_A1B2C3D4-E5F6-7890-ABCD-EF1234567890
+pulse_anon_A1B2C3D4-E5F6-7890-ABCD-EF1234567890
 ```
 
-This ID is stored in the device Keychain under the service `com.owlmetry.sdk`, which means it persists across app restarts and even survives app reinstalls. All events are tagged with this ID until a real user is identified.
+This ID is stored in the device Keychain under the service `org.pubky.pulse.sdk`, which means it persists across app restarts and even survives app reinstalls. All events are tagged with this ID until a real user is identified.
 
-You do not need to generate or manage this ID -- the SDK handles it automatically on `Owl.configure()`.
+You do not need to generate or manage this ID -- the SDK handles it automatically on `Pulse.configure()`.
 
 ## Setting a User
 
-After your app authenticates a user, call `Owl.setUser()` with their identifier:
+After your app authenticates a user, call `Pulse.setUser()` with their identifier:
 
 ```swift
 func handleLoginSuccess(user: User) {
-    Owl.setUser(user.id)
+    Pulse.setUser(user.id)
     // All future events are tagged with user.id
 }
 ```
@@ -33,19 +33,19 @@ This does two things:
 1. **Future events** are tagged with the real user ID instead of the anonymous ID.
 2. **Previous events** emitted with the anonymous ID are retroactively claimed for this user on the server. The SDK automatically flushes all buffered events before sending the claim request, so no in-flight events are missed.
 
-The user ID is persisted in `UserDefaults`, so it survives app restarts. On the next launch, `Owl.configure()` will use the saved user ID automatically -- you do not need to call `setUser()` again unless the user has logged out.
+The user ID is persisted in `UserDefaults`, so it survives app restarts. On the next launch, `Pulse.configure()` will use the saved user ID automatically -- you do not need to call `setUser()` again unless the user has logged out.
 
-If you need to read the active identifier (anonymous or real) at any point, use `Owl.currentUserId`.
+If you need to read the active identifier (anonymous or real) at any point, use `Pulse.currentUserId`.
 
-On launch, `Owl.configure()` also fires an idempotent claim in the background if a saved user ID is present. This closes the gap where a previous session's claim never reached the server (e.g. the app was killed before it flushed). Any late-arriving events still tagged with the old anonymous ID are re-attributed server-side on ingest, so you don't need to handle this case yourself.
+On launch, `Pulse.configure()` also fires an idempotent claim in the background if a saved user ID is present. This closes the gap where a previous session's claim never reached the server (e.g. the app was killed before it flushed). Any late-arriving events still tagged with the old anonymous ID are re-attributed server-side on ingest, so you don't need to handle this case yourself.
 
 ## Clearing a User
 
-On logout, call `Owl.clearUser()` to revert to anonymous tracking:
+On logout, call `Pulse.clearUser()` to revert to anonymous tracking:
 
 ```swift
 func handleLogout() {
-    Owl.clearUser()
+    Pulse.clearUser()
     // Future events use the original anonymous ID
 }
 ```
@@ -58,7 +58,7 @@ If the device may be used by different people (e.g., a shared iPad), pass `newAn
 
 ```swift
 func handleLogout() {
-    Owl.clearUser(newAnonymousId: true)
+    Pulse.clearUser(newAnonymousId: true)
     // Future events use a brand-new anonymous ID
 }
 ```
@@ -76,26 +76,26 @@ class AuthManager: ObservableObject {
         currentUser = user
 
         // Link all previous anonymous events to this user
-        Owl.setUser(user.id)
-        Owl.info("User logged in", screenName: "Login")
+        Pulse.setUser(user.id)
+        Pulse.info("User logged in", screenName: "Login")
     }
 
     func logout() {
-        Owl.info("User logged out")
+        Pulse.info("User logged out")
         authService.logout()
         currentUser = nil
 
         // Revert to anonymous tracking
-        Owl.clearUser()
+        Pulse.clearUser()
     }
 
     func logoutSharedDevice() {
-        Owl.info("User logged out (shared device)")
+        Pulse.info("User logged out (shared device)")
         authService.logout()
         currentUser = nil
 
         // Generate a new anonymous ID for the next user
-        Owl.clearUser(newAnonymousId: true)
+        Pulse.clearUser(newAnonymousId: true)
     }
 }
 ```
@@ -104,27 +104,27 @@ class AuthManager: ObservableObject {
 
 ```
 App Launch
-  -> Owl.configure()
-  -> Events tagged with owl_anon_XXXX
+  -> Pulse.configure()
+  -> Events tagged with pulse_anon_XXXX
 
 User Logs In
-  -> Owl.setUser("user_123")
+  -> Pulse.setUser("user_123")
   -> Buffered events flushed
-  -> Server claims all owl_anon_XXXX events for user_123
+  -> Server claims all pulse_anon_XXXX events for user_123
   -> Future events tagged with user_123
 
 User Logs Out
-  -> Owl.clearUser()
-  -> Future events tagged with owl_anon_XXXX again
+  -> Pulse.clearUser()
+  -> Future events tagged with pulse_anon_XXXX again
 
   OR (shared device)
-  -> Owl.clearUser(newAnonymousId: true)
-  -> Future events tagged with owl_anon_YYYY (new ID)
+  -> Pulse.clearUser(newAnonymousId: true)
+  -> Future events tagged with pulse_anon_YYYY (new ID)
 ```
 
 ## Persistence Summary
 
 | Data | Storage | Survives Reinstall |
 |------|---------|--------------------|
-| Anonymous ID | Keychain (`com.owlmetry.sdk`) | Yes |
+| Anonymous ID | Keychain (`org.pubky.pulse.sdk`) | Yes |
 | Real User ID | UserDefaults | No |

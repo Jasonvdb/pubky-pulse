@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const url = process.env.DATABASE_URL || "postgres://localhost:5432/owlmetry";
+const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
 type Db = ReturnType<typeof createDatabaseConnection>;
 
@@ -41,8 +41,8 @@ async function main() {
   // --- User ---
   const user = await findOrCreate<typeof users.$inferSelect>(
     db, users,
-    { email: "admin@owlmetry.com", name: "Admin" },
-    eq(users.email, "admin@owlmetry.com"),
+    { email: "admin@pulse.pubky.org", name: "Admin" },
+    eq(users.email, "admin@pulse.pubky.org"),
   );
   console.log(`  User:    ${user.email} (${user.id})`);
 
@@ -70,7 +70,7 @@ async function main() {
   console.log(`  Project: ${project.name} (${project.slug})`);
 
   // --- Demo app (apple) ---
-  const clientKey = "owl_client_demo_000000000000000000000000000000000000000000";
+  const clientKey = "pulse_client_demo_000000000000000000000000000000000000000000";
 
   let [app] = await db.select().from(apps).where(and(eq(apps.project_id, project.id), eq(apps.name, "Demo App")));
   if (!app) {
@@ -79,7 +79,7 @@ async function main() {
       project_id: project.id,
       name: "Demo App",
       platform: "apple",
-      bundle_id: "com.owlmetry.demo",
+      bundle_id: "org.pubky.pulse.demo",
     }).returning();
   }
   console.log(`  App:     ${app.name} (${app.id})`);
@@ -90,7 +90,7 @@ async function main() {
   });
 
   // --- Agent API key ---
-  const agentKey = "owl_agent_demo_000000000000000000000000000000000000000000";
+  const agentKey = "pulse_agent_demo_000000000000000000000000000000000000000000";
   await ensureApiKey(db, agentKey, {
     key_type: "agent", app_id: null, team_id: team.id,
     name: "Demo Agent Key", created_by: user.id,
@@ -98,7 +98,7 @@ async function main() {
   });
 
   // --- Demo server app (backend) ---
-  const serverAppKey = "owl_client_svr_0000000000000000000000000000000000000000";
+  const serverAppKey = "pulse_client_svr_0000000000000000000000000000000000000000";
 
   let [serverApp] = await db.select().from(apps).where(and(eq(apps.project_id, project.id), eq(apps.name, "Demo API Server")));
   if (!serverApp) {
@@ -128,7 +128,7 @@ async function main() {
     { session_id: session1, level: "info", message: "Dashboard rendered", screen_name: "Dashboard", user_id: "user-42", source_module: "DashboardVC", environment: "ios", os_version: "18.3", app_version: "1.0.0", device_model: "iPhone 16", locale: "en_US", timestamp: new Date(now - 6 * 60000) },
     { session_id: session1, level: "warn", message: "Slow network response: 2.3s", screen_name: "Dashboard", user_id: "user-42", source_module: "NetworkManager", environment: "ios", os_version: "18.3", app_version: "1.0.0", device_model: "iPhone 16", locale: "en_US", timestamp: new Date(now - 5 * 60000) },
     { session_id: session1, level: "error", message: "Failed to load profile image: 404", screen_name: "ProfileScreen", user_id: "user-42", source_module: "ImageLoader", environment: "ios", os_version: "18.3", app_version: "1.0.0", device_model: "iPhone 16", locale: "en_US", timestamp: new Date(now - 4 * 60000) },
-    { session_id: session1, level: "info", message: "metric:onboarding:record", screen_name: "OnboardingScreen", user_id: "user-42", source_module: "Owlmetry", environment: "ios", os_version: "18.3", app_version: "1.0.0", device_model: "iPhone 16", locale: "en_US", timestamp: new Date(now - 3 * 60000), custom_attributes: { metric_slug: "onboarding", phase: "record" } },
+    { session_id: session1, level: "info", message: "metric:onboarding:record", screen_name: "OnboardingScreen", user_id: "user-42", source_module: "PubkyPulse", environment: "ios", os_version: "18.3", app_version: "1.0.0", device_model: "iPhone 16", locale: "en_US", timestamp: new Date(now - 3 * 60000), custom_attributes: { metric_slug: "onboarding", phase: "record" } },
     { session_id: session1, level: "warn", message: "User skipped onboarding step 3", screen_name: "OnboardingScreen", user_id: "user-42", source_module: "OnboardingVC", environment: "ios", os_version: "18.3", app_version: "1.0.0", device_model: "iPhone 16", locale: "en_US", timestamp: new Date(now - 2 * 60000), custom_attributes: { step: "3", reason: "skipped" } },
     { session_id: session2, level: "info", message: "App launched", screen_name: "HomeScreen", user_id: "user-99", source_module: "AppDelegate", environment: "ios", os_version: "18.2", app_version: "1.0.0", device_model: "iPhone 15 Pro", locale: "en_US", timestamp: new Date(now - 90000) },
     { session_id: session2, level: "info", message: "Search performed", screen_name: "SearchScreen", user_id: "user-99", source_module: "SearchVC", environment: "ios", os_version: "18.2", app_version: "1.0.0", device_model: "iPhone 15 Pro", locale: "en_US", timestamp: new Date(now - 60000), custom_attributes: { query: "weather", results_count: "12" } },
@@ -236,7 +236,7 @@ async function main() {
   const seedUserRows = [
     { user_id: "user-42", is_anonymous: false, first_seen_at: new Date(now - 8 * 60000), last_seen_at: new Date(now - 2 * 60000), appId: app.id },
     { user_id: "user-99", is_anonymous: false, first_seen_at: new Date(now - 90000), last_seen_at: new Date(now - 30000), appId: app.id },
-    { user_id: "owl_anon_demo-visitor", is_anonymous: true, first_seen_at: new Date(now - 120000), last_seen_at: new Date(), appId: app.id },
+    { user_id: "pulse_anon_demo-visitor", is_anonymous: true, first_seen_at: new Date(now - 120000), last_seen_at: new Date(), appId: app.id },
   ];
   for (const row of seedUserRows) {
     const [upserted] = await db

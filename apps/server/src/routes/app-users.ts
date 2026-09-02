@@ -1,19 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, lte, lt, desc, inArray, isNull, ilike, sql } from "drizzle-orm";
-import { apps, projects, appUsers, appUserApps } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
+import { apps, projects, appUsers, appUserApps } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 import {
   parseTimeParam,
   APP_PLATFORMS,
   baseLanguage,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type {
   AppUsersQueryParams,
   TeamAppUsersQueryParams,
   UserLocalesResponse,
   LocaleDemandRow,
   DataMode,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { serializeAppUser } from "../utils/serialize.js";
 import { normalizeLimit } from "../utils/pagination.js";

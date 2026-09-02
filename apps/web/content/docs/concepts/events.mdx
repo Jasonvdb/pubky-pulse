@@ -1,19 +1,19 @@
 ---
 title: Events
-description: Understand how Owlmetry captures, stores, and queries events with log levels, sessions, and timestamps.
+description: Understand how Pubky Pulse captures, stores, and queries events with log levels, sessions, and timestamps.
 ---
 
-Events are the core data unit in Owlmetry. Every interaction your app records -- a screen view, a button tap, a warning, an error -- is captured as an event and sent to the server for storage and analysis.
+Events are the core data unit in Pubky Pulse. Every interaction your app records -- a screen view, a button tap, a warning, an error -- is captured as an event and sent to the server for storage and analysis.
 
 ```text title="Add event logging with your coding agent"
-Instrument this project with Owlmetry event logging. Connect the Owlmetry
-MCP server first (https://owlmetry.com/docs/mcp) — it exposes its integration
-guide as the owlmetry://guide resource, and the SDK docs are at
-https://owlmetry.com/docs/sdks.
+Instrument this project with Pubky Pulse event logging. Connect the Pubky Pulse
+MCP server first (https://pulse.pubky.org/docs/mcp) — it exposes its integration
+guide as the pubky-pulse://guide resource, and the SDK docs are at
+https://pulse.pubky.org/docs/sdks.
 
-- Add Owl.info/warn/error calls at key points: caught exceptions,
+- Add Pulse.info/warn/error calls at key points: caught exceptions,
   user actions, state transitions, and failure paths.
-- Add .owlScreen() to every distinct screen for automatic screen
+- Add .pulseScreen() to every distinct screen for automatic screen
   view tracking.
 - Don't log inside loops or high-frequency callbacks — each call
   sends a network event.
@@ -36,8 +36,8 @@ Each event contains the following fields:
 | `environment` | string | No | Runtime environment (`ios`, `ipados`, `macos`, `watchos`, `android`, `web`, `backend`) |
 | `os_version` | string | No | Operating system version |
 | `app_version` | string | No | App version string |
-| `sdk_name` | string | No | Identifier of the Owlmetry SDK that produced the event (e.g. `owlmetry-swift`, `owlmetry-node`). Auto-set by official SDKs. |
-| `sdk_version` | string | No | Version of the Owlmetry SDK that produced the event. Auto-set by official SDKs. |
+| `sdk_name` | string | No | Identifier of the Pubky Pulse SDK that produced the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`). Auto-set by official SDKs. |
+| `sdk_version` | string | No | Version of the Pubky Pulse SDK that produced the event. Auto-set by official SDKs. |
 | `build_number` | string | No | App build number |
 | `device_model` | string | No | Device hardware model |
 | `locale` | string | No | User locale (e.g., `en_US`) |
@@ -102,7 +102,7 @@ Events can carry arbitrary metadata as `custom_attributes` -- a flat object of s
 }
 ```
 
-The SDKs also auto-capture certain fields as custom attributes. Underscore-prefixed keys (`_*`) are reserved for SDK use — for example, the Swift SDK records `_connection` (wifi, cellular, ethernet, offline) via its network monitor; auto-instrumented network requests carry `_http_url` / `_http_method` / `_http_status`; and `Owl.error(error)` extracts `_error_type` / `_error_stack` / `_error_code` / `_error_domain` / `_error_cause_<n>_*` from the caught Error so the issue tracker can fingerprint by runtime type. `_error_stack` is exempt from the 200-char value cap (capped at 16000 instead) so stack traces survive intact. Avoid using your own underscore-prefixed keys to prevent collisions with future SDK additions.
+The SDKs also auto-capture certain fields as custom attributes. Underscore-prefixed keys (`_*`) are reserved for SDK use — for example, the Swift SDK records `_connection` (wifi, cellular, ethernet, offline) via its network monitor; auto-instrumented network requests carry `_http_url` / `_http_method` / `_http_status`; and `Pulse.error(error)` extracts `_error_type` / `_error_stack` / `_error_code` / `_error_domain` / `_error_cause_<n>_*` from the caught Error so the issue tracker can fingerprint by runtime type. `_error_stack` is exempt from the 200-char value cap (capped at 16000 instead) so stack traces survive intact. Avoid using your own underscore-prefixed keys to prevent collisions with future SDK additions.
 
 ## Auto-Captured Fields
 
@@ -114,8 +114,8 @@ The SDKs automatically populate device and app metadata on every event without a
 - **`build_number`** -- the app's build number
 - **`locale`** -- the device locale (e.g., "en_US")
 - **`environment`** -- the runtime platform (ios, ipados, macos, watchos, android, web, backend)
-- **`sdk_name`** -- identifier of the Owlmetry SDK producing the event (e.g. `owlmetry-swift`, `owlmetry-node`)
-- **`sdk_version`** -- version of the Owlmetry SDK producing the event
+- **`sdk_name`** -- identifier of the Pubky Pulse SDK producing the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`)
+- **`sdk_version`** -- version of the Pubky Pulse SDK producing the event
 - **`is_dev`** -- whether this is a development build (see [Data Mode](/docs/concepts/data-mode))
 
 For SDK-specific details, see the [Swift SDK events guide](/docs/sdks/swift/events) or the [Node SDK events guide](/docs/sdks/node/events).

@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, sql, desc } from "drizzle-orm";
-import { issues, issueFingerprints, issueOccurrences, issueComments, apps, projects, eventAttachments, appUsers } from "@owlmetry/db";
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, ISSUE_STATUSES, OPEN_ISSUE_STATUSES, ATTACHMENT_ISSUE_DETAIL_PAGE_SIZE } from "@owlmetry/shared";
-import type { IssueCountsResponse } from "@owlmetry/shared";
-import type { DataMode, IssueStatus, IssuesQueryParams, UpdateIssueRequest, MergeIssuesRequest, CreateIssueCommentRequest, UpdateIssueCommentRequest } from "@owlmetry/shared";
-import type { IssueAlertFrequency } from "@owlmetry/shared";
+import { issues, issueFingerprints, issueOccurrences, issueComments, apps, projects, eventAttachments, appUsers } from "@pubky-pulse/db";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, ISSUE_STATUSES, OPEN_ISSUE_STATUSES, ATTACHMENT_ISSUE_DETAIL_PAGE_SIZE } from "@pubky-pulse/shared";
+import type { IssueCountsResponse } from "@pubky-pulse/shared";
+import type { DataMode, IssueStatus, IssuesQueryParams, UpdateIssueRequest, MergeIssuesRequest, CreateIssueCommentRequest, UpdateIssueCommentRequest } from "@pubky-pulse/shared";
+import type { IssueAlertFrequency } from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { resolveProject } from "../utils/project.js";
@@ -725,8 +725,8 @@ export async function teamIssuesRoutes(app: FastifyInstance) {
   );
 
   // Per-status issue counts. Authoritative COUNT(*) GROUP BY status — the home
-  // "Open Issues" tile + iOS tile read `open` from here instead of paging the
-  // list endpoint and filtering client-side (which silently undercounts once a
+  // "Open Issues" tile reads `open` from here instead of paging the list
+  // endpoint and filtering client-side (which silently undercounts once a
   // team crosses one page of total issues).
   app.get<{ Querystring: { team_id?: string; project_id?: string; app_id?: string; data_mode?: string } }>(
     "/issues/count",

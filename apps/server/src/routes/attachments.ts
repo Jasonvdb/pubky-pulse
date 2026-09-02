@@ -1,13 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm";
-import { eventAttachments, projects } from "@owlmetry/db";
-import { ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS } from "@owlmetry/shared";
+import { eventAttachments, projects } from "@pubky-pulse/db";
+import { ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS } from "@pubky-pulse/shared";
 import type {
   AttachmentDownloadUrlResponse,
   AttachmentListResponse,
   AttachmentQuotaUsage,
   AttachmentSummary,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import {
   requirePermission,
   getAuthTeamIds,

@@ -477,7 +477,7 @@ describe("DELETE /v1/projects/:id", () => {
   });
 
   it("returns 404 for project belonging to another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@owlmetry.com", "Other");
+    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
 
     const res = await app.inject({
       method: "DELETE",
@@ -489,7 +489,7 @@ describe("DELETE /v1/projects/:id", () => {
   });
 
   it("member cannot delete project", async () => {
-    const { userId: memberUserId, token: memberToken } = await createUserAndGetToken(app, "member@owlmetry.com", "Member");
+    const { userId: memberUserId, token: memberToken } = await createUserAndGetToken(app, "member@pulse.pubky.org", "Member");
     await addTeamMember(testData.teamId, memberUserId, "member");
 
     const res = await app.inject({

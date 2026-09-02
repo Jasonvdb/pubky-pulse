@@ -1,4 +1,4 @@
-import type { MetricPhase } from "@owlmetry/shared";
+import type { MetricPhase } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 type Tone = "red" | "blue" | "green" | "yellow" | "cyan";

@@ -12,7 +12,7 @@ import {
   funnelEventsHourly,
   questionnaireResponsesDaily,
   questionnaireResponsesHourly,
-} from "@owlmetry/db";
+} from "@pubky-pulse/db";
 import {
   STATS_KINDS,
   STATS_GRAINS,
@@ -24,7 +24,7 @@ import {
   type StatsBucketedResponse,
   type StatsBucketedPoint,
   type FunnelStep,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
 import { resolveProject } from "../utils/project.js";

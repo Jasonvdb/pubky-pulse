@@ -3,7 +3,7 @@ title: Projects & Apps
 description: Organize your tracking with projects (cross-platform products) and apps (platform-specific builds).
 ---
 
-Owlmetry uses a two-level hierarchy to organize your tracking: **projects** group related apps by product, and **apps** represent individual platform-specific builds.
+Pubky Pulse uses a two-level hierarchy to organize your tracking: **projects** group related apps by product, and **apps** represent individual platform-specific builds.
 
 ## Projects
 
@@ -86,7 +86,7 @@ Bundle IDs are **immutable after creation**. The update endpoint only accepts a 
 
 ## Auto-Created Client Key
 
-When you create an app, Owlmetry automatically generates a client API key (`owl_client_` prefix) as a row in the `api_keys` table, scoped to that app. The key is returned in the app creation response so you can configure your SDK immediately, and remains viewable at any time from the **API Keys** page in the dashboard.
+When you create an app, Pubky Pulse automatically generates a client API key (`pulse_client_` prefix) as a row in the `api_keys` table, scoped to that app. The key is returned in the app creation response so you can configure your SDK immediately, and remains viewable at any time from the **API Keys** page in the dashboard.
 
 ## Latest App Version
 
@@ -94,7 +94,7 @@ Each app response includes two fields tracking the current public release: `late
 
 ## Typical Setup
 
-A common configuration for a cross-platform mobile product:
+A common configuration for a cross-platform product:
 
 | Project | App | Platform | Bundle ID |
 |---|---|---|---|

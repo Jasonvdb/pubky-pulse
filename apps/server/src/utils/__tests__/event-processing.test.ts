@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { truncateCustomAttributes } from "../event-processing.js";
-import { MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH } from "@owlmetry/shared";
+import { MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH } from "@pubky-pulse/shared";
 
 describe("truncateCustomAttributes", () => {
   it("returns null for undefined input", () => {

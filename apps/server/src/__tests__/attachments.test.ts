@@ -15,7 +15,7 @@ import {
 import { attachmentCleanupHandler } from "../jobs/attachment-cleanup.js";
 import { issueScanHandler } from "../jobs/issue-scan.js";
 import type { JobContext } from "../services/job-runner.js";
-import { createDatabaseConnection } from "@owlmetry/db";
+import { createDatabaseConnection } from "@pubky-pulse/db";
 
 let app: FastifyInstance;
 

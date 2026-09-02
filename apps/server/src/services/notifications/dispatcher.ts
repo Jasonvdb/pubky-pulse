@@ -1,11 +1,11 @@
 import { eq, inArray } from "drizzle-orm";
-import { users, notifications, notificationDeliveries } from "@owlmetry/db";
-import type { Db } from "@owlmetry/db";
+import { users, notifications, notificationDeliveries } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 import {
   NOTIFICATION_CHANNELS,
   isChannelEnabled,
   type NotificationChannel,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import type { JobRunner } from "../job-runner.js";
 import type {
   ChannelAdapter,
@@ -32,7 +32,7 @@ interface DispatcherOptions {
  * payload — the dispatcher writes inbox rows synchronously and queues async
  * delivery jobs for non-`in_app` channels via pg-boss.
  *
- * Adding Telegram / Android push / Slack means dropping in a new
+ * Adding Telegram / Slack / webhooks means dropping in a new
  * ChannelAdapter and extending NOTIFICATION_CHANNELS — no producer change.
  */
 export class NotificationDispatcher {

@@ -1,4 +1,4 @@
-import type { ApiKeyType } from "@owlmetry/shared";
+import type { ApiKeyType } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
 const KEY_TYPE_META: Record<ApiKeyType, { emoji: string; variant: "default" | "secondary" }> = {

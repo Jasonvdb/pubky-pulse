@@ -16,13 +16,13 @@ import {
   questionnaires,
   questionnaireResponses,
   schema,
-} from "@owlmetry/db";
+} from "@pubky-pulse/db";
 import {
   statsAggregateDailyHandler,
   statsAggregateHourlyHandler,
 } from "../jobs/stats-aggregate.js";
 import { TEST_DB_URL } from "./setup.js";
-import { ensurePartitionsForDates } from "@owlmetry/db";
+import { ensurePartitionsForDates } from "@pubky-pulse/db";
 
 const dbClient = postgres(TEST_DB_URL, { max: 1 });
 const db = drizzle(dbClient, { schema });

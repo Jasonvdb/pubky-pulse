@@ -28,7 +28,7 @@ List all apps the caller has access to.
       "name": "iOS App",
       "platform": "apple",
       "bundle_id": "com.example.myapp",
-      "client_secret": "owl_client_abc123...",
+      "client_secret": "pulse_client_abc123...",
       "created_at": "2024-01-01T00:00:00.000Z"
     }
   ]
@@ -52,7 +52,7 @@ Get a single app by ID.
   "name": "iOS App",
   "platform": "apple",
   "bundle_id": "com.example.myapp",
-  "client_secret": "owl_client_abc123...",
+  "client_secret": "pulse_client_abc123...",
   "created_at": "2024-01-01T00:00:00.000Z"
 }
 ```
@@ -80,7 +80,7 @@ Create a new app within a project. A client API key is automatically generated a
   "name": "iOS App",
   "platform": "apple",
   "bundle_id": "com.example.myapp",
-  "client_secret": "owl_client_full_key...",
+  "client_secret": "pulse_client_full_key...",
   "created_at": "2024-01-01T00:00:00.000Z"
 }
 ```
@@ -119,7 +119,7 @@ Update an app. Only the `name` field can be changed.
   "name": "Renamed App",
   "platform": "apple",
   "bundle_id": "com.example.myapp",
-  "client_secret": "owl_client_abc123...",
+  "client_secret": "pulse_client_abc123...",
   "created_at": "2024-01-01T00:00:00.000Z"
 }
 ```
@@ -158,13 +158,13 @@ List users seen by a specific app, ordered by most recently seen.
     {
       "id": "uuid",
       "project_id": "uuid",
-      "user_id": "owl_anon_abc123",
+      "user_id": "pulse_anon_abc123",
       "is_anonymous": true,
       "first_seen_at": "2024-01-01T00:00:00.000Z",
       "last_seen_at": "2024-01-15T10:30:00.000Z",
       "last_country_code": "US",
       "last_app_version": "1.2.0",
-      "last_sdk_name": "owlmetry-swift",
+      "last_sdk_name": "pubky-pulse-swift",
       "last_sdk_version": "0.1.0",
       "claimed_from": null,
       "properties": {},
@@ -189,7 +189,7 @@ App users are project-scoped: the `project_id` identifies the project, and the `
 
 `last_app_version` is the `app_version` string from the most recent event ingested for this user. It mirrors the `last_country_code` pattern — updated on every batch from the incoming events — and is `null` until an event with a non-empty `app_version` arrives.
 
-`last_sdk_name` and `last_sdk_version` are the SDK identifier and version from the most recent event ingested for this user (e.g. `owlmetry-swift` / `0.1.0`). Auto-stamped by official SDKs and updated alongside `last_app_version`. Useful for spotting users on stale SDK versions.
+`last_sdk_name` and `last_sdk_version` are the SDK identifier and version from the most recent event ingested for this user (e.g. `pubky-pulse-swift` / `0.1.0`). Auto-stamped by official SDKs and updated alongside `last_app_version`. Useful for spotting users on stale SDK versions.
 
 `is_dev` marks the user as a development (test) user vs a real production user. It is derived from the user's **client** events only (apple / android / web apps) on a last-write-wins basis — backend-platform events never set it, because dev/test clients routinely point at production backends. A user is either dev or prod, not both. Filter listings with `data_mode` (`production` is the default).
 

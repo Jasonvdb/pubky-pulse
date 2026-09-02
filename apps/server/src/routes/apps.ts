@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, asc } from "drizzle-orm";
-import { apps, projects, apiKeys } from "@owlmetry/db";
-import type { CreateAppRequest, UpdateAppRequest } from "@owlmetry/shared";
-import { APP_PLATFORMS, DEFAULT_API_KEY_PERMISSIONS, generateApiKeySecret } from "@owlmetry/shared";
+import { apps, projects, apiKeys } from "@pubky-pulse/db";
+import type { CreateAppRequest, UpdateAppRequest } from "@pubky-pulse/shared";
+import { APP_PLATFORMS, DEFAULT_API_KEY_PERMISSIONS, generateApiKeySecret } from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
 import { serializeApp, getClientSecret, getClientSecretMap } from "../utils/serialize.js";
 import { logAuditEvent } from "../utils/audit.js";

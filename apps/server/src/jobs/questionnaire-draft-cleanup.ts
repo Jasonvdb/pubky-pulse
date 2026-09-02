@@ -1,5 +1,5 @@
 import { and, isNull, lt, sql } from "drizzle-orm";
-import { questionnaireResponses } from "@owlmetry/db";
+import { questionnaireResponses } from "@pubky-pulse/db";
 import type { JobHandler } from "../services/job-runner.js";
 
 // 90 days is long enough that a user who answered Q1 and bailed can still

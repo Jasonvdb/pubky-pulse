@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
-import type { DataMode } from "@owlmetry/shared";
+import type { DataMode } from "@pubky-pulse/shared";
 
 /**
  * Translate a `data_mode` value into a Drizzle condition on an `is_dev` column.

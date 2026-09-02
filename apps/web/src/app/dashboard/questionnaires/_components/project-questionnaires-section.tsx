@@ -1,6 +1,6 @@
 "use client";
 
-import type { QuestionnaireSpec } from "@owlmetry/shared";
+import type { QuestionnaireSpec } from "@pubky-pulse/shared";
 import { ProjectDot } from "@/lib/project-color";
 import { QuestionnaireCardGrid } from "./questionnaire-card-grid";
 

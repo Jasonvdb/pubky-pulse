@@ -5,7 +5,7 @@ import {
   dropOldestEventPartitions,
   getEventPartitionNames,
   ensurePartitions,
-} from "@owlmetry/db";
+} from "@pubky-pulse/db";
 import { TEST_DB_URL } from "./setup.js";
 
 let client: postgres.Sql;

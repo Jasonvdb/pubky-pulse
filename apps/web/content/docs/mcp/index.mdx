@@ -1,9 +1,9 @@
 ---
 title: MCP
-description: Connect AI agents directly to Owlmetry via the Model Context Protocol — the interface for coding agents. Nothing to install.
+description: Connect AI agents directly to Pubky Pulse via the Model Context Protocol — the interface for coding agents. Nothing to install.
 ---
 
-The Owlmetry MCP endpoint lets AI agents connect directly to your Owlmetry server over HTTP. There is nothing to install or keep up to date — agents configure a URL once and always get the latest tools, so every deploy is instantly live.
+The Pubky Pulse MCP endpoint lets AI agents connect directly to your Pubky Pulse server over HTTP. There is nothing to install or keep up to date — agents configure a URL once and always get the latest tools, so every deploy is instantly live.
 
 <Callout>
 **MCP is the agent interface.** Point your coding agent (Claude Code, Cursor, VS Code Copilot, Windsurf, Zed, JetBrains, Cline, Roo Code) at the endpoint. No installation, no updates, 62 tools available instantly.
@@ -11,13 +11,13 @@ The Owlmetry MCP endpoint lets AI agents connect directly to your Owlmetry serve
 
 Ready to connect? Jump to [Setup](/docs/mcp/setup) for editor-specific configuration.
 
-The endpoint exposes 62 tools covering every operation Owlmetry supports: managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, questionnaires, and attachments; running background jobs; and viewing audit logs.
+The endpoint exposes 62 tools covering every operation Pubky Pulse supports: managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, questionnaires, and attachments; running background jobs; and viewing audit logs.
 
 ## How it works
 
-The MCP endpoint lives at `/mcp` on your Owlmetry API server. It uses the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) in stateless JSON mode — each request is independent, no session management needed.
+The MCP endpoint lives at `/mcp` on your Pubky Pulse API server. It uses the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) in stateless JSON mode — each request is independent, no session management needed.
 
-Agents authenticate with an `owl_agent_*` API key passed as a Bearer token. The endpoint forwards each tool call to the corresponding REST route internally, so all existing permission checks and validation apply.
+Agents authenticate with a `pulse_agent_*` API key passed as a Bearer token. The endpoint forwards each tool call to the corresponding REST route internally, so all existing permission checks and validation apply.
 
 The endpoint needs only a URL and an API key pasted into your editor's config file once — no package to install, no periodic updates, and no interactive login flow.
 
@@ -41,10 +41,10 @@ The endpoint needs only a URL and an API key pasted into your editor's config fi
 
 ## Agent resources
 
-The server also exposes MCP resources that clients can read on connection:
+The server also exposes one MCP resource that clients can read on connection:
 
 | URI | Description |
 |-----|-------------|
-| `owlmetry://guide` | Operational guide — concepts, resource hierarchy, workflows, and conventions |
+| `pubky-pulse://guide` | Operational guide — concepts, resource hierarchy, workflows, and conventions |
 
-Supported clients read `owlmetry://guide` automatically on connection, so an agent picks up the concepts, resource hierarchy, and conventions without any extra setup. The full SDK and platform documentation lives at [/docs](/docs).
+Supported clients read `pubky-pulse://guide` automatically on connection, so an agent picks up the concepts, resource hierarchy, and conventions without any extra setup. The full SDK and platform documentation lives at [/docs](/docs).

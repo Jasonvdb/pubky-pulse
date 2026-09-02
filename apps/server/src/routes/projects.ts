@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, isNotNull, asc } from "drizzle-orm";
-import { projects, apps, apiKeys, metricDefinitions, funnelDefinitions } from "@owlmetry/db";
-import type { CreateProjectRequest, UpdateProjectRequest } from "@owlmetry/shared";
+import { projects, apps, apiKeys, metricDefinitions, funnelDefinitions } from "@pubky-pulse/db";
+import type { CreateProjectRequest, UpdateProjectRequest } from "@pubky-pulse/shared";
 import {
   SLUG_REGEX,
   PG_UNIQUE_VIOLATION,
@@ -18,7 +18,7 @@ import {
   MAX_ATTACHMENT_PROJECT_QUOTA_BYTES,
   ISSUE_ALERT_FREQUENCIES,
   isValidProjectColor,
-} from "@owlmetry/shared";
+} from "@pubky-pulse/shared";
 import { serializeApp, getClientSecretMap } from "../utils/serialize.js";
 import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";

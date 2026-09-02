@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { API_KEY_PREFIX } from "@owlmetry/shared";
+import { API_KEY_PREFIX } from "@pubky-pulse/shared";
 import { createMcpServer } from "./server.js";
 
 export async function mcpRoute(app: FastifyInstance) {
@@ -23,7 +23,7 @@ export async function mcpRoute(app: FastifyInstance) {
       return reply
         .code(401)
         .send({
-          error: "MCP endpoint requires an agent API key (owl_agent_*)",
+          error: "MCP endpoint requires an agent API key (pulse_agent_*)",
         });
     }
 

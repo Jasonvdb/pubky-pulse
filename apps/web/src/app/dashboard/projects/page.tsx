@@ -21,7 +21,7 @@ import { api, ApiError } from "@/lib/api";
 import { useTeam } from "@/contexts/team-context";
 import { useUser } from "@/hooks/use-user";
 import { ProjectDot } from "@/lib/project-color";
-import type { AppResponse, ProjectResponse } from "@owlmetry/shared";
+import type { AppResponse, ProjectResponse } from "@pubky-pulse/shared";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { CardGridSkeleton } from "@/components/ui/skeletons";
 

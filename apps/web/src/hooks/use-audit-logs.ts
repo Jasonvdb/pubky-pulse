@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { buildQueryString } from "@/lib/query";
-import type { AuditLogsResponse, AuditLogsQueryParams, AuditLogResponse } from "@owlmetry/shared";
+import type { AuditLogsResponse, AuditLogsQueryParams, AuditLogResponse } from "@pubky-pulse/shared";
 
 export function useAuditLogs(teamId: string | undefined, filters: AuditLogsQueryParams) {
   const [extraLogs, setExtraLogs] = useState<AuditLogResponse[]>([]);

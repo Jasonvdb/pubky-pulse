@@ -37,7 +37,7 @@ nginx (reverse proxy)
   +-- /opt/pubky-pulse-attachments  (on-disk event attachments)
 ```
 
-Both the API server (`pulse-api`) and the web dashboard (`pulse-web`) are Node.js processes managed by pm2. PostgreSQL runs locally on the same machine. Event attachments (SDK file uploads) are stored on disk alongside the database — not inside Postgres.
+Both the API server (`pulse-api`) and the web dashboard (`pulse-web`) are Node.js processes managed by pm2. PostgreSQL runs locally on the same machine. Event attachments (SDK file uploads) are stored on disk alongside the database — not inside Postgres — so backups are a `pg_dump` of `pubky_pulse` plus a separate sync of the attachments directory. Exclude that directory from `pg_dump`; see [Deployment](/docs/self-hosting/deployment#backups).
 
 ## Domains
 

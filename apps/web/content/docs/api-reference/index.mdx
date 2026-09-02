@@ -3,7 +3,26 @@ title: API Reference
 description: Complete REST API reference for Pubky Pulse. Base URL, authentication, and endpoint documentation.
 ---
 
-Complete REST API reference for Pubky Pulse.
+Complete REST API reference for Pubky Pulse. Every operation the dashboard and the [MCP endpoint](/docs/mcp) perform is available here, authenticated with the same `pulse_agent_` keys.
+
+## Sections
+
+| Section | Covers |
+|---------|--------|
+| [Authentication](/docs/api-reference/authentication) | Send and verify email codes, `whoami`, agent login |
+| [Ingest](/docs/api-reference/ingest) | `POST /v1/ingest` — SDK and backend event batches, gzip and deduplication |
+| [Import](/docs/api-reference/import) | `POST /v1/import` — bulk historical import with no timestamp restrictions |
+| [Events](/docs/api-reference/events) | Query events by app, level, date range, session, and more |
+| [Apps](/docs/api-reference/apps) | App CRUD, platforms, bundle IDs, and client keys |
+| [Projects](/docs/api-reference/projects) | Project CRUD, retention settings, and team scoping |
+| [Metrics](/docs/api-reference/metrics) | Metric definition CRUD and aggregation queries |
+| [Funnels](/docs/api-reference/funnels) | Funnel definition CRUD and open/closed analytics queries |
+| [Issues](/docs/api-reference/issues) | List, view, update, merge issues and manage comments |
+| [Attachments](/docs/api-reference/attachments) | Reserve, upload, list, download (signed URL), delete, and quota usage |
+| [Teams](/docs/api-reference/teams) | Team CRUD, invitations, and member roles |
+| [Identity](/docs/api-reference/identity) | Claim anonymous events for a known user ID and set user properties |
+| [Jobs](/docs/api-reference/jobs) | List, trigger, inspect, and cancel background job runs |
+| [Notifications](/docs/api-reference/notifications) | Per-user inbox: list, mark read, mark all read, soft-delete |
 
 ## Base URL
 
@@ -110,11 +129,6 @@ Most read endpoints accept a `data_mode` query parameter to filter development v
 | `development` | Only development events (`is_dev: true`) |
 | `all` | Both production and development events |
 
-## Additional endpoints
+## MCP endpoint
 
-Beyond the endpoints documented in this section, the API also exposes:
-
-| Area | Notes |
-|------|-------|
-| [Attachments](/docs/api-reference/attachments) | Reserve, upload, list, download (signed URL), and delete event attachments; query per-project/user quota usage. |
-| MCP | `POST /mcp`, `GET /mcp`, `DELETE /mcp` — Model Context Protocol endpoint for AI coding agents. Authenticated with a `pulse_agent_*` Bearer token. See the [MCP docs](/docs/mcp). |
+The same server also hosts the Model Context Protocol endpoint used by AI coding agents: `POST /mcp` (plus `GET /mcp` for the SSE stream; `DELETE /mcp` returns 405). It authenticates with a `pulse_agent_*` Bearer token and exposes 62 tools. See the [MCP docs](/docs/mcp).

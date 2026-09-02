@@ -13,10 +13,12 @@ Agent keys get all permissions by default and are scoped to your team. You can a
 
 ## Endpoint URL
 
+The MCP endpoint is `POST /mcp` on your Pubky Pulse API server, and it exposes all 62 tools.
+
 | Environment | URL |
 |-------------|-----|
-| Pubky's instance | `https://api.pulse.pubky.org/mcp` |
-| Self-hosted | `https://your-server.com/mcp` |
+| Pubky's instance (placeholder — substitute your own host) | `https://api.pulse.pubky.org/mcp` |
+| Self-hosted | `https://api.yourdomain.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
 
 ## Editor Setup
@@ -29,9 +31,9 @@ Pick your editor below for copy-pasteable config. We support **Claude Code**, **
 
 Any MCP-compatible client can connect to Pubky Pulse. The endpoint uses:
 
-- **Server name:** `pubky-pulse`
+- **Server name:** `pubky-pulse` (the dashboard emits `pubky-pulse-local-dev` when it is itself running in development, so a local entry doesn't collide with your production one)
 - **Transport:** Streamable HTTP (stateless JSON)
-- **URL:** `https://api.pulse.pubky.org/mcp` (self-hosted: your own `/mcp` endpoint)
+- **URL:** your instance's `/mcp` endpoint — `https://api.pulse.pubky.org/mcp` on Pubky's instance, `https://api.yourdomain.com/mcp` self-hosted, `http://localhost:4000/mcp` in local development
 - **Auth:** `Authorization: Bearer pulse_agent_YOUR_KEY_HERE` header (required on POST and GET)
 - **Mode:** Stateless JSON — each POST request is independent, no session initialization needed. GET opens an authenticated SSE stream; DELETE returns 405.
 

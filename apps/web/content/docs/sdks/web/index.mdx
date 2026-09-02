@@ -1,0 +1,50 @@
+---
+title: Web SDK
+description: Browser instrumentation for Pubky Pulse. Coming soon.
+---
+
+The Web SDK is in development and is not published yet. This page records the intended scope so you can plan an integration; nothing here is final.
+
+## Planned coverage
+
+- Page and route tracking, including navigation in single-page apps
+- Structured events at the four log levels, with custom attributes
+- Browser error capture
+- Structured metrics for operation start, complete, and fail
+- Funnel step tracking
+- User identity and user properties
+- Feedback capture from the browser
+
+It will follow the same API surface as the [Node.js](/docs/sdks/node), [Swift](/docs/sdks/swift), and [Android](/docs/sdks/android) SDKs, so browser events land in the same project as the rest of your platforms.
+
+## Until it ships
+
+Two approaches work today.
+
+**Send events directly to the ingest API.** Create an app with platform `web`, use its `pulse_client_` key, and POST batches to [`/v1/ingest`](/docs/api-reference/ingest) with `environment` set to `web`. Add the site's origin to `CORS_ORIGINS` on your server or the browser will block the request. A client key embedded in a page is readable by anyone who views the source; it is scoped to a single app and can only write events and user data, never read them.
+
+```bash
+curl -X POST https://ingest.yourdomain.com/v1/ingest \
+  -H "Authorization: Bearer pulse_client_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bundle_id": "com.example.myapp",
+    "events": [
+      {
+        "client_event_id": "550e8400-e29b-41d4-a716-446655440000",
+        "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "level": "info",
+        "message": "screen_viewed",
+        "screen_name": "Pricing",
+        "environment": "web",
+        "app_version": "1.2.0",
+        "locale": "en_US",
+        "timestamp": "2026-01-15T10:30:00.000Z"
+      }
+    ]
+  }'
+```
+
+The [ingest reference](/docs/api-reference/ingest) covers the full field list, the 100-event batch limit, gzip support, and deduplication via `client_event_id`.
+
+**Route through your backend.** Post from the browser to your own API and log there with the [Node.js SDK](/docs/sdks/node). This keeps the client key on the server and lets you tag events with a user ID you have already authenticated.

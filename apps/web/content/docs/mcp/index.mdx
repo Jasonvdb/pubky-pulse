@@ -9,13 +9,30 @@ The Pubky Pulse MCP endpoint lets AI agents connect directly to your Pubky Pulse
 **MCP is the agent interface.** Point your coding agent (Claude Code, Cursor, VS Code Copilot, Windsurf, Zed, JetBrains, Cline, Roo Code) at the endpoint. No installation, no updates, 62 tools available instantly.
 </Callout>
 
-Ready to connect? Jump to [Setup](/docs/mcp/setup) for editor-specific configuration.
-
 The endpoint exposes 62 tools covering every operation Pubky Pulse supports: managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, questionnaires, and attachments; running background jobs; and viewing audit logs.
+
+## Endpoint
+
+The MCP endpoint lives at `POST /mcp` on your Pubky Pulse API server, and clients register it under the server name `pubky-pulse`.
+
+| Instance | MCP endpoint |
+|----------|--------------|
+| Pubky's instance (placeholder — substitute your own host) | `https://api.pulse.pubky.org/mcp` |
+| Self-hosted | `https://api.yourdomain.com/mcp` |
+| Local development | `http://localhost:4000/mcp` |
+
+For Claude Code, adding it is one command:
+
+```bash
+claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky.org/mcp \
+  --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
+```
+
+See [Setup](/docs/mcp/setup) for the equivalent config in every other supported editor.
 
 ## How it works
 
-The MCP endpoint lives at `/mcp` on your Pubky Pulse API server. It uses the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) in stateless JSON mode — each request is independent, no session management needed.
+It uses the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) in stateless JSON mode — each request is independent, no session management needed.
 
 Agents authenticate with a `pulse_agent_*` API key passed as a Bearer token. The endpoint forwards each tool call to the corresponding REST route internally, so all existing permission checks and validation apply.
 
@@ -38,6 +55,7 @@ The endpoint needs only a URL and an API key pasted into your editor's config fi
 | Jobs | `list-jobs`, `get-job`, `trigger-job`, `cancel-job` | 4 |
 | Audit Logs | `list-audit-logs` | 1 |
 | Stats | `query-stats-bucketed` | 1 |
+| **Total** | | **62** |
 
 ## Agent resources
 

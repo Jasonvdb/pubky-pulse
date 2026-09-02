@@ -6,26 +6,28 @@ icon: CircleHelp
 
 ## What is Pubky Pulse?
 
-Pubky Pulse is a self-hosted observability platform for web, backend and mobile apps. It provides structured event logging, performance metrics with p50/p95 tracking, multi-step conversion funnels, automatic error clustering via the issue tracker, and event attachments for logs and screenshots. It is designed to be driven by AI coding agents through its MCP endpoint and REST API, though it includes a full web dashboard for human use.
+Pubky Pulse is self-hosted, agent-first observability for web, backend and mobile apps. It provides structured event logging, performance metrics with p50/p95 tracking, multi-step conversion funnels, automatic error clustering via the issue tracker, and event attachments for logs and screenshots. It is designed to be driven by AI coding agents through its MCP endpoint and REST API, though it includes a full web dashboard for human use.
 
 ## Is Pubky Pulse free?
 
-Yes. Pubky Pulse is open source under the MIT license and free to run, with no limits on apps, events, or features. There is no hosted service and no paid tiers — you deploy it on your own infrastructure.
+Yes. Pubky Pulse is open source under the MIT license and free to run, with no limits on apps, events, or features. You run it on your own infrastructure. Pubky runs its own instance for Pubky's apps; see [Hosted instance](/docs/getting-started/hosted).
 
 ## What database does Pubky Pulse require?
 
-Pubky Pulse uses a single PostgreSQL 16 database with no additional infrastructure. Events are stored in monthly-partitioned tables for performance. There is no Redis, Kafka, or other dependency — just Postgres.
+Pubky Pulse uses a single PostgreSQL database (15 or newer; the VPS setup script installs 16) with no additional infrastructure. Events, metric events, and funnel events are stored in monthly-partitioned tables for performance. There is no Redis, Kafka, or other dependency — just Postgres.
 
 ## Which platforms are supported?
 
-Pubky Pulse collects data from web, backend and mobile apps. Three SDKs ship today, and a browser SDK is in progress:
+Pubky Pulse collects data from web, backend and mobile apps:
 
-- **Web SDK** — browser apps. Coming soon; until it ships, web apps can post to the [ingest API](/docs/api-reference/ingest) directly.
-- **Node.js SDK** — Express, Fastify, serverless functions, and any Node.js backend
-- **Swift SDK** — iOS, iPadOS, and macOS (distributed as a Swift Package)
-- **Android SDK** — Kotlin apps, with optional Jetpack Compose UI (published to Maven Central as `org.pubky.pulse:pulse-android`)
+- **[Web SDK](/docs/sdks/web)** — browser apps. Coming soon; until it ships, web apps can post to the [ingest API](/docs/api-reference/ingest) directly.
+- **[Node.js SDK](/docs/sdks/node)** — Express, Fastify, serverless functions, and any Node.js backend
+- **[Swift SDK](/docs/sdks/swift)** — iOS, iPadOS, macOS, and watchOS (distributed as a Swift Package)
+- **[Android SDK](/docs/sdks/android)** — Kotlin apps, with optional Jetpack Compose UI
 
-The Swift and Node.js SDKs have zero runtime dependencies; the Android core module depends only on `kotlinx-coroutines`. All three handle batching, compression, and retry automatically. Events from every platform appear in the same dashboard.
+The Swift and Node.js SDKs have zero runtime dependencies; the Android core module depends only on `kotlinx-coroutines`. Each handles batching, compression, and retry automatically, and events from every platform appear in the same dashboard.
+
+The SDK repositories are being rebuilt under the [pubky GitHub org](https://github.com/pubky) and are not published yet. The SDK docs describe the API surface as it stands.
 
 ## Can I self-host Pubky Pulse?
 
@@ -37,23 +39,23 @@ Pubky Pulse is purpose-built for the agent-first development workflow. Where oth
 
 ## What does "agent-first" mean?
 
-Agent-first means Pubky Pulse is designed so that AI coding agents (Claude Code, Codex, Cursor, etc.) can handle the entire observability workflow — from installing SDKs and configuring API keys to querying events and diagnosing production issues. The MCP server exposes its integration guide as the `pubky-pulse://guide` resource, which supported clients read automatically on connection, so agents pick up the concepts, conventions, and tool surface without any extra setup; the full SDK documentation lives at [/docs](/docs). You still get a full web dashboard, but the API is the primary interface.
+Agent-first means Pubky Pulse is designed so that AI coding agents (Claude Code, Codex, Cursor, etc.) can handle the entire observability workflow — from installing SDKs and configuring API keys to querying events and diagnosing production issues. The MCP endpoint exposes 62 tools covering every operation, plus an integration guide as the `pubky-pulse://guide` resource, which supported clients read automatically on connection — so agents pick up the concepts, conventions, and tool surface without any extra setup. The full documentation lives at [/docs](/docs). You still get a full web dashboard, but the API is the primary interface.
 
 ## Is Pubky Pulse open source?
 
 Yes, under the MIT license. The codebase is spread across a few repos in the [pubky GitHub org](https://github.com/pubky):
 
 - [pubky/pubky-pulse](https://github.com/pubky/pubky-pulse) — server, web dashboard, and deploy scripts
-- [pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift) — Swift SDK for iOS, iPadOS, and macOS
+- [pubky/pubky-pulse-node](https://github.com/pubky/pubky-pulse-node) — Node.js server SDK
+- [pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift) — Swift SDK for iOS, iPadOS, macOS, and watchOS
 - [pubky/pubky-pulse-android](https://github.com/pubky/pubky-pulse-android) — Android SDK (Kotlin / Jetpack Compose)
-- [pubky/pubky-pulse-node](https://github.com/pubky/pubky-pulse-node) — Node.js Server SDK
 
 You can inspect, modify, and self-host it freely.
 
 ## How do I get started?
 
-The fastest path is to point your coding agent at the MCP endpoint and let it handle the rest. Create an agent API key in the dashboard, add the endpoint to your editor's MCP config, and ask the agent to call the `whoami` tool to confirm the connection. See the [MCP setup guide](/docs/mcp/setup) for editor-specific configuration.
+Get an instance running (self-hosted or the local development stack), sign in to the dashboard, then point your coding agent at the MCP endpoint and let it handle the rest. Add the endpoint to your editor's MCP config with your agent key, and ask the agent to call the `whoami` tool to confirm the connection. See the [MCP setup guide](/docs/mcp/setup) for editor-specific configuration.
 
 Your agent doesn't need any extra instructions: the MCP server exposes its integration guide as the `pubky-pulse://guide` resource, which supported clients read automatically on connection.
 
-See the [getting started guide](/docs/getting-started) for both agent-driven and manual setup paths.
+See the [getting started guide](/docs/getting-started) for the full walkthrough.

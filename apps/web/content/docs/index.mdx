@@ -1,11 +1,11 @@
 ---
 title: Pubky Pulse Documentation
-description: Self-hosted observability platform for web, backend and mobile apps. SDKs for Node.js, Swift and Kotlin (web SDK coming soon), an MCP endpoint for agents, and a REST API.
+description: Self-hosted, agent-first observability for web, backend and mobile apps. An MCP endpoint for agents, a REST API, and SDKs for web (coming soon), Node.js, Swift and Kotlin.
 ---
 
-Pubky Pulse is a self-hosted observability platform built for the agentic development era. It captures events, metrics, and funnels from your apps and backend services, stores everything in a single PostgreSQL instance, and exposes it all through a REST API, an MCP endpoint, and an optional web dashboard.
+Pubky Pulse is self-hosted, agent-first observability for web, backend and mobile apps. It captures events, metrics, and funnels from browsers, backend services, and mobile apps, stores everything in a single PostgreSQL database, and exposes it all through an MCP endpoint, a REST API, and a web dashboard.
 
-Your agent can set up the entire integration, query events, diagnose issues, and act on what it finds -- without a human opening a dashboard.
+Your agent can set up the entire integration, query events, diagnose issues, and act on what it finds — without a human opening a dashboard.
 
 ## Key Features
 
@@ -14,12 +14,13 @@ Your agent can set up the entire integration, query events, diagnose issues, and
 - **Funnel analytics** to measure conversion and drop-off across multi-step flows
 - **Issue tracker** that clusters error events into actionable issues with regression detection
 - **Event attachments** for uploading logs, screenshots, and crash dumps alongside error events
+- **User feedback and questionnaires** collected in-app and triaged in the dashboard
 - **Agent-native API** where every operation is available through `pulse_agent_` keys
-- **Single PostgreSQL** backend with monthly-partitioned event tables -- no Kafka, no ClickHouse, no Redis
+- **Single PostgreSQL** backend with monthly-partitioned event tables — no Kafka, no ClickHouse, no Redis
 
 ## Automate everything
 
-The web dashboard is great for exploring data, but you shouldn't need to open it for routine work. Pubky Pulse exposes every operation -- creating projects, defining metrics, querying funnels, triaging issues -- through its MCP endpoint. **MCP is the agent interface** -- configure it once and your agent always has the latest tools. Your agent can set up an entire analytics pipeline, investigate production issues, and act on the results without a human ever touching the dashboard.
+The web dashboard is great for exploring data, but you shouldn't need to open it for routine work. Pubky Pulse exposes every operation — creating projects, defining metrics, querying funnels, triaging issues — through its MCP endpoint. **MCP is the agent interface** — configure it once and your agent always has the latest tools. Your agent can set up an entire analytics pipeline, investigate production issues, and act on the results without a human ever touching the dashboard.
 
 - **Setup** — a one-time URL + API key in your client config
 - **Updates** — automatic; the tool list always matches the server
@@ -33,12 +34,13 @@ Learn more: [MCP setup](/docs/mcp/setup)
 
 ## Documentation Sections
 
-- **[Getting Started](/docs/getting-started)** -- Set up your first project and start sending events in minutes. Connect your agent via MCP, then add an SDK.
-- **[Concepts](/docs/concepts)** -- Core building blocks: [events](/docs/concepts/events), [metrics](/docs/concepts/metrics), [funnels](/docs/concepts/funnels), [projects and apps](/docs/concepts/projects-and-apps), [authentication](/docs/concepts/authentication), and [data mode](/docs/concepts/data-mode).
-- **Web SDK** -- Browser SDK for web apps. Coming soon; until it ships, web apps can post to the [ingest API](/docs/api-reference/ingest) directly.
-- **[Node.js SDK](/docs/sdks/node)** -- Server-side SDK for backends and serverless functions. Zero runtime dependencies. Covers events, metrics, funnels, identity, and serverless support.
-- **[Swift SDK](/docs/sdks/swift)** -- Native SDK for iOS, iPadOS, and macOS. Zero external dependencies. Covers events, screen tracking, metrics, funnels, and identity.
-- **[Android SDK](/docs/sdks/android)** -- Kotlin SDK for Android, with optional Jetpack Compose UI. Covers events, screen tracking, metrics, funnels, identity, feedback, and questionnaires.
-- **[MCP](/docs/mcp)** -- Connect AI agents directly to Pubky Pulse via the Model Context Protocol. The single agent interface: no installation, automatic updates, 62 tools covering every operation.
-- **[API Reference](/docs/api-reference)** -- Complete REST API covering authentication, ingestion, querying, project/app management, metrics, funnels, issues, attachments, teams, and identity.
-- **[Self-Hosting](/docs/self-hosting)** -- Deploy on your own infrastructure. Covers system requirements, PostgreSQL, nginx, SSL, pm2, and maintenance.
+- **[Getting Started](/docs/getting-started)** — Run or connect to an instance, sign in, add the MCP server to your editor, and let your agent integrate an SDK.
+- **[Concepts](/docs/concepts)** — Core building blocks: [events](/docs/concepts/events), [metrics](/docs/concepts/metrics), [funnels](/docs/concepts/funnels), [issues](/docs/concepts/issues), [projects and apps](/docs/concepts/projects-and-apps), [authentication](/docs/concepts/authentication), and [data mode](/docs/concepts/data-mode).
+- **[Web SDK](/docs/sdks/web)** — Browser SDK for web apps. Coming soon; until it ships, web apps can post to the [ingest API](/docs/api-reference/ingest) directly.
+- **[Node.js SDK](/docs/sdks/node)** — Server-side SDK for backends and serverless functions. Zero runtime dependencies. Covers events, metrics, funnels, identity, and serverless support.
+- **[Swift SDK](/docs/sdks/swift)** — Native SDK for iOS, iPadOS, macOS, and watchOS. Zero external dependencies. Covers events, screen tracking, metrics, funnels, and identity.
+- **[Android SDK](/docs/sdks/android)** — Kotlin SDK for Android, with optional Jetpack Compose UI. Covers events, screen tracking, metrics, funnels, identity, feedback, and questionnaires.
+- **[MCP](/docs/mcp)** — Connect AI agents directly to Pubky Pulse via the Model Context Protocol. The single agent interface: no installation, automatic updates, 62 tools covering every operation.
+- **[API Reference](/docs/api-reference)** — Complete REST API covering authentication, ingestion, querying, project/app management, metrics, funnels, issues, attachments, teams, and identity.
+- **[Self-Hosting](/docs/self-hosting)** — Deploy on your own infrastructure. Covers system requirements, PostgreSQL, nginx, SSL, pm2, and maintenance.
+- **[FAQ](/docs/faq)** — Platforms, self-hosting, licensing, and how Pubky Pulse compares to other analytics tools.

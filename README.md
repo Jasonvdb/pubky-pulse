@@ -1,151 +1,150 @@
 # Pubky Pulse
 
+Self-hosted, agent-first observability for web, backend and mobile apps.
+
 [![Tests](https://github.com/pubky/pubky-pulse/actions/workflows/test.yml/badge.svg)](https://github.com/pubky/pubky-pulse/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-Agent-first observability. Self-hosted. Built for the way you actually ship now.
+> Alpha software. APIs, database schema and configuration can change without notice. Run it, but expect breakage.
 
-Pubky Pulse is an observability platform for web, backend and mobile apps, designed for the agentic development era. Point your coding agent at the setup instructions, and it handles everything — integration, monitoring, debugging, performance analysis. The developer doesn't need to open a dashboard, configure alerts, or interpret charts. The agent does it all through MCP and the REST API.
+## What it is
 
-> **⚠️ Alpha Software** — Pubky Pulse is in early alpha. APIs, schemas, and configuration may change without notice. Not yet production-ready.
+Pubky Pulse collects what your apps report — events, errors, metrics, funnel steps, feedback — into one Postgres database, and exposes all of it through a single HTTP API. Agents talk to that API over MCP; the dashboard and the SDKs are just other clients of the same endpoints. It is web-first and platform-agnostic: any runtime that can make an HTTPS request can send data, and every field the SDKs stamp (device, OS, app version, locale, country) is optional.
 
-## Get Started
+Capability areas:
 
-Add the Pubky Pulse MCP server to your agent's config. It exposes the full product surface as tools, plus its integration guide as the `pubky-pulse://guide` resource — nothing to install. See the [MCP setup docs](https://pulse.pubky.org/docs/mcp) for editor-specific instructions, and [pulse.pubky.org/docs](https://pulse.pubky.org/docs) for the SDK integration guides.
+- **Events** — batched ingest with deduplication and gzip, four log levels, custom attributes, monthly-partitioned storage
+- **Metrics** — structured operations tracked as start / complete / fail, queried as counts, success rates and duration percentiles
+- **Funnels** — named step sequences with drop-off queries
+- **Issues** — error events clustered by fingerprint, with a lifecycle (new, in progress, resolved, silenced, snoozed, regressed), comments, merging and regression detection
+- **Feedback** — free-text reports from your apps, linked back to the session that produced them
+- **Questionnaires** — in-app surveys built from text, single choice, multi choice, rating and NPS questions, with per-question rollups
+- **Attachments** — files uploaded alongside an event, stored on disk behind signed URLs, with per-project and per-user quotas
+- **Identity and user properties** — anonymous IDs (`pulse_anon_`) that can later be claimed by a known user, plus custom key-value metadata per user
+- **Locale demand** — which languages and countries your users have, and which ones your app does not ship yet
+- **Stats rollups** — daily and hourly pre-aggregated counts that outlive raw-event retention
+- **Notifications** — in-app inbox and email, per user and per type
+- **Teams** — owner, admin and member roles with email invites
+- **Audit** — who created, updated or deleted what, queryable like any other resource
+- **Jobs** — 13 background job types on pg-boss, with scheduling, progress and cancellation
+- **Retention** — per-project retention windows plus an optional database size cap that drops the oldest partitions first
 
-Your agent handles the rest — account setup, SDK integration, instrumentation, and querying.
+The whole thing is one Postgres database, one Node API server, and an optional Next.js dashboard. No Kafka, no ClickHouse, no Redis. Every event is tagged `production` or `development`, so a local run never pollutes the numbers you care about, and the three high-volume tables (events, metric events, funnel events) are partitioned by month, so expiring old data means dropping a partition rather than running a long `DELETE`.
 
-## Why agent-first?
+## Get started
 
-Most observability tools are built for humans staring at dashboards. Pubky Pulse is built for agents making API calls. Every feature is accessible programmatically through agent API keys, an MCP server, and a complete REST API. The web dashboard exists as an optional visual layer — not the primary interface.
+MCP is the only agent interface. Point your agent at a running instance:
 
-With Pubky Pulse, your agent can:
+```bash
+claude mcp add --transport http --scope user pubky-pulse \
+  https://api.pulse.pubky.org/mcp \
+  --header "Authorization: Bearer pulse_agent_..."
+```
 
-1. **Set up observability** — create projects, register apps, integrate the SDK into your codebase
-2. **Monitor in production** — query events, filter by level/app/time, investigate error clusters, watch user journeys
-3. **Diagnose issues** — pull the cross-app session timeline around an incident, download crash attachments, read user feedback
-4. **Act on what it finds** — the agent reads the data, understands the problem, and writes the fix
+`api.pulse.pubky.org` is a placeholder — self-hosters use their own instance URL, and local development uses `http://localhost:4000/mcp`. The key is an agent key (`pulse_agent_*`) created from the dashboard; client and import keys are rejected by the MCP endpoint.
 
-The dashboard is there if you want to look. But you shouldn't have to.
+Then tell your agent what you want. It reads the `pubky-pulse://guide` resource on connect, so it knows the resource hierarchy and conventions, and it has 62 tools covering projects, apps, events, metrics, funnels, issues, feedback, questionnaires, attachments, jobs, audit logs, stats and identity. Ask it to create a project and an app, wire the SDK into your codebase, and from then on ask it questions instead of opening charts: what broke since the last release, which funnel step people abandon, what a specific user did in the ten minutes before the crash.
 
-## Why self-hosted?
+Permissions are enforced per tool, not per connection: a key without `projects:write` gets an error from `create-project` and keeps working for everything else, so you can hand a read-only key to an agent you are still learning to trust.
 
-Your analytics data is some of the most sensitive information you have — user behavior, device details, session traces, error logs, crash dumps. Pubky Pulse keeps all of it on your own infrastructure. No data leaves your servers, no third-party vendor has access, no privacy policy to hope they follow. Self-hosted by design means GDPR, HIPAA, and SOC 2 compliance become properties of your infrastructure, not vendor promises.
+Three other key types exist alongside agent keys: `pulse_client_*` for SDKs sending data (scoped to one app's bundle ID), `pulse_import_*` for backfilling history, and a passwordless email code that signs you into the dashboard. Only agent keys reach MCP.
 
-And it's simple: one Postgres database, one Node.js API server, one optional Next.js dashboard. No Kafka, no ClickHouse, no Redis. A `deploy/` folder of Ubuntu scripts gets you from a fresh VPS to a running instance with backups, log rotation, and health checks.
+Editor-specific setup lives at [pulse.pubky.org/docs/mcp/setup](https://pulse.pubky.org/docs/mcp/setup); the walkthrough from empty database to first event is at [pulse.pubky.org/docs/getting-started](https://pulse.pubky.org/docs/getting-started).
 
-## Features
+## Why agent-first
 
-### Ingestion and instrumentation
-- **Event ingestion** — batch ingest up to 100 events per request with deduplication; gzip-compressed payloads supported
-- **Bulk historical import** — import keys (`pulse_import_`) scoped per project; `POST /v1/import` accepts up to 1000 events per request and upserts duplicates
-- **Projects & apps** — organize apps by product across platforms (`apple`, `android`, `web`, `backend`); one Apple app covers iOS, iPadOS, and macOS
-- **Device tracking** — environment, OS version, app version, device model, locale, build number, SDK name + version (auto-stamped by official SDKs); latest released version auto-detected per app (highest version seen in the last 90 days of production events) and stale versions badged across surfaces
-- **Country tracking** — server auto-derives country from Cloudflare's `CF-IPCountry` header at ingest; rendered as flags across the dashboard
-- **Anonymous identity** — SDKs generate `pulse_anon_` IDs; `/v1/identity/claim` retroactively links anonymous events to a known user, including late-arriving events after the claim
-- **Bundle ID validation** — client API keys are scoped to an app's registered bundle ID, validated on every ingest request
-- **SDK console logging** — opt-in via `consoleLogging: true` on `Pulse.configure()` (Swift + Node); prints every tracked event, metric, and funnel step to the console so you can verify instrumentation without a dashboard round-trip
+Dashboards assume a human is watching. Most of the time now, the thing reading your error logs and correlating them with a deploy is an agent — and it is bad at screenshots and good at API calls. So the API is the product here, and everything else is a client of it: the MCP server, the dashboard, the SDKs. Nothing is dashboard-only, which means an agent can do anything a person can do in the web UI.
 
-### Debugging and incident response
-- **Issue tracker** — error events automatically clustered into issues by fingerprint, with status lifecycle (`new → in_progress → resolved → silenced → snoozed → regressed`), agent/user comments, merge duplicates, semver-aware regression detection against `resolved_at_version`, first/last-seen app version tracking. `snoozed` is like `silenced` (no notifications, no fix version required) but auto-flips back to `new` and re-fires the `issue.new` notification when the issue recurs. Same-session error bursts within 5 seconds auto-alias onto a single issue so a loader throwing + caller logging + `op.fail()` doesn't triple-count. Kanban board in the dashboard, full API and MCP surface
-- **Notifications** — multi-channel notification system (in-app inbox, email) with per-user preferences and pluggable channel adapters. Triggers today: `issue.new` (fires as soon as an issue opens or regresses), `issue.digest` (per-project email digest, gated by `issue_alert_frequency`: `none | hourly | 6_hourly | daily | weekly`), `feedback.new`, `questionnaire.response_new`, `job.completed`, and `team.invitation`. Users opt channels in or out per type. See [docs/concepts/notifications](https://pulse.pubky.org/docs/concepts/notifications)
-- **Event attachments** — SDKs can upload files (logs, screenshots, crash dumps) alongside error events; stored on disk, linked to events and issues, downloadable via dashboard and MCP. Per-project + per-user quotas. See [docs/concepts/attachments](https://pulse.pubky.org/docs/concepts/attachments)
-- **Cross-app session investigation** — one endpoint reconstructs the full timeline across all apps a user touched during an incident window
-- **User feedback** — free-text feedback from apps (Swift SDK `PulseFeedbackView` / `Pulse.sendFeedback`) or from your own frontend (Node SDK `Pulse.sendFeedback`). Kanban board with status lifecycle, comments, and session-linked event replay. See [docs/concepts/feedback](https://pulse.pubky.org/docs/concepts/feedback)
+That changes what the tool is for. An agent that can query issues, pull the cross-app session timeline around an incident, download the attachment from a failed request and read the user's feedback about it has enough context to write the fix. The dashboard stays useful for looking around, but you should not have to open it to get an answer.
 
-### Analytics
-- **Structured metrics** — define metrics, track operations with `startOperation`/`complete`/`fail`, query aggregations (counts, success rates, duration percentiles, error breakdowns) via API
-- **Funnel analytics** — define conversion funnels and let your agent query drop-off rates programmatically
-- **In-app questionnaires** — structured multi-question surveys for product research and NPS. Up to 30 questions per questionnaire across `text` / `single_choice` / `multi_choice` / `rating` (1–5) / `nps` (0–10), with per-question rollups. **Progressive draft saves**: the Swift SDK persists answers on every Next tap so users can resume mid-flow across launches; analytics include drafts by default so abandonment renders as a natural drop-off curve. Identity-aware eligibility (`already_responded` / `globally_dismissed` / `inactive`) and global dismiss via a single user property survive reinstall. Schema edits mid-draft are non-breaking — unknown answer keys prune at submission. Full dashboard and MCP surface. See [docs/concepts/questionnaires](https://pulse.pubky.org/docs/concepts/questionnaires)
-- **User properties** — attach custom key-value metadata to users (plan tier, account status, cohort) from the SDKs or the identity API
-- **Time-series rollups** — daily and hourly pre-aggregated counts for events, users, sessions, metric completions, funnel completions, and questionnaire responses. Power subtle SVG sparklines on dashboard cards and trend queries that survive raw-event retention. Per-user window preference (7 / 14 / 30 / 60 / 90 days), backfill via aggregation jobs, full MCP (`query-stats-bucketed`) surface. See [docs/concepts/aggregations](https://pulse.pubky.org/docs/concepts/aggregations)
-- **Locale demand** — rank users by the language they want (device preferred language) and by country, flagging languages with demand the app doesn't ship yet, to decide where to localize next. The Swift SDK reports the user's preferred language (`Locale.preferredLanguages`) plus the app's shipped languages (`Bundle.main.localizations`), so the localization gap is computed automatically. The country breakdown works for every user immediately and bridges until SDK adoption catches up. Dashboard `/dashboard/locales` with project + app scoping; full MCP (`list-user-locales`) surface.
+## Why self-hosted
 
-### Agent and human interfaces
-- **Agent-native API** — every operation available through `pulse_agent_` keys: query events, investigate sessions, read issues, download attachments, trigger jobs
-- **MCP server** — Streamable HTTP endpoint exposing the full product surface as tools (62), plus its integration guide as the `pubky-pulse://guide` resource; agents connect directly with a `pulse_agent_` key
-- **Dashboard optional** — Next.js web UI for when you want a visual overview. Not required for any workflow
+Behavioural data is among the most sensitive you hold: what users do, on which device, from which country, and the stack traces and crash dumps from when it went wrong. Pubky Pulse keeps all of it on infrastructure you control. There is no third-party vendor in the path, nothing to negotiate a data processing agreement over, and no export step if you want to query the raw tables yourself.
 
-### Platform and operations
-- **Auth model** — `pulse_client_` keys for SDKs, `pulse_agent_` keys for agents (MCP and API), `pulse_import_` keys for bulk history, JWT (passwordless email code) for the optional dashboard. Role-based access: **owner** > **admin** > **member**
-- **Team management** — create teams, invite members by email (7-day token expiry), change roles, remove members
-- **Audit trail** — automatic logging of who created, updated, or deleted resources; queryable via API, MCP, and dashboard
-- **Background jobs** — generic job system on pg-boss with cron scheduling, progress tracking, cooperative cancellation, and email alerts. Manages issue scanning, issue digests, aggregation rollups, app-version detection, retention cleanup, and database maintenance with full visibility via dashboard, MCP, and API
-- **Per-project retention** — configurable `retention_days_events`, `retention_days_metrics`, `retention_days_funnels` columns enforced by a daily job
-- **Database auto-pruning** — optional size limit (`MAX_DATABASE_SIZE_GB`) safety net; drops oldest monthly partitions first
-- **Data mode** — every event is tagged `production` / `development`; dashboard sidebar toggles which you're looking at
-- **Single Postgres** — one database, one API server. Monthly partitioned events, metrics, and funnels handle the scale. Postgres does what it's been doing reliably for decades
+Operationally it is deliberately boring. Postgres holds everything; the API server is a normal Node process; backups are `pg_dump` plus one directory of attachment files. The `deploy/` scripts take a fresh Ubuntu VPS to a running instance.
 
 ## Architecture
 
 ```
-apps/server        Fastify API server (port 4000) — the core of Pubky Pulse
-apps/web           Next.js dashboard + Fumadocs documentation site (port 3000)
+apps/server        Fastify API server (port 4000) — the core; also hosts the MCP endpoint and pg-boss jobs
+apps/web           Next.js dashboard and Fumadocs documentation site (port 3000)
 packages/shared    Shared TypeScript types and constants
-packages/db        Drizzle ORM schema, migrations, seed, partition utilities
-deploy/            VPS deployment scripts (Ubuntu 24.04)
+packages/db        Drizzle schema, baseline migration, seeds, partition utilities
+deploy/            Ubuntu VPS setup scripts and nginx snippets
 ```
 
-Sibling repos:
+`packages/db` carries a single baseline migration rather than a chain of incremental ones, so a fresh instance is one `pnpm db:migrate` away. That same step converts the three high-volume tables to partitioned ones and creates partitions for the current month and the next two; a background job keeps the window rolling forward.
 
-- **[pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift)** — Swift SDK for iOS, iPadOS, and macOS (being rebuilt).
-- **[pubky/pubky-pulse-android](https://github.com/pubky/pubky-pulse-android)** — Android SDK (being rebuilt).
-- **[pubky/pubky-pulse-node](https://github.com/pubky/pubky-pulse-node)** — Node.js server SDK, `@synonymdev/pubky-pulse-node` (being rebuilt).
+The MCP server is not a separate process. It lives inside `apps/server` as a Streamable HTTP handler on `POST /mcp`, authenticated with the same agent keys as the REST API and backed by the same service layer — so a tool and its equivalent endpoint cannot drift apart.
 
-The API server is the product. Everything else — the dashboard, the MCP server, the SDKs — is a client of that API. This means your agent has the same capabilities as the web UI. Nothing is dashboard-only.
+## SDKs
 
-## Local Development
+| SDK | Status | Docs | Repo |
+| --- | --- | --- | --- |
+| Web | Coming soon | [/docs/sdks/web](https://pulse.pubky.org/docs/sdks/web) | TBD |
+| Node.js | Docs describe the current API surface | [/docs/sdks/node](https://pulse.pubky.org/docs/sdks/node) | [pubky/pubky-pulse-node](https://github.com/pubky/pubky-pulse-node) |
+| Swift | Docs describe the current API surface | [/docs/sdks/swift](https://pulse.pubky.org/docs/sdks/swift) | [pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift) |
+| Android | Docs describe the current API surface | [/docs/sdks/android](https://pulse.pubky.org/docs/sdks/android) | [pubky/pubky-pulse-android](https://github.com/pubky/pubky-pulse-android) |
 
-Requires Node.js >= 20, PostgreSQL >= 15, and pnpm.
+The SDK repositories are being rebuilt under the [pubky](https://github.com/pubky) org and are not published yet, so package names and coordinates may still change. Ingest is plain HTTP, so you do not have to wait for one.
+
+## Local development
+
+Requires Node.js >= 20, PostgreSQL >= 15 and pnpm 10.
 
 ```bash
-# Install dependencies
 pnpm install
 
-# Create database
 createdb pubky_pulse
+cp .env.example .env          # set DATABASE_URL, JWT_SECRET, PORT, HOST, CORS_ORIGINS
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your DATABASE_URL, JWT_SECRET, etc.
+pnpm db:migrate               # tables plus the first event partitions
+pnpm dev:seed                 # admin user, team, project, app, API keys
 
-# Run migrations (creates tables + event partitions)
-pnpm db:migrate
-
-# Seed dev data (creates admin user, team, project, app, API keys)
-pnpm dev:seed
-
-# Start the API server
-pnpm dev:server
-
-# Run tests (requires pubky_pulse_test database)
-createdb pubky_pulse_test
-pnpm test              # Vitest workspace tests
-pnpm test:coverage     # Server tests with code coverage reporting
+pnpm dev:server               # API on http://localhost:4000
+pnpm dev:web                  # dashboard and docs on http://localhost:3000
 ```
 
-## Self-Hosting
+`pnpm dev:seed` gives you a working account, team, project, app and API keys, and prints them; with no `RESEND_API_KEY` set, the sign-in code for the dashboard is printed to the API server console and written to `.dev-verification-code` instead of being mailed. To get data to look at, `pnpm dev:seed-events`, `pnpm dev:seed-issues` and `pnpm dev:seed-aggregates` generate synthetic events, error clusters and stats rollups.
 
-See the [self-hosting guide](https://pulse.pubky.org/docs/self-hosting) for the full walkthrough — covers system dependencies, PostgreSQL, nginx, pm2, SSL, Cloudflare, firewall, attachments storage, and maintenance.
+Tests need their own database. `apps/server` test setup hardcodes `postgres://localhost:5432/pubky_pulse_test`, so create it under exactly that name and keep Postgres reachable on the default port as your local OS user:
+
+```bash
+createdb pubky_pulse_test
+pnpm test                     # Vitest across the workspace
+pnpm test:coverage            # server tests with coverage
+```
+
+`pnpm dev:unsafe-reset` truncates every table. It refuses to run when `NODE_ENV=production` or when the database name does not end in `_test`, so it is a way to reset the test database, not the development one.
+
+CI pins pnpm 10.33.0 through corepack. Match it locally (`corepack prepare pnpm@10.33.0 --activate`) if you touch `pnpm-lock.yaml`, otherwise a different patch release can rewrite the lockfile.
+
+## Self-hosting
+
+The full walkthrough — system dependencies, PostgreSQL, nginx, SSL, environment variables, maintenance — is at [pulse.pubky.org/docs/self-hosting](https://pulse.pubky.org/docs/self-hosting).
+
+Configuration is environment variables only. Beyond `DATABASE_URL`, `JWT_SECRET`, `PORT`, `HOST` and `CORS_ORIGINS`, a production instance wants `PULSE_ATTACHMENTS_PATH` and `PULSE_ATTACHMENTS_SIGNING_SECRET` (the server refuses to start without the latter, and it must differ from `JWT_SECRET`), `API_PUBLIC_URL` and `WEB_APP_URL`, `COOKIE_DOMAIN`, `MAX_DATABASE_SIZE_GB` for the pruning safety net, and `RESEND_API_KEY` plus `EMAIL_FROM` if you want email out. `.env.example` documents each one.
+
+The short version: `deploy/setup-ubuntu-vps.sh` provisions a fresh Ubuntu host (Node, PostgreSQL, nginx, pm2). The application lives in `/opt/pubky-pulse` and runs as two pm2 processes, `pulse-api` and `pulse-web`. Event attachments are written to `/opt/pubky-pulse-attachments`, outside the database — back that directory up alongside `pg_dump`, and exclude it from the dump itself.
 
 ## Documentation
 
-Full documentation is available at [pulse.pubky.org/docs](https://pulse.pubky.org/docs):
+Documentation is served by the dashboard app and published at [pulse.pubky.org/docs](https://pulse.pubky.org/docs) (placeholder until DNS is set up):
 
-- **[API Reference](https://pulse.pubky.org/docs/api-reference)** — complete REST API with request/response examples
-- **[MCP](https://pulse.pubky.org/docs/mcp)** — setup and tool reference for MCP clients
-- **[Node.js SDK](https://pulse.pubky.org/docs/sdks/node)** — server-side instrumentation (`npm install @synonymdev/pubky-pulse-node`)
-- **[Swift SDK](https://pulse.pubky.org/docs/sdks/swift)** — iOS, iPadOS, and macOS instrumentation (Swift Package)
-- **[Concepts](https://pulse.pubky.org/docs/concepts)** — events, issues, feedback, attachments, metrics, funnels, and more
-- **[Self-Hosting](https://pulse.pubky.org/docs/self-hosting)** — VPS setup, nginx, pm2, SSL, environment variables
+- [Getting started](https://pulse.pubky.org/docs/getting-started) — from empty database to first event
+- [Concepts](https://pulse.pubky.org/docs/concepts) — events, issues, feedback, attachments, metrics, funnels, jobs and more
+- [MCP](https://pulse.pubky.org/docs/mcp) — endpoint, tool reference and editor setup
+- [API reference](https://pulse.pubky.org/docs/api-reference) — every REST route with request and response examples
+- [SDKs](https://pulse.pubky.org/docs/sdks) — web, Node.js, Swift and Android
+- [Self-hosting](https://pulse.pubky.org/docs/self-hosting) — VPS setup, nginx, pm2, SSL, configuration
+- [FAQ](https://pulse.pubky.org/docs/faq) — platforms, licensing, and how this differs from hosted analytics tools
 
-## Links
-
-- [Website](https://pulse.pubky.org)
-- [Documentation](https://pulse.pubky.org/docs)
-- [Self-Hosting Guide](https://pulse.pubky.org/docs/self-hosting)
-- [Node SDK](https://github.com/pubky/pubky-pulse-node)
+Running locally, the same pages are at `http://localhost:3000/docs`. They are MDX files under `apps/web/content/docs`, so a documentation fix is an ordinary pull request.
 
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+## History
+
+Pubky Pulse started as a copy of the owlmetry monorepo; the pre-rework tree is tagged `owlmetry-baseline`.

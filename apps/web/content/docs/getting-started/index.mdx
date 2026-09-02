@@ -1,39 +1,83 @@
 ---
 title: Getting Started
-description: Get up and running with Pubky Pulse in minutes. Your coding agent handles the setup.
+description: Run or connect to a Pubky Pulse instance, sign in, add the MCP server to your editor, and let your agent do the integration.
 ---
 
-Pubky Pulse is designed to be set up by your coding agent. The [MCP endpoint](/docs/mcp/setup) is the agent interface: configure a URL once in your editor and your agent gets 62 tools instantly, with no installation and no updates to keep on top of.
+Pubky Pulse is designed to be set up by your coding agent. There are four steps:
 
-Any MCP-capable editor works (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code). For CI/CD pipelines and shell scripts that can't speak MCP, the [REST API](/docs/api-reference) covers the same operations.
+1. Run or access a Pubky Pulse instance
+2. Sign in to the dashboard
+3. Add the MCP server to your editor
+4. Tell your agent to create a project and an app, then integrate an SDK
 
-You can also [set everything up manually](#manual-setup) if you prefer.
+## 1. Run or access an instance
 
-## Connect via MCP
+Pubky Pulse is self-hosted, so the first thing you need is an instance to talk to.
 
-If your coding agent supports MCP, this is the fastest path. You need two things: an agent API key and your editor's MCP config.
+- **Self-hosted server** — the path for everyone outside Pubky. A single VPS runs the API, the dashboard, and PostgreSQL. See the [Self-Hosting Quickstart](/docs/getting-started/self-hosting), or the [full Self-Hosting guide](/docs/self-hosting) for nginx, SSL, and firewall configuration.
+- **Local development stack** — clone the repo and run it on your machine. Requires Node.js 20+, PostgreSQL 15+, and pnpm.
 
-1. **Create an agent key** — In the dashboard, go to **API Keys** > **New Key** > select **🕶️ Agent** > name it > **Create** > copy the key
-2. **Add the MCP config** — Follow the instructions for your editor in the [MCP setup guide](/docs/mcp/setup)
-3. **Verify** — Ask your agent to call the `whoami` tool
+  ```bash
+  pnpm install
+  createdb pubky_pulse
+  cp .env.example .env
+  pnpm db:migrate
+  pnpm dev:seed     # sample team, project, app, and API keys
+  pnpm dev:server   # API on http://localhost:4000
+  pnpm dev:web      # dashboard on http://localhost:3000
+  ```
 
-That's it. Your agent now has access to all Pubky Pulse operations — creating projects, defining metrics, querying events, and building funnels.
+  Run `pnpm dev:server` and `pnpm dev:web` in separate terminals. The seed data is for development only — its API keys are committed to the repository and publicly known.
+- **Pubky's instance** — Pubky runs its own instance at pulse.pubky.org for Pubky's apps. It is not an open sign-up service; see [Hosted instance](/docs/getting-started/hosted).
 
-<Callout>
-**Self-hosted?** Point the config at your own instance (e.g., `https://your-server.example.com/mcp`, or `http://localhost:4000/mcp` in local development) instead of `api.pulse.pubky.org`. See [Self-hosted setup](/docs/getting-started/self-hosting).
-</Callout>
+## 2. Sign in
 
-### Tell Your Agent to Set Up Pubky Pulse
+Open the dashboard in a browser — `http://localhost:3000` for a local development stack, or whatever hostname you deployed the dashboard to. Enter your email and you'll receive a 6-digit verification code; enter it to sign in. No password needed, and your account is created automatically on first verification.
+
+If no `RESEND_API_KEY` is configured, the verification code is printed to the API server console instead of being emailed.
+
+Signing in also creates a default agent key (`pulse_agent_*`) for your team — that is the credential the MCP config uses. You can create more keys later from the **API Keys** page.
+
+## 3. Add the MCP server to your editor
+
+The [MCP endpoint](/docs/mcp/setup) is the agent interface: one HTTP URL gives your agent 62 tools, with nothing to install and no updates to keep on top of.
+
+| Instance | MCP endpoint |
+|----------|--------------|
+| Pubky's instance (placeholder — substitute your own host) | `https://api.pulse.pubky.org/mcp` |
+| Self-hosted | `https://api.yourdomain.com/mcp` |
+| Local development | `http://localhost:4000/mcp` |
+
+For Claude Code, the whole setup is one command:
+
+```bash
+claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky.org/mcp \
+  --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
+```
+
+Any MCP-capable editor works (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code). The [MCP setup guide](/docs/mcp/setup) has copy-pasteable config for each one, pre-filled with your key when you are signed in.
+
+Verify the connection by asking your agent to call the `whoami` tool. It should return your key type, team, and permissions.
+
+For CI/CD pipelines and shell scripts that can't speak MCP, the [REST API](/docs/api-reference) covers the same operations with the same `pulse_agent_` keys.
+
+## 4. Tell your agent to set up Pubky Pulse
 
 With the endpoint configured, give your coding agent a prompt like this:
 
 ```
 Set up Pubky Pulse in this project. Use the Pubky Pulse MCP tools to create a
-project and an app, then instrument the code with the SDK for this
-platform.
+project and an app, then instrument the code with the SDK for this platform.
 ```
 
-Supported clients read the `pubky-pulse://guide` resource automatically on connection, so your agent already knows the concepts, resource hierarchy, and conventions — it takes it from there: `create-project`, `create-app`, then installing the SDK and wiring up event tracking. The SDK integration guides live at [/docs/sdks](/docs/sdks).
+Supported clients read the `pubky-pulse://guide` resource automatically on connection, so your agent already knows the concepts, resource hierarchy, and conventions — it takes it from there: `create-project`, `create-app`, then installing the SDK and wiring up event tracking.
+
+| SDK | Platforms | Docs |
+|-----|-----------|------|
+| Web | Browser apps | [Coming soon](/docs/sdks/web) |
+| Node.js | Any Node.js backend | [/docs/sdks/node](/docs/sdks/node) |
+| Swift | iOS, iPadOS, macOS, watchOS | [/docs/sdks/swift](/docs/sdks/swift) |
+| Android | Android (Kotlin / Compose) | [/docs/sdks/android](/docs/sdks/android) |
 
 **Tip:** Add this line to your project's `CLAUDE.md`, `AGENTS.md`, or whatever default instructions file your coding agent uses:
 
@@ -43,36 +87,23 @@ Use the Pubky Pulse MCP tools for any analytics work — read the `pubky-pulse:/
 resource first, and see https://pulse.pubky.org/docs/sdks for SDK integration.
 ```
 
-This ensures every future session knows Pubky Pulse is integrated and picks up the right context automatically — including the full tool surface, funnel design rules, and lifecycle metric patterns.
+Every future session then knows Pubky Pulse is integrated and picks up the right context automatically — including the full tool surface, funnel design rules, and lifecycle metric patterns.
 
-## Choose Your Deployment
+## Doing it by hand
 
-- **[Self-hosted](/docs/getting-started/self-hosting)** — Run Pubky Pulse on your own server. Full control over your data, deployed in under 30 minutes. This is the path for everyone outside Pubky.
-- **[Hosted instance](/docs/getting-started/hosted)** — Pubky runs its own instance at pulse.pubky.org for Pubky apps.
+Prefer to click through the dashboard? Steps 1 and 2 are the same; instead of step 4:
 
----
-
-## Manual Setup
-
-Prefer to set things up yourself? Here's what to do.
-
-### 1. Sign In to Your Instance
-
-Open your Pubky Pulse instance in a browser — `http://localhost:3000` for a local development server, or whatever hostname you deployed the dashboard to. Enter your email and you'll receive a 6-digit verification code; enter it to sign in. No password needed. Your account is created automatically on first verification.
-
-Pubky's own instance at [pulse.pubky.org](https://pulse.pubky.org) serves Pubky apps — see [Hosted instance](/docs/getting-started/hosted).
-
-### 2. Create a Project
+### Create a project
 
 In the dashboard sidebar, go to **Projects** and click **Create Project**. A project groups related apps across platforms (e.g., a web app, a backend service, and a mobile app under one project).
 
-### 3. Create an App
+### Create an app
 
 From your project's detail page, click **Create App**. Choose the platform that matches your target:
 
 | Platform | Use for |
 |----------|---------|
-| Apple | iOS, iPadOS, macOS apps |
+| Apple | iOS, iPadOS, macOS, watchOS apps |
 | Android | Android apps |
 | Web | Browser-based apps |
 | Backend | API servers, workers, serverless functions |
@@ -81,144 +112,17 @@ For Apple, Android, and Web platforms, provide a **bundle ID** (e.g., `com.examp
 
 When you create the app, a client API key (`pulse_client_...`) is generated automatically. **Copy this key** — you'll need it to configure the SDK.
 
-### 4. Install and Configure Your SDK
+### Configure the SDK
 
-| SDK | Platforms | Install |
-|-----|-----------|---------|
-| [Swift SDK](/docs/sdks/swift) | iOS, iPadOS, macOS | Swift Package Manager |
-| [Android SDK](/docs/sdks/android) | Android (Kotlin / Compose) | Gradle (`org.pubky.pulse:pulse-android`) |
-| [Node.js SDK](/docs/sdks/node) | Any Node.js backend | `npm install @synonymdev/pubky-pulse-node` |
-| Web SDK | Browser apps | Coming soon |
-
-The `endpoint` in the examples below points at Pubky's instance. On a self-hosted install, use your own ingest host instead (e.g. `https://ingest.your-server.com`, or `http://localhost:4000` in local development).
-
-### Swift Quickstart
-
-For iOS, iPadOS, and macOS apps. Requires an Apple-platform app and client key from Pubky Pulse.
-
-#### 1. Add the Swift Package
-
-In Xcode: **File > Add Package Dependencies**, enter the repository URL, select branch `main`, and add `PubkyPulse` to your target.
-
-Or in `Package.swift`:
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/pubky/pubky-pulse-swift.git", branch: "main")
-]
-```
-
-> For stable releases, pin to a version instead: `.package(url: "…", from: "X.Y.Z")`. See [releases](https://github.com/pubky/pubky-pulse-swift/releases/latest) for the latest.
-
-Add to your target:
-
-```swift
-.target(name: "YourApp", dependencies: [
-    .product(name: "PubkyPulse", package: "pubky-pulse-swift")
-])
-```
-
-Minimum platforms: iOS 16.0, macOS 13.0. Zero external dependencies.
-
-#### 2. Configure
-
-Call `Pulse.configure()` as early as possible -- in your `@main` App `init()` or AppDelegate `didFinishLaunching`:
-
-```swift
-import PubkyPulse
-
-@main
-struct MyApp: App {
-    init() {
-        do {
-            try Pulse.configure(
-                endpoint: "https://ingest.pulse.pubky.org",
-                apiKey: "pulse_client_your_key_here"
-            )
-        } catch {
-            print("Pubky Pulse configuration failed: \(error)")
-        }
-    }
-
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}
-```
-
-#### 3. Log an Event
-
-```swift
-Pulse.info("App launched")
-Pulse.error("Failed to load profile", screenName: "ProfileView")
-Pulse.warn("Slow network response", attributes: ["latency_ms": "1200"])
-```
-
-Events are buffered and flushed automatically in batches. They appear in the Pubky Pulse dashboard within seconds.
-
-<Callout>
-For the full Swift SDK reference -- screen tracking, metrics, funnels, and identity -- see the [Swift SDK documentation](/docs/sdks/swift).
-</Callout>
-
-### Node.js Quickstart
-
-For API servers, job workers, and serverless functions. Requires a backend-platform app and client key from Pubky Pulse.
-
-#### 1. Install
-
-```bash
-npm install @synonymdev/pubky-pulse-node
-```
-
-Zero runtime dependencies. Node.js 20+. Dual ESM and CommonJS builds.
-
-#### 2. Configure
-
-Call `Pulse.configure()` in your main entry point, before any other `Pulse` calls:
-
-```typescript
-import { Pulse } from '@synonymdev/pubky-pulse-node';
-
-Pulse.configure({
-  endpoint: 'https://ingest.pulse.pubky.org',
-  apiKey: 'pulse_client_your_key_here',
-  serviceName: 'my-api',
-  appVersion: '1.0.0',
-});
-```
-
-#### 3. Log an Event
-
-```typescript
-Pulse.info('Server started', { port: 4000 });
-Pulse.error('Database connection failed', { host: 'db.example.com' });
-Pulse.warn('Rate limit approaching', { current: 95, limit: 100 });
-```
-
-Events are buffered in memory and flushed every 5 seconds or when 20 events accumulate. A `beforeExit` handler auto-flushes on graceful shutdown.
-
-#### 4. Scoped Logging (Optional)
-
-In multi-user backends, create a scoped logger to automatically tag events with a user ID:
-
-```typescript
-const pulse = Pulse.withUser('user_42');
-pulse.info('Order placed', { order_id: 'ord_123' });
-pulse.error('Payment failed', { reason: 'insufficient_funds' });
-```
-
-<Callout>
-For the full Node.js SDK reference -- serverless support, metrics, funnels, and identity -- see the [Node.js SDK documentation](/docs/sdks/node).
-</Callout>
+Follow the installation page for your platform: [Node.js](/docs/sdks/node/installation), [Swift](/docs/sdks/swift/installation), or [Android](/docs/sdks/android/installation). Each SDK is configured with two values: the client key you just copied and the ingest endpoint of your instance (`https://ingest.yourdomain.com`, or `http://localhost:4000` in local development).
 
 ## What's Next
 
 Once events are flowing, explore these areas:
 
-- [MCP](/docs/mcp) -- Connect agents via the Model Context Protocol
-- [Events](/docs/concepts/events) -- Understand log levels, sessions, and timestamps
-- [Metrics](/docs/concepts/metrics) -- Track operation durations and success rates
-- [Funnels](/docs/concepts/funnels) -- Measure conversion across multi-step flows
-- [API Reference](/docs/api-reference) -- Full REST API documentation
+- [MCP](/docs/mcp) — the full tool surface, by domain
+- [Events](/docs/concepts/events) — log levels, sessions, and timestamps
+- [Metrics](/docs/concepts/metrics) — operation durations and success rates
+- [Funnels](/docs/concepts/funnels) — conversion across multi-step flows
+- [Issues](/docs/concepts/issues) — error clustering, lifecycle, and regressions
+- [API Reference](/docs/api-reference) — full REST API documentation

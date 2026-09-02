@@ -302,6 +302,12 @@ pg_dump --no-owner pubky_pulse | gzip > /opt/pubky-pulse-backups/pubky-pulse-$(d
 
 If you need to back up attachment files too, sync them separately (e.g. with `rsync` or an object-storage mirror) — do not try to tar them into the SQL dump.
 
+Create the backup directory first (the health-check cron below writes its log there too):
+
+```bash
+mkdir -p /opt/pubky-pulse-backups
+```
+
 A simple daily backup cron that runs at 3am UTC with 7-day rotation:
 
 ```bash

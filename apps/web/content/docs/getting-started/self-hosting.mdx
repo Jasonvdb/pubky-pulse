@@ -12,11 +12,11 @@ This page covers the quick-start path. For the full deployment guide with nginx,
 | Component | Minimum |
 |-----------|---------|
 | OS | Ubuntu 24.04 LTS (or any Linux with systemd) |
-| Node.js | 20+ |
-| PostgreSQL | 16+ |
+| Node.js | 20+ (the setup script installs 22 LTS) |
+| PostgreSQL | 15+ (the setup script installs 16) |
 | RAM | 1 GB |
 | Disk | 25 GB recommended |
-| pnpm | 9+ |
+| pnpm | 10 |
 
 You also need a domain with three A records pointing to your server: root (`yourdomain.com`), `api`, and `ingest`.
 
@@ -55,12 +55,17 @@ cp .env.example .env
 Edit `.env` with your values:
 
 ```bash
+NODE_ENV=production
 DATABASE_URL=postgresql://pubky_pulse:<password>@localhost:5432/pubky_pulse
 JWT_SECRET=<random-64-char-string>
 PORT=4000
 HOST=0.0.0.0
 CORS_ORIGINS=https://yourdomain.com
 COOKIE_DOMAIN=.yourdomain.com
+WEB_APP_URL=https://yourdomain.com
+API_PUBLIC_URL=https://api.yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
+PULSE_ATTACHMENTS_PATH=/opt/pubky-pulse-attachments
 PULSE_ATTACHMENTS_SIGNING_SECRET=<random-hex-string-different-from-JWT_SECRET>
 ```
 
@@ -81,7 +86,11 @@ openssl rand -hex 32       # PULSE_ATTACHMENTS_SIGNING_SECRET
 | `PULSE_ATTACHMENTS_PATH` | No | Directory for attachment bytes. Defaults to `/opt/pubky-pulse-attachments`. Exclude from `pg_dump` backups. |
 | `PULSE_ATTACHMENTS_INTERNAL_URI` | No | nginx `internal` URI prefix to enable X-Accel-Redirect downloads (see `deploy/attachments-nginx-snippet.conf`). |
 | `RESEND_API_KEY` | No | [Resend](https://resend.com) API key for email delivery. If unset, verification codes print to the server console. |
+| `WEB_APP_URL` | No | Base URL of the dashboard, used in invitation emails and redirects |
+| `API_PUBLIC_URL` | No | Public base URL of the API server, used in attachment upload/download URLs |
+| `EMAIL_FROM` | No | "From" address for verification and invitation emails |
 | `MAX_DATABASE_SIZE_GB` | No | Auto-prune old events when the database exceeds this size |
+| `SYSTEM_JOBS_ALERT_EMAIL` | No | Address that receives system job completion and failure alerts |
 
 ### 4. Run Migrations
 
@@ -93,7 +102,7 @@ This creates all tables, indexes, and monthly event partitions. Your first user 
 
 ### 5. Start Services
 
-Using pm2 for process management:
+Create `/opt/pubky-pulse/ecosystem.config.cjs` as shown in the [Deployment guide](/docs/self-hosting/deployment), then start both processes with pm2:
 
 ```bash
 pm2 start ecosystem.config.cjs

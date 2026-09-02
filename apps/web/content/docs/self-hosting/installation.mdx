@@ -31,6 +31,10 @@ pnpm build
 
 The build compiles all packages in dependency order: `shared` then `db` then `server`, plus the Next.js web dashboard.
 
+<Callout>
+On a ~1 GB VPS the Next.js build can run out of heap. If `pnpm build` is killed, raise the heap limit: `NODE_OPTIONS='--max-old-space-size=1024' pnpm build`.
+</Callout>
+
 ## 3. Configure environment
 
 ```bash

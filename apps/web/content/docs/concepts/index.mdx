@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: Core building blocks of Pubky Pulse — events, metrics, funnels, issues, attachments, user properties, jobs, projects, authentication, data mode, and latest version detection.
+description: Core building blocks of Pubky Pulse — events, metrics, funnels, projects, authentication, data mode, issues, feedback, questionnaires, notifications, attachments, jobs, rollups, and version detection.
 ---
 
 Pubky Pulse's data model is built around a small set of composable primitives. Events capture what happened, metrics measure how long things take, and funnels track multi-step conversions. Error events cluster into trackable issues, and optional file attachments let you ship bytes alongside errors. Everything is scoped to projects and apps, secured by API keys, and filterable by data mode.
@@ -10,11 +10,15 @@ Understanding these concepts will help you instrument your app effectively and g
 - **[Events](/docs/concepts/events)** — The core data unit. Every interaction, error, and state change becomes a structured event with log levels, session tracking, timestamps, deduplication, and custom attributes. Events are the foundation that metrics and funnels build on.
 - **[Structured Metrics](/docs/concepts/metrics)** — Lifecycle operations (start/complete/fail/cancel), single-shot measurements, duration tracking, and aggregation queries. Use metrics to track performance-critical operations like API calls, image uploads, or checkout flows.
 - **[Funnels](/docs/concepts/funnels)** — Multi-step conversion tracking with open and closed analysis modes and drop-off rates. Funnels answer "where are users dropping off?" across versions and environments.
-- **[Issues](/docs/concepts/issues)** — Error events automatically fingerprinted and clustered into trackable issues with status lifecycle, occurrence tracking, regression detection, comments, merging, and per-project email alerts.
-- **[Event Attachments](/docs/concepts/attachments)** — Upload input files alongside error events to reproduce bugs locally. Per-user and per-project quotas keep storage bounded.
-- **[User Properties](/docs/concepts/user-properties)** — Custom key-value metadata on each project-level user (plan tier, subscription status, revenue). Merged on each call with a 50-key limit.
-- **[Background Jobs](/docs/concepts/background-jobs)** — Async work powered by pg-boss: retention cleanup, partition creation, soft-delete cleanup, issue scanning and notification, attachment cleanup, app version sync, and stats rollups.
-- **[Latest Version Detection](/docs/concepts/latest-version-detection)** — Per-app `latest_app_version` computed hourly from the last 90 days of production events. Powers the green/amber version badges shown across events, users, and issues.
 - **[Projects & Apps](/docs/concepts/projects-and-apps)** — How projects group apps across platforms, bundle ID validation, project color, retention policies, and auto-created client keys. A single project can have web, backend, iOS, and Android apps — all sharing the same dashboard.
 - **[Authentication & API Keys](/docs/concepts/authentication)** — Passwordless email auth, client vs agent vs import keys, permissions, team roles (owner > admin > member), and invitations.
 - **[Data Mode](/docs/concepts/data-mode)** — Filtering between production and development data across the dashboard, MCP, and API. Keep debug noise out of production views without losing visibility into dev builds.
+- **[User Properties](/docs/concepts/user-properties)** — Custom key-value metadata on each project-level user (plan tier, subscription status, revenue). Merged on each call with a 50-key limit.
+- **[Issues](/docs/concepts/issues)** — Error events automatically fingerprinted and clustered into trackable issues with status lifecycle, occurrence tracking, regression detection, comments, merging, and per-project email alerts.
+- **[Feedback](/docs/concepts/feedback)** — Free-text user feedback submitted from your apps, triaged on a kanban board, and linked back to the session that produced it.
+- **[Questionnaires](/docs/concepts/questionnaires)** — Structured in-app surveys (text, single choice, multi choice, rating, NPS) shown on launch-count, foreground-count, or time-since-install triggers, with per-question analytics.
+- **[Notifications](/docs/concepts/notifications)** — A per-user in-app inbox plus email fan-out from a single producer call: new feedback, issue digests, and manual job results.
+- **[Event Attachments](/docs/concepts/attachments)** — Upload input files alongside error events to reproduce bugs locally. Per-user and per-project quotas keep storage bounded.
+- **[Background Jobs](/docs/concepts/background-jobs)** — Async work powered by pg-boss: retention cleanup, partition creation, soft-delete cleanup, issue scanning and notification, attachment cleanup, app version sync, and stats rollups.
+- **[Time-Series Rollups](/docs/concepts/aggregations)** — Pre-aggregated daily and hourly count tables over events, metric events, funnel events, and questionnaire responses. They power dashboard sparklines and arbitrary trend queries.
+- **[Latest Version Detection](/docs/concepts/latest-version-detection)** — Per-app `latest_app_version` computed hourly from the last 90 days of production events. Powers the green/amber version badges shown across events, users, and issues.

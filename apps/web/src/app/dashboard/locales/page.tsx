@@ -119,8 +119,8 @@ export default function LocalesPage() {
   const supported = data?.supported_languages ?? null;
 
   // Country is only known for users who arrived via SDK ingest (CF-IPCountry);
-  // integration-synced users (e.g. RevenueCat) have none. Share % and the chart
-  // must divide by users-with-a-country, not the full population, or every slice
+  // users created through other paths have none. Share % and the chart must
+  // divide by users-with-a-country, not the full population, or every slice
   // reads as a misleadingly tiny fraction of the total. by_country is unlimited
   // server-side, so summing it is the exact known-country count.
   const usersWithCountry = useMemo(

@@ -101,12 +101,12 @@ describe("isDefaultColumnOrder", () => {
 
 describe("isChannelEnabled", () => {
   it("falls back to NOTIFICATION_TYPE_META defaults when prefs is null", () => {
-    // issue.digest defaults: email only (in_app + mobile_push off so digests don't double up with issue.new).
+    // issue.digest defaults: email only (in_app off so digests don't double up with issue.new).
     expect(isChannelEnabled(null, "issue.digest", "in_app")).toBe(false);
     expect(isChannelEnabled(null, "issue.digest", "email")).toBe(true);
-    expect(isChannelEnabled(null, "issue.digest", "mobile_push")).toBe(false);
-    // job.completed defaults: all three on so the triggering user always sees completion.
-    expect(isChannelEnabled(null, "job.completed", "mobile_push")).toBe(true);
+    // job.completed defaults: both channels on so the triggering user always sees completion.
+    expect(isChannelEnabled(null, "job.completed", "in_app")).toBe(true);
+    expect(isChannelEnabled(null, "job.completed", "email")).toBe(true);
   });
 
   it("falls back to defaults when prefs has no notifications block", () => {
@@ -127,9 +127,9 @@ describe("isChannelEnabled", () => {
 
   it("treats explicit `true` as enabling even when default is false", () => {
     const prefs = {
-      notifications: { types: { "issue.digest": { mobile_push: true } } },
+      notifications: { types: { "issue.digest": { in_app: true } } },
     };
-    expect(isChannelEnabled(prefs, "issue.digest", "mobile_push")).toBe(true);
+    expect(isChannelEnabled(prefs, "issue.digest", "in_app")).toBe(true);
   });
 
   it("returns false for team.invitation channels (transactional, no channels configured)", () => {
@@ -151,7 +151,7 @@ describe("mergeUserPreferences with notifications", () => {
       notifications: {
         types: {
           "issue.digest": { email: false },
-          "feedback.new": { mobile_push: false },
+          "feedback.new": { email: false },
         },
       },
     };
@@ -159,7 +159,7 @@ describe("mergeUserPreferences with notifications", () => {
       notifications: { types: { "issue.digest": { in_app: true } } },
     });
     // The `feedback.new` override survives.
-    expect(result.notifications?.types?.["feedback.new"]?.mobile_push).toBe(false);
+    expect(result.notifications?.types?.["feedback.new"]?.email).toBe(false);
     // The new `issue.digest.in_app` override is in place, and the existing
     // `issue.digest.email` override is preserved (channel maps merge per-key).
     expect(result.notifications?.types?.["issue.digest"]?.in_app).toBe(true);
@@ -169,11 +169,11 @@ describe("mergeUserPreferences with notifications", () => {
   it("preserves sibling channel overrides when patching one channel within a type", () => {
     // Regression: a single-channel patch used to wipe other channel overrides
     // for the same type, which made the preferences page appear to auto-enable
-    // mobile_push when in_app was unchecked (defaults snapped back).
+    // email when in_app was unchecked (defaults snapped back).
     const existing = {
       notifications: {
         types: {
-          "issue.new": { mobile_push: false },
+          "issue.new": { email: false },
         },
       },
     };
@@ -181,7 +181,7 @@ describe("mergeUserPreferences with notifications", () => {
       notifications: { types: { "issue.new": { in_app: false } } },
     });
     expect(result.notifications?.types?.["issue.new"]?.in_app).toBe(false);
-    expect(result.notifications?.types?.["issue.new"]?.mobile_push).toBe(false);
+    expect(result.notifications?.types?.["issue.new"]?.email).toBe(false);
   });
 
   it("preserves columns when patching notifications and vice-versa", () => {
@@ -298,12 +298,11 @@ describe("NOTIFICATION_TYPE_META coverage", () => {
     expect(NOTIFICATION_TYPE_META["team.invitation"].channels).toEqual([]);
   });
 
-  it("user-configurable types include in_app, email, and mobile_push", () => {
+  it("user-configurable types include in_app and email", () => {
     for (const type of ["issue.digest", "feedback.new", "job.completed"] as const) {
       const channels = NOTIFICATION_TYPE_META[type].channels;
       expect(channels).toContain("in_app");
       expect(channels).toContain("email");
-      expect(channels).toContain("mobile_push");
     }
   });
 });

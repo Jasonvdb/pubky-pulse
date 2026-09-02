@@ -11,44 +11,31 @@ Every event, user, and issue in Owlmetry carries an `app_version` string capture
 
 ## How the latest version is determined
 
-Owlmetry uses a hybrid source-of-truth that picks the most reliable signal available per platform:
+The latest version is **computed from your own production events**, identically for every platform -- web, backend and mobile apps alike. No store lookup, no external service, nothing to configure.
 
-| Platform | Source | Notes |
-|---|---|---|
-| `apple` | iTunes Lookup API | Free, unauthenticated public endpoint. Pulls the live App Store version, immune to TestFlight pollution. |
-| `android` / `web` / `backend` | Computed from production events | Highest `app_version` seen in `is_dev = false` events. Compared semver-aware so `1.10.0 > 1.9.0`. |
+For each app, the `app_version_sync` job takes the distinct `app_version` values on events from the last 90 days where `is_dev = false`, and keeps the highest one. Versions are compared semver-aware, so `1.10.0 > 1.9.0`.
 
-The provenance is exposed on every app response as `latest_app_version_source` (`"app_store"` or `"computed"`).
+The 90-day window keeps partition pruning effective and matches the cadence at which apps actually release -- anything older is irrelevant for "latest".
 
 ## When the detection runs
 
 - **Hourly**, at `:15` past the hour, by the `app_version_sync` system job. Iterates every active app.
-- **Immediately on Apple app create** -- a fire-and-forget sync runs as soon as a new app is added so the badge appears without waiting for the next scheduled run.
-- **On demand** -- trigger the job manually via the dashboard Jobs page or the `trigger-job` MCP tool. Pass an `app_id` parameter to refresh just one app instead of the whole system.
-
-```json
-// Refresh every app
-{ "team_id": "<id>", "job_type": "app_version_sync" }
-
-// Refresh just one app
-{ "team_id": "<id>", "job_type": "app_version_sync", "params": { "app_id": "<appId>" } }
-```
+- **On demand** -- the job accepts an optional `app_id` parameter to refresh a single app instead of every app on the server. It is system-scoped, so it runs on its cron schedule rather than being triggered through the API or MCP.
 
 ## The fields on the app response
 
 ```json
 {
   "id": "...",
-  "name": "Lofi iOS",
-  "platform": "apple",
+  "name": "Lofi Web",
+  "platform": "web",
   "bundle_id": "com.example.lofi",
   "latest_app_version": "1.4.2",
-  "latest_app_version_updated_at": "2026-04-23T06:15:00.000Z",
-  "latest_app_version_source": "app_store"
+  "latest_app_version_updated_at": "2026-04-23T06:15:00.000Z"
 }
 ```
 
-`latest_app_version` is `null` until the first sync runs (or when the iTunes lookup returns no results and there are no production events to compute from).
+`latest_app_version` is `null` until the first sync runs, and is reset to `null` whenever an app has no production events with a version in the trailing 90 days.
 
 ## Issues "is on latest" semantics
 
@@ -69,6 +56,6 @@ If the issue's most recent occurrence was on the latest release, the badge is gr
 
 ## Caveats
 
-- App Store lookups default to the `us` storefront. Apps not published in the US may return no results -- the job falls through to the computed-from-events path.
-- The computed fallback uses production events only (`is_dev = false`). If your SDK never marks builds as dev (e.g. you ship release builds with no `is_dev` override), TestFlight builds may inflate the computed "latest" ahead of the App Store release. Apple apps avoid this entirely via the iTunes API.
+- Only production events count (`is_dev = false`). If your builds never mark themselves as dev, pre-release builds can push the computed "latest" ahead of what your users actually have. Set the SDK's data mode correctly on internal builds -- see [Data Mode](/docs/concepts/data-mode).
+- A version only becomes "latest" once at least one production event has arrived from it. Expect the badge to lag a release by however long it takes the first user to open the new build, plus up to an hour for the next sync.
 - Versions are compared with a semver-aware comparator that handles standard formats (`1.2.3`), build-number suffixes (`1.2.3 (456)`), and date-style versions (`2024.10.15`).

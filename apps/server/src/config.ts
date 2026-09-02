@@ -1,6 +1,5 @@
 import { config as dotenvConfig } from "dotenv";
 import { resolve } from "node:path";
-import { loadApnsConfig } from "./utils/apns/config.js";
 
 dotenvConfig({ path: resolve(import.meta.dirname, "../../../.env") });
 
@@ -39,5 +38,4 @@ export const config = {
     (isProduction ? "/opt/owlmetry-attachments" : "./data/attachments"),
   attachmentsSigningSecret: resolveAttachmentsSigningSecret(),
   attachmentsInternalUri: process.env.OWLMETRY_ATTACHMENTS_INTERNAL_URI || "",
-  apns: loadApnsConfig(),
 };

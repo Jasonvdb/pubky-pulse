@@ -10,9 +10,6 @@ async function main() {
   const client = postgres(url, { max: 1 });
   const db = drizzle(client);
 
-  // Remove stale log_level enum values (pre-production cleanup)
-  await removeStaleLogLevelEnumValues(client);
-
   console.log("Running migrations...");
   await migrate(db, { migrationsFolder: "./drizzle" });
 
@@ -28,35 +25,6 @@ async function main() {
 
   await client.end();
   console.log("Migrations complete.");
-}
-
-async function removeStaleLogLevelEnumValues(client: postgres.Sql) {
-  const staleCheck = await client`
-    SELECT enumlabel FROM pg_enum
-    WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'log_level')
-      AND enumlabel IN ('tracking', 'attention')
-  `;
-  if (staleCheck.length === 0) return;
-
-  const staleValues = staleCheck.map((r) => r.enumlabel as string);
-  console.log(`Removing ${staleValues.map((v) => `'${v}'`).join(', ')} from log_level enum...`);
-
-  for (const val of staleValues) {
-    try {
-      await client.unsafe(`UPDATE events SET level = $1 WHERE level = $2`, ['info', val]);
-    } catch {
-      // events table may not exist yet
-    }
-  }
-
-  await client.unsafe(`ALTER TYPE log_level RENAME TO log_level_old`);
-  await client.unsafe(`CREATE TYPE log_level AS ENUM ('info', 'debug', 'warn', 'error')`);
-  try {
-    await client.unsafe(`ALTER TABLE events ALTER COLUMN level TYPE log_level USING level::text::log_level`);
-  } catch {
-    // events table may not exist yet
-  }
-  await client.unsafe(`DROP TYPE log_level_old`);
 }
 
 /**

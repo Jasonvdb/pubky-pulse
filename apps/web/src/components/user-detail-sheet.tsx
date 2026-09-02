@@ -31,96 +31,20 @@ interface UserDetailSheetProps {
   appLatestVersionMap?: Map<string, string | null>;
 }
 
-// Prefix-based grouping. Adding a future ad network (e.g. "meta_") is a
-// one-line extension in `ATTRIBUTION_PREFIXES`. Cross-network keys (e.g.
-// `attribution_source`) are listed explicitly.
-const ATTRIBUTION_PREFIXES = ["asa_"];
-const ATTRIBUTION_EXPLICIT_KEYS = new Set(["attribution_source"]);
-const SUBSCRIPTION_PREFIXES = ["rc_"];
-
-function isAttributionKey(key: string): boolean {
-  if (ATTRIBUTION_EXPLICIT_KEYS.has(key)) return true;
-  return ATTRIBUTION_PREFIXES.some((p) => key.startsWith(p));
-}
-
-function isSubscriptionKey(key: string): boolean {
-  return SUBSCRIPTION_PREFIXES.some((p) => key.startsWith(p));
-}
-
-const ATTRIBUTION_SOURCE_LABELS: Record<string, string> = {
-  apple_search_ads: "Apple Search Ads",
-  apple_test_install: "Apple test install",
-  none: "None",
-};
-
-function stripPrefixAndHumanize(key: string, prefixes: readonly string[]): string {
-  const stripped = prefixes.reduce(
-    (k, p) => (k.startsWith(p) ? k.slice(p.length) : k),
-    key,
-  );
-  const words = stripped.replace(/_/g, " ").trim();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-function humanizeAttributionKey(key: string): string {
-  if (key === "attribution_source") return "Source";
-  return stripPrefixAndHumanize(key, ATTRIBUTION_PREFIXES);
-}
-
 function PropertiesPanel({ properties }: { properties: Record<string, string> }) {
-  const attribution: Array<[string, string]> = [];
-  const subscription: Array<[string, string]> = [];
   const diagnostics: Array<[string, string]> = [];
   const other: Array<[string, string]> = [];
 
   for (const [k, v] of Object.entries(properties)) {
-    // Underscore-prefixed keys are server-stamped diagnostics (e.g.
-    // `_asa_enrichment_last_outcome`). Hide them from the main properties
-    // list and render in a separate, collapsed-feel Diagnostics section.
+    // Underscore-prefixed keys are server-stamped diagnostics. Hide them from
+    // the main properties list and render in a separate, collapsed-feel
+    // Diagnostics section.
     if (k.startsWith("_")) diagnostics.push([k, v]);
-    else if (isAttributionKey(k)) attribution.push([k, v]);
-    else if (isSubscriptionKey(k)) subscription.push([k, v]);
     else other.push([k, v]);
   }
 
-  // Within Attribution, always surface `attribution_source` first.
-  attribution.sort(([a], [b]) => {
-    if (a === "attribution_source") return -1;
-    if (b === "attribution_source") return 1;
-    return a.localeCompare(b);
-  });
-
   return (
     <>
-      {attribution.length > 0 && (
-        <>
-          <Separator className="my-4" />
-          <h3 className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Attribution
-          </h3>
-          <div className="space-y-1">
-            {attribution.map(([k, v]) => {
-              const label = humanizeAttributionKey(k);
-              const value =
-                k === "attribution_source" ? ATTRIBUTION_SOURCE_LABELS[v] ?? v : v;
-              return <DetailRow key={k} label={label} value={value} />;
-            })}
-          </div>
-        </>
-      )}
-      {subscription.length > 0 && (
-        <>
-          <Separator className="my-4" />
-          <h3 className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Subscription
-          </h3>
-          <div className="space-y-1">
-            {subscription.map(([k, v]) => (
-              <DetailRow key={k} label={stripPrefixAndHumanize(k, SUBSCRIPTION_PREFIXES)} value={v} />
-            ))}
-          </div>
-        </>
-      )}
       {other.length > 0 && (
         <>
           <Separator className="my-4" />

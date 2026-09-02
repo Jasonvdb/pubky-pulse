@@ -13,12 +13,9 @@
     "funnels",
     "issues",
     "attachments",
-    "ads",
-    "integrations",
     "teams",
     "identity",
     "jobs",
-    "notifications",
-    "devices"
+    "notifications"
   ]
 }

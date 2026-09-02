@@ -65,7 +65,6 @@ func application(
 | `compressionEnabled` | `Bool` | `true` | Gzip-compress request bodies before sending. |
 | `networkTrackingEnabled` | `Bool` | `true` | Automatically track URLSession HTTP requests. |
 | `consoleLogging` | `Bool` | `true` | Print events to the Xcode console / terminal. Each line is prefixed with `🦉 Owlmetry` and the log level. Set to `false` to suppress. |
-| `attributionEnabled` | `Bool` | `true` | Auto-capture Apple Search Ads attribution on configure. See [below](#apple-search-ads-attribution). |
 
 ## Full Example with All Options
 
@@ -99,58 +98,6 @@ try Owl.configure(
 | `invalidEndpoint` | The endpoint string is not a valid URL. |
 | `invalidApiKey` | The API key does not start with `owl_client_`. |
 | `missingBundleId` | `Bundle.main.bundleIdentifier` is nil or empty. This can happen in command-line tools or certain test environments. |
-
-## Apple Search Ads Attribution
-
-When `attributionEnabled` is `true` (the default), the SDK auto-captures Apple Search Ads attribution shortly after `Owl.configure()`. It asks the AdServices framework for an attribution token, POSTs it to `/v1/identity/attribution/apple-search-ads`, and the server resolves it against Apple's Attribution API and writes the results to the current user's [properties](/docs/sdks/swift/user-properties).
-
-The SDK writes one of:
-
-- `attribution_source = "apple_search_ads"` plus `asa_campaign_id`, `asa_ad_group_id`, `asa_keyword_id`, `asa_claim_type`, `asa_ad_id`, `asa_creative_set_id` when Apple attributes the install.
-- `attribution_source = "none"` when Apple responds but the install is not attributed, or after `ASA_MAX_PENDING_ATTEMPTS` (5) failed retries.
-- `attribution_source = "apple_test_install"` (with **no** `asa_*` fields) when Apple's response carries its deliberate non-production fixture — same numeric ID across campaign, ad group, and ad. This fires for **TestFlight builds, Xcode-deployed dev builds on real devices, and the iOS simulator**. Filter these out of acquisition dashboards alongside organic installs by excluding `attribution_source IN ('none', 'apple_test_install')` so a developer's own install doesn't get counted as a paid acquisition. The placeholder IDs are intentionally dropped so they don't pollute reports or trigger an Apple Ads enrichment call.
-
-The SDK's live path only populates numeric IDs — Apple's AdServices Attribution API doesn't return human-readable names. Name fields (`asa_campaign_name`, `asa_ad_group_name`, `asa_ad_name`, `asa_keyword`) are populated by one of two server-side integrations, both of which cover every attributed user and are per-field merged so the live SDK's numeric IDs are never overwritten:
-
-- **[Apple Search Ads integration](/docs/concepts/integrations#apple-search-ads)** (recommended, self-contained) — Owlmetry calls Apple's Campaign Management API directly to resolve IDs → names.
-- **[RevenueCat integration](/docs/concepts/integrations)** with RC's Advanced Apple AdServices integration configured — RC resolves the names server-side on AdServices token receipt; Owlmetry pulls them via RC sync and webhooks.
-
-Capture runs once per anonymous ID and is idempotent — the SDK records completion in `UserDefaults` and skips on subsequent launches. If Apple's attribution record isn't ready yet (HTTP 404), the server returns `pending: true` and the SDK retries on the next launch, up to 5 attempts across ~24h.
-
-To opt out entirely:
-
-```swift
-try Owl.configure(
-    endpoint: "https://ingest.owlmetry.com",
-    apiKey: "owl_client_...",
-    attributionEnabled: false
-)
-```
-
-If you disable auto-capture, you can still submit a token manually — e.g. after showing an ATT prompt — with:
-
-```swift
-let sent = await Owl.sendAppleSearchAdsAttributionToken(token)
-```
-
-`Owl.resetAppleSearchAdsAttributionCapture()` clears the captured-once flag if you ever need to force a retry.
-
-Attribution properties carry through the identity claim: when an anonymous user is upgraded via `Owl.setUser()`, `asa_*` and `attribution_source` merge into the real user's properties.
-
-### Debugging attribution from the dashboard
-
-Every capture attempt emits an `sdk:attribution_capture` event so you can spot failures without attaching a debugger. The `_outcome` attribute distinguishes the states:
-
-| `_outcome` | Level | Extra attributes | When |
-|---|---|---|---|
-| `success` | info | `_attribution_source` | Apple returned a decisive answer (`apple_search_ads`, `none`, or `apple_test_install`). |
-| `pending` | info | `_attempt`, `_max_attempts` | Apple 404 — record not ready yet. Will retry on next launch. |
-| `gave_up` | warn | `_attempts` | Hit the 5-pending cap; SDK wrote `attribution_source = "none"`. |
-| `token_fetch_failed` | warn | `_error` | `AAAttribution.attributionToken()` threw on-device. |
-| `invalid_token` | warn | — | Owlmetry rejected the token as empty or malformed; never retried. Common in regions where AdServices is unavailable or the user disabled personalized ads. |
-| `transport_failure` | error | — | Owlmetry POST failed after transport retries. |
-
-Filter the dashboard events list by `sdk:attribution_capture` to see the capture outcome for each install.
 
 ## Calling Configure More Than Once
 

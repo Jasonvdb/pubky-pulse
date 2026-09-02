@@ -34,14 +34,14 @@ The normalization strips:
 
 ### Network request errors split by endpoint
 
-`sdk:network_request` errors (connection failures emitted by the Swift SDK's URLSession instrumentation) discriminate on `${method} ${host}${templated_path}` from the event's `_http_url` and `_http_method` custom attributes. So a connection failure to `api.revenuecat.com/v1/subscribers/<id>/offerings` becomes a different issue from one to your own backend, instead of all SDK-tracked network errors collapsing onto a single issue per source module.
+`sdk:network_request` errors (connection failures emitted by the Swift SDK's URLSession instrumentation) discriminate on `${method} ${host}${templated_path}` from the event's `_http_url` and `_http_method` custom attributes. So a connection failure to `api.stripe.com/v1/customers/<id>/subscriptions` becomes a different issue from one to your own backend, instead of all SDK-tracked network errors collapsing onto a single issue per source module.
 
 Path templating runs over each `/`-separated segment to keep per-user IDs from fragmenting the issue:
 - UUIDs become `<uuid>` (e.g. `/v1/sessions/550e8400-...` → `/v1/sessions/<uuid>`)
 - Pure-numeric segments become `<n>` (e.g. `/users/123` → `/users/<n>`)
 - 12+ char segments containing at least one digit become `<id>` — generic across Firebase Auth UIDs, Stripe IDs (`cus_*`, `sub_*`, `pi_*`), MongoDB ObjectIds, Cuid/Cuid2, Nanoid, KSUID, ULID, Auth0 sub claims (URL-decoded so `auth0%7C...` works), and `did:plc:*` DIDs. The "must contain a digit" guard prevents real endpoint names like `/metrics-aggregator/` from being templated.
 
-Network issues get a human-readable title `Network error: METHOD host/path` (e.g. `Network error: GET api.revenuecat.com/v1/subscribers/<id>/offerings`).
+Network issues get a human-readable title `Network error: METHOD host/path` (e.g. `Network error: GET api.stripe.com/v1/customers/<id>/subscriptions`).
 
 ## Session-burst aliasing
 
@@ -104,12 +104,12 @@ snoozed → new (automatic, on next occurrence — see Auto-revert below)
 | `in_progress` | Claimed by a user or agent for investigation. |
 | `resolved` | Fixed. Tagged with the app version where the fix was applied (required — see [Regression Detection](#regression-detection) below). |
 | `silenced` | Known issue, notifications suppressed. Occurrences still tracked. Stays silenced even if it keeps happening — use when there's nothing to fix and you don't want to hear about it again (e.g. transient infra blip you've decided to live with). |
-| `snoozed` | Suspected one-off. Like `silenced` (no notifications, no fix version) but **automatically reverts to `new` and re-fires the `issue.new` push the next time it recurs**. Use when you think an error was a one-off and only want to be alerted if the assumption turns out wrong. The transition to `snoozed` records `snoozed_at`; the auto-revert clears it. |
+| `snoozed` | Suspected one-off. Like `silenced` (no notifications, no fix version) but **automatically reverts to `new` and re-fires the `issue.new` notification the next time it recurs**. Use when you think an error was a one-off and only want to be alerted if the assumption turns out wrong. The transition to `snoozed` records `snoozed_at`; the auto-revert clears it. |
 | `regressed` | Was resolved, but the error reappeared in a **newer** app version. |
 
 ### Auto-revert from snoozed
 
-When the issue-scan job processes a new occurrence for an issue currently in `snoozed`, the job flips the issue's status to `new`, clears `snoozed_at`, and adds it to the per-team `issue.new` push the same way a brand-new prod issue would. There's no version comparison (snooze carries no fix claim) and no extra notification type — the team gets the same instant push they'd get if the issue had just been created. Once back in `new`, the next `issue.digest` cycle picks the issue up too.
+When the issue-scan job processes a new occurrence for an issue currently in `snoozed`, the job flips the issue's status to `new`, clears `snoozed_at`, and adds it to the per-team `issue.new` notification the same way a brand-new prod issue would. There's no version comparison (snooze carries no fix claim) and no extra notification type — the team gets the same instant notification they'd get if the issue had just been created. Once back in `new`, the next `issue.digest` cycle picks the issue up too.
 
 ### Regression Detection
 
@@ -150,16 +150,16 @@ Both dev (`is_dev: true`) and production events create issues, tracked separatel
 
 ## Notifications
 
-Two notification paths fire off issue activity, both production-only (dev issues are never surfaced to a team's inbox or push):
+Two notification paths fire off issue activity, both production-only (dev issues are never surfaced to a team's inbox or email):
 
-- **`issue.new`** — instant fan-out. The `issue_scan` job dispatches one notification per team at the end of every run summarizing all production issues created or regressed during that scan. Bypasses the per-project digest cadence so push lands in close to real time. Defaults to in-app + mobile push on, email off.
-- **`issue.digest`** — per-project rollup. The `issue_notify` job assembles a periodic digest at each project's configured cadence and sends it to every team member over their enabled channels. Defaults to email only (in-app + mobile push off so the digest doesn't double up with the instant `issue.new` push).
+- **`issue.new`** — instant fan-out. The `issue_scan` job dispatches one notification per team at the end of every run summarizing all production issues created or regressed during that scan. Bypasses the per-project digest cadence so it lands in close to real time. Defaults to in-app on, email off.
+- **`issue.digest`** — per-project rollup. The `issue_notify` job assembles a periodic digest at each project's configured cadence and sends it to every team member over their enabled channels. Defaults to email only (in-app off so the digest doesn't double up with the instant `issue.new` notification).
 
-Both types route through the unified [notifications dispatcher](/docs/concepts/notifications), so each recipient's per-channel toggles at `/dashboard/profile/notifications` decide whether a given delivery becomes an inbox row, an email, a mobile push, or some combination.
+Both types route through the unified [notifications dispatcher](/docs/concepts/notifications), so each recipient's per-channel toggles at `/dashboard/profile/notifications` decide whether a given delivery becomes an inbox row, an email, or both.
 
 ### Per-Project Alert Frequency
 
-The `issue_alert_frequency` setting controls **only the digest cadence** — `issue.new` push fires every scan regardless.
+The `issue_alert_frequency` setting controls **only the digest cadence** — `issue.new` fires every scan regardless.
 
 | Frequency | Interval |
 |-----------|----------|

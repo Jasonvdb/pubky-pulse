@@ -15,8 +15,8 @@ interface StatCardProps {
   icon: LucideIcon;
   href?: string;
   isLoading?: boolean;
-  // Optional trailing "+N" / "-N" indicator (muted; colored deltas live on
-  // dedicated rating surfaces, not on dashboard stat tiles).
+  // Optional trailing "+N" / "-N" indicator. Always muted on stat tiles —
+  // colored deltas are reserved for dedicated detail surfaces.
   delta?: number | null;
   /**
    * Optional trend chart shown at the bottom of the card. `values` are
@@ -103,11 +103,11 @@ export function StatCard({
 export function StatRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-md border bg-card shadow-sm overflow-hidden">
-      {/* 5-col grid at lg gives a clean 2 rows for the current 10-card layout
+      {/* 4-col grid at lg gives a clean 2 rows for the current 8-card layout
           (Issues, Events, Users, Sessions, Metrics, Funnels, Feedback,
-          Responses, Reviews, Avg Rating). At smaller breakpoints the count of
-          rows adjusts naturally — divides keep the visual block clean. */}
-      <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-5">
+          Responses). At smaller breakpoints the count of rows adjusts
+          naturally — divides keep the visual block clean. */}
+      <div className="grid grid-cols-2 divide-x divide-y divide-border sm:grid-cols-3 lg:grid-cols-4">
         {children}
       </div>
     </div>

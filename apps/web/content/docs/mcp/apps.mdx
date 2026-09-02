@@ -15,7 +15,7 @@ List all apps accessible to this agent.
 |-----------|------|----------|-------------|
 | `team_id` | UUID | No | Filter by team ID |
 
-Returns `{ apps: [...] }` with each app's `id`, `name`, `platform`, `bundle_id`, `client_secret`, `project_id`, and timestamps. Each app also carries `latest_app_version`, `latest_app_version_updated_at`, and `latest_app_version_source` (`"app_store"` or `"computed"`) — compare these against an event's `app_version` to tell whether the data is from the current release. See [Latest Version Detection](/docs/concepts/latest-version-detection).
+Returns `{ apps: [...] }` with each app's `id`, `name`, `platform`, `bundle_id`, `client_secret`, `project_id`, and timestamps. Each app also carries `latest_app_version` and `latest_app_version_updated_at` — compare these against an event's `app_version` to tell whether the data is from the current release. See [Latest Version Detection](/docs/concepts/latest-version-detection).
 
 ## get-app
 
@@ -73,7 +73,6 @@ List users for a specific app. Supports search, filtering, and pagination.
 | `app_id` | UUID | Yes | The app ID |
 | `search` | string | No | Search by user ID |
 | `is_anonymous` | string | No | `"true"` or `"false"` to filter by anonymous status |
-| `billing_status` | string | No | Comma-separated billing tiers to include: `paid`, `trial`, `free`. Derived from RevenueCat-synced user properties. Omit or pass all three for no filter. |
 | `data_mode` | string | No | `production` (default), `development`, or `all`. A user's dev/prod flag is derived from their client (non-backend) events. |
 | `cursor` | string | No | Pagination cursor |
 | `limit` | number | No | Max results (default 50, max 200) |

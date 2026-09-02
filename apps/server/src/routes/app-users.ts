@@ -1,14 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, gte, lte, lt, desc, inArray, isNull, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, gte, lte, lt, desc, inArray, isNull, ilike, sql } from "drizzle-orm";
 import { apps, projects, appUsers, appUserApps } from "@owlmetry/db";
 import type { Db } from "@owlmetry/db";
 import {
   parseTimeParam,
-  parseBillingTiers,
-  isBillingFilterActive,
   APP_PLATFORMS,
   baseLanguage,
-  type BillingTier,
 } from "@owlmetry/shared";
 import type {
   AppUsersQueryParams,
@@ -20,33 +17,7 @@ import type {
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { serializeAppUser } from "../utils/serialize.js";
 import { normalizeLimit } from "../utils/pagination.js";
-import { paidTierPredicate } from "../utils/billing-sql.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
-
-/**
- * Build a SQL predicate that matches users in any of the requested billing tiers.
- * Tiers are derived from the JSONB `properties` column (rc_period_type, rc_subscriber),
- * matching the dashboard's badge logic. `IS DISTINCT FROM` so NULL values behave as "not equal".
- *
- * Note: `rc_subscriber` is only `"true"` for users on a renewing subscription.
- * A cancelled trial has `rc_subscriber="false"` + `rc_period_type="trial"`, so it
- * correctly matches the `trial` tier and NOT the `paid` tier.
- */
-function buildBillingStatusCondition(tiers: Set<BillingTier>): SQL | undefined {
-  const exprs: SQL[] = [];
-  if (tiers.has("trial")) {
-    exprs.push(sql`${appUsers.properties}->>'rc_period_type' = 'trial'`);
-  }
-  if (tiers.has("paid")) {
-    exprs.push(paidTierPredicate(sql`${appUsers.properties}`));
-  }
-  if (tiers.has("free")) {
-    exprs.push(
-      sql`(${appUsers.properties}->>'rc_subscriber') IS DISTINCT FROM 'true' AND (${appUsers.properties}->>'rc_period_type') IS DISTINCT FROM 'trial'`,
-    );
-  }
-  return or(...exprs);
-}
 
 // User-facing surfaces show one app pill + "+N more" — order by platform so client
 // platforms (apple/android/web) surface ahead of backend.
@@ -243,7 +214,7 @@ export async function appUsersRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const auth = request.auth;
       const { id } = request.params;
-      const { search, is_anonymous, billing_status, data_mode, sort, cursor, limit: rawLimit } = request.query;
+      const { search, is_anonymous, data_mode, sort, cursor, limit: rawLimit } = request.query;
 
       const limit = normalizeLimit(rawLimit);
       const sortColumn = sort === "first_seen" ? appUsers.first_seen_at : appUsers.last_seen_at;
@@ -278,12 +249,6 @@ export async function appUsersRoutes(app: FastifyInstance) {
         conditions.push(ilike(appUsers.user_id, `%${search}%`));
       }
 
-      const billingTiers = parseBillingTiers(billing_status);
-      if (isBillingFilterActive(billingTiers)) {
-        const billingCondition = buildBillingStatusCondition(billingTiers);
-        if (billingCondition) conditions.push(billingCondition);
-      }
-
       if (cursor) {
         conditions.push(lt(sortColumn, new Date(cursor)));
       }
@@ -304,8 +269,6 @@ export async function appUsersRoutes(app: FastifyInstance) {
           last_sdk_version: appUsers.last_sdk_version,
           last_locale: appUsers.last_locale,
           last_preferred_language: appUsers.last_preferred_language,
-          total_revenue_usd_cents: appUsers.total_revenue_usd_cents,
-          revenue_synced_at: appUsers.revenue_synced_at,
           is_dev: appUsers.is_dev,
         })
         .from(appUsers)
@@ -348,7 +311,6 @@ export async function appUsersRoutes(app: FastifyInstance) {
         app_id,
         search,
         is_anonymous,
-        billing_status,
         data_mode,
         since,
         until,
@@ -424,12 +386,6 @@ export async function appUsersRoutes(app: FastifyInstance) {
         conditions.push(ilike(appUsers.user_id, `%${search}%`));
       }
 
-      const billingTiers = parseBillingTiers(billing_status);
-      if (isBillingFilterActive(billingTiers)) {
-        const billingCondition = buildBillingStatusCondition(billingTiers);
-        if (billingCondition) conditions.push(billingCondition);
-      }
-
       if (since) {
         conditions.push(gte(appUsers.last_seen_at, parseTimeParam(since)));
       }
@@ -457,8 +413,6 @@ export async function appUsersRoutes(app: FastifyInstance) {
               last_app_version: appUsers.last_app_version,
               last_sdk_name: appUsers.last_sdk_name,
               last_sdk_version: appUsers.last_sdk_version,
-              total_revenue_usd_cents: appUsers.total_revenue_usd_cents,
-              revenue_synced_at: appUsers.revenue_synced_at,
               is_dev: appUsers.is_dev,
             })
             .from(appUsers)

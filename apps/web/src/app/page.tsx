@@ -8,11 +8,9 @@ import {
   Shield,
   ArrowRight,
   Check,
-  Megaphone,
   Bug,
   MessageSquare,
   ClipboardList,
-  Star,
   Bell,
   Users,
   History,
@@ -52,11 +50,6 @@ const features = [
     description: "Error events cluster into issues automatically. Semver-aware regression detection, kanban workflow, and same-session burst aliasing so one bug doesn't triple-count.",
   },
   {
-    icon: Megaphone,
-    title: "Acquisition Attribution",
-    description: "See which Apple Search Ads campaigns drive your installs. The Swift SDK auto-captures attribution, and the dashboard ties campaign to user to revenue — no marketing SDK required.",
-  },
-  {
     icon: MessageSquare,
     title: "User Feedback",
     description: "Collect free-text feedback from your apps or your own frontend. Kanban board with status lifecycle, comments, and session-linked event replay for every submission.",
@@ -65,11 +58,6 @@ const features = [
     icon: ClipboardList,
     title: "In-App Questionnaires",
     description: "Ask your users questions in-app — text, choice, 1–5 rating, 0–10 NPS. Drafts save on every step so users can resume across launches, and per-question analytics show exactly where they drop off.",
-  },
-  {
-    icon: Star,
-    title: "App Store Reviews",
-    description: "Daily snapshots of your per-country App Store ratings and every individual review, plus reply, edit, and delete from any surface. Connect once with an App Store Connect key — no scraping.",
   },
   {
     icon: Smartphone,
@@ -87,7 +75,7 @@ const operatorFeatures = [
   {
     icon: Bell,
     title: "Notifications",
-    description: "Multi-channel alerts — in-app inbox, email, and APNs push. Issue alerts, feedback, App Store rating bumps, new reviews, and job completion. Per-user preferences per type.",
+    description: "Multi-channel alerts — in-app inbox and email. Issue alerts, feedback, and job completion. Per-user preferences per type.",
   },
   {
     icon: Users,
@@ -712,7 +700,7 @@ export default function LandingPage() {
               applicationCategory: "DeveloperApplication",
               operatingSystem: "iOS, iPadOS, macOS, Android, Node.js",
               description:
-                "Agent-first observability platform. Events, metrics, funnels, in-app questionnaires, error tracking, and App Store reviews — for mobile and backend apps.",
+                "Agent-first observability platform. Events, metrics, funnels, in-app questionnaires, and error tracking — for web, backend and mobile apps.",
               url: "https://owlmetry.com",
               image: "https://owlmetry.com/owl-logo.png",
               author: {
@@ -754,11 +742,9 @@ export default function LandingPage() {
                 "Performance metrics with lifecycle tracking",
                 "Funnel analytics with drop-off detection",
                 "Error issue tracker with semver-aware regression detection",
-                "Apple Search Ads acquisition attribution",
                 "User feedback with kanban workflow",
                 "In-app questionnaires with NPS, rating, and resumable drafts",
-                "App Store ratings and individual reviews with reply support",
-                "Multi-channel notifications (in-app, email, APNs push)",
+                "Multi-channel notifications (in-app, email)",
                 "Team management with role-based access",
                 "Audit trail across every resource",
                 "Per-project event, metric, and funnel retention",

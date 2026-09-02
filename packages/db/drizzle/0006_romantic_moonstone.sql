@@ -1,1 +1,0 @@
-ALTER TABLE "apps" ADD COLUMN "client_key" text;

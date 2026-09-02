@@ -22,21 +22,12 @@ import { metricsRoutes, metricByIdRoutes, teamMetricsRoutes } from "./routes/met
 import { funnelsRoutes, funnelByIdRoutes, teamFunnelsRoutes } from "./routes/funnels.js";
 import { auditLogsRoutes } from "./routes/audit-logs.js";
 import { userPropertiesRoutes } from "./routes/user-properties.js";
-import { attributionRoutes } from "./routes/attribution.js";
-import { integrationsRoutes } from "./routes/integrations.js";
-import { revenuecatRoutes } from "./routes/revenuecat.js";
-import { appleSearchAdsRoutes } from "./routes/apple-search-ads.js";
-import { appStoreConnectRoutes } from "./routes/app-store-connect.js";
 import { jobsRoutes, jobsByIdRoutes } from "./routes/jobs.js";
 import { issuesRoutes, teamIssuesRoutes } from "./routes/issues.js";
 import { feedbackRoutes, teamFeedbackRoutes } from "./routes/feedback.js";
 import { questionnaireRoutes, teamQuestionnaireRoutes } from "./routes/questionnaires.js";
-import { reviewsRoutes, teamReviewsRoutes } from "./routes/reviews.js";
-import { ratingsRoutes, teamRatingsRoutes } from "./routes/ratings.js";
-import { adsRoutes, teamAdsRoutes } from "./routes/ads.js";
 import { statsRoutes, teamStatsRoutes } from "./routes/stats.js";
 import { notificationsRoutes } from "./routes/notifications.js";
-import { devicesRoutes } from "./routes/devices.js";
 import { mcpRoute } from "./mcp/index.js";
 import { decompressPlugin } from "./middleware/decompress.js";
 import { createEmailService } from "./services/email.js";
@@ -45,8 +36,6 @@ import { registerAllJobs } from "./jobs/index.js";
 import { NotificationDispatcher } from "./services/notifications/dispatcher.js";
 import { inAppAdapter } from "./services/notifications/adapters/in-app.js";
 import { createEmailAdapter } from "./services/notifications/adapters/email.js";
-import { createMobilePushAdapter } from "./services/notifications/adapters/mobile-push.js";
-import { ApnsClient } from "./utils/apns/client.js";
 import type { ChannelAdapter } from "./services/notifications/types.js";
 
 const app = Fastify({ logger: true });
@@ -66,22 +55,8 @@ const jobRunner = new JobRunner({
   systemJobsAlertEmail: config.systemJobsAlertEmail,
 });
 
-// Notification dispatcher — drops in the mobile_push adapter only when APNS_* env
-// vars are set. Two APNs clients side-by-side: each owns its own HTTP/2 session,
-// adapter routes per device.environment. Same auth key works for both hosts.
+// Notification dispatcher — in-app and email channels.
 const adapters: ChannelAdapter[] = [inAppAdapter, createEmailAdapter(emailService)];
-const apnsClients = config.apns
-  ? {
-      sandbox: new ApnsClient(config.apns, "https://api.sandbox.push.apple.com"),
-      production: new ApnsClient(config.apns, "https://api.push.apple.com"),
-    }
-  : null;
-if (apnsClients && config.apns) {
-  adapters.push(createMobilePushAdapter(apnsClients));
-  app.log.info(`APNs configured for ${config.apns.bundleId} — per-device sandbox/production routing`);
-} else {
-  app.log.info("APNs not configured (APNS_KEY_P8 unset) — mobile push deliveries will be skipped");
-}
 
 const notificationDispatcher = new NotificationDispatcher({
   db,
@@ -140,46 +115,6 @@ jobRunner.schedule({
 jobRunner.schedule({
   jobType: "app_version_sync",
   cron: isDev ? "*/5 * * * *" : "15 * * * *",
-  enabled: () => true,
-  params: () => ({}),
-});
-jobRunner.schedule({
-  jobType: "revenuecat_sync",
-  // Daily 03:00 UTC in prod (before app_store_ratings_sync at 04:30 and
-  // app_store_connect_reviews_sync at 05:30). Fans out across every project
-  // with an active RevenueCat integration. Per-project failures are isolated
-  // so one bad key doesn't kill the run for others. Dev runs every 30 min for
-  // observability. Manual single-project triggers (`POST .../revenuecat/sync`)
-  // bypass the cron via the same handler with `params.project_id` set.
-  cron: isDev ? "*/30 * * * *" : "0 3 * * *",
-  enabled: () => true,
-  params: () => ({}),
-});
-jobRunner.schedule({
-  jobType: "app_store_ratings_sync",
-  // Daily 04:30 UTC in prod (between 04:00 partition_creation and 05:00
-  // attachment_cleanup). Dev runs every 30 min so iteration is observable.
-  cron: isDev ? "*/30 * * * *" : "30 4 * * *",
-  enabled: () => true,
-  params: () => ({}),
-});
-jobRunner.schedule({
-  jobType: "app_store_connect_reviews_sync",
-  // Daily 05:30 UTC in prod (after 05:00 attachment_cleanup, before 06:00
-  // notification_cleanup). Fans out across every project with an active
-  // App Store Connect integration. Dev runs every 30 min for observability.
-  cron: isDev ? "*/30 * * * *" : "30 5 * * *",
-  enabled: () => true,
-  params: () => ({}),
-});
-jobRunner.schedule({
-  jobType: "apple_ads_sync",
-  // Daily 04:45 UTC in prod (after 04:30 ratings sync, before 05:30 reviews
-  // sync). Fans out across every project with an active Apple Search Ads
-  // integration. Per-project failures are isolated. Dev runs every 30 min
-  // for observability. Manual single-project triggers (`POST .../ads/sync`)
-  // bypass the cron via the same handler with `params.project_id` set.
-  cron: isDev ? "*/30 * * * *" : "45 4 * * *",
   enabled: () => true,
   params: () => ({}),
 });
@@ -251,11 +186,6 @@ await app.register(funnelByIdRoutes, { prefix: "/v1" });
 await app.register(teamFunnelsRoutes, { prefix: "/v1" });
 await app.register(auditLogsRoutes, { prefix: "/v1/teams/:teamId" });
 await app.register(userPropertiesRoutes, { prefix: "/v1" });
-await app.register(attributionRoutes, { prefix: "/v1" });
-await app.register(integrationsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(revenuecatRoutes, { prefix: "/v1" });
-await app.register(appleSearchAdsRoutes, { prefix: "/v1" });
-await app.register(appStoreConnectRoutes, { prefix: "/v1" });
 await app.register(jobsRoutes, { prefix: "/v1/teams/:teamId" });
 await app.register(jobsByIdRoutes, { prefix: "/v1" });
 await app.register(issuesRoutes, { prefix: "/v1/projects/:projectId" });
@@ -264,16 +194,9 @@ await app.register(feedbackRoutes, { prefix: "/v1/projects/:projectId" });
 await app.register(teamFeedbackRoutes, { prefix: "/v1" });
 await app.register(questionnaireRoutes, { prefix: "/v1/projects/:projectId" });
 await app.register(teamQuestionnaireRoutes, { prefix: "/v1" });
-await app.register(reviewsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamReviewsRoutes, { prefix: "/v1" });
-await app.register(ratingsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamRatingsRoutes, { prefix: "/v1" });
-await app.register(adsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamAdsRoutes, { prefix: "/v1" });
 await app.register(statsRoutes, { prefix: "/v1/projects/:projectId" });
 await app.register(teamStatsRoutes, { prefix: "/v1" });
 await app.register(notificationsRoutes, { prefix: "/v1" });
-await app.register(devicesRoutes, { prefix: "/v1" });
 await app.register(mcpRoute);
 
 // Start
@@ -307,8 +230,6 @@ const shutdown = async (signal: string) => {
   forceTimer.unref();
 
   await jobRunner.shutdown(2500);
-  apnsClients?.sandbox.close();
-  apnsClients?.production.close();
   try {
     await app.close();
   } catch {

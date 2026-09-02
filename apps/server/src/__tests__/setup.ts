@@ -34,20 +34,12 @@ import { metricsRoutes, metricByIdRoutes, teamMetricsRoutes } from "../routes/me
 import { funnelsRoutes, funnelByIdRoutes, teamFunnelsRoutes } from "../routes/funnels.js";
 import { auditLogsRoutes } from "../routes/audit-logs.js";
 import { userPropertiesRoutes } from "../routes/user-properties.js";
-import { attributionRoutes } from "../routes/attribution.js";
-import { integrationsRoutes } from "../routes/integrations.js";
-import { revenuecatRoutes } from "../routes/revenuecat.js";
-import { appleSearchAdsRoutes } from "../routes/apple-search-ads.js";
 import { jobsRoutes, jobsByIdRoutes } from "../routes/jobs.js";
 import { issuesRoutes, teamIssuesRoutes } from "../routes/issues.js";
 import { feedbackRoutes, teamFeedbackRoutes } from "../routes/feedback.js";
 import { questionnaireRoutes, teamQuestionnaireRoutes } from "../routes/questionnaires.js";
-import { reviewsRoutes, teamReviewsRoutes } from "../routes/reviews.js";
-import { ratingsRoutes, teamRatingsRoutes } from "../routes/ratings.js";
-import { adsRoutes, teamAdsRoutes } from "../routes/ads.js";
 import { statsRoutes, teamStatsRoutes } from "../routes/stats.js";
 import { notificationsRoutes } from "../routes/notifications.js";
-import { devicesRoutes } from "../routes/devices.js";
 import { mcpRoute } from "../mcp/index.js";
 import { decompressPlugin } from "../middleware/decompress.js";
 import type { EmailService } from "../services/email.js";
@@ -57,13 +49,6 @@ import { NotificationDispatcher } from "../services/notifications/dispatcher.js"
 import { inAppAdapter } from "../services/notifications/adapters/in-app.js";
 import { createEmailAdapter } from "../services/notifications/adapters/email.js";
 import { notificationDeliverHandler } from "../jobs/notification-deliver.js";
-import type {
-  ChannelAdapter,
-  ChannelDeliveryContext,
-  ChannelDeliveryResult,
-  NotificationPayload,
-} from "../services/notifications/types.js";
-import type { NotificationType } from "@owlmetry/shared";
 
 export const TEST_DB_URL = "postgres://localhost:5432/owlmetry_test";
 
@@ -132,88 +117,10 @@ let migrationClient: postgres.Sql | null = null;
 export async function setupTestDb() {
   migrationClient = postgres(TEST_DB_URL, { max: 1 });
 
-  // Add 'server' to api_key_type enum if it exists but doesn't have the value yet.
-  // ALTER TYPE ... ADD VALUE cannot run inside a transaction, so we do it before migrate().
-  // On a completely fresh DB, the enum won't exist yet — we handle that after migrate().
-  const typeExistsBefore = await migrationClient`
-    SELECT 1 FROM pg_type WHERE typname = 'api_key_type'
-  `;
-  if (typeExistsBefore.length > 0) {
-    const enumCheck = await migrationClient`
-      SELECT 1 FROM pg_enum WHERE enumlabel = 'server'
-        AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'api_key_type')
-    `;
-    if (enumCheck.length === 0) {
-      await migrationClient.unsafe(`ALTER TYPE api_key_type ADD VALUE 'server'`);
-    }
-    const importEnumCheck = await migrationClient`
-      SELECT 1 FROM pg_enum WHERE enumlabel = 'import'
-        AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'api_key_type')
-    `;
-    if (importEnumCheck.length === 0) {
-      await migrationClient.unsafe(`ALTER TYPE api_key_type ADD VALUE 'import'`);
-    }
-  }
-
-  // Pre-migration fixes for existing databases only (skip on fresh DB)
-  if (typeExistsBefore.length > 0) {
-    // Create app_platform and environment enums if not present
-    const appPlatformCheck = await migrationClient`
-      SELECT 1 FROM pg_type WHERE typname = 'app_platform'
-    `;
-    if (appPlatformCheck.length === 0) {
-      await migrationClient.unsafe(`CREATE TYPE app_platform AS ENUM ('apple', 'android', 'web', 'backend')`);
-    }
-    const environmentCheck = await migrationClient`
-      SELECT 1 FROM pg_type WHERE typname = 'environment'
-    `;
-    if (environmentCheck.length === 0) {
-      await migrationClient.unsafe(`CREATE TYPE environment AS ENUM ('ios', 'ipados', 'macos', 'watchos', 'android', 'web', 'backend')`);
-    }
-
-    // Make bundle_id nullable if not already
-    const colCheck = await migrationClient`
-      SELECT is_nullable FROM information_schema.columns
-      WHERE table_name = 'apps' AND column_name = 'bundle_id'
-    `;
-    if (colCheck.length > 0 && colCheck[0].is_nullable === 'NO') {
-      await migrationClient`ALTER TABLE apps ALTER COLUMN bundle_id DROP NOT NULL`;
-    }
-
-    // Convert apps.platform from varchar to app_platform enum if needed
-    const platformColCheck = await migrationClient`
-      SELECT data_type FROM information_schema.columns
-      WHERE table_name = 'apps' AND column_name = 'platform'
-    `;
-    if (platformColCheck.length > 0 && platformColCheck[0].data_type === 'character varying') {
-      await migrationClient.unsafe(`
-        UPDATE apps SET platform = 'apple' WHERE platform IN ('ios', 'ipados', 'macos');
-        UPDATE apps SET platform = 'backend' WHERE platform = 'server';
-        ALTER TABLE apps ALTER COLUMN platform TYPE app_platform USING platform::app_platform
-      `);
-    }
-  }
-
   const migrationDb = drizzle(migrationClient);
   await migrate(migrationDb, {
     migrationsFolder: MIGRATIONS_FOLDER,
   });
-
-  // After migration, ensure 'server' and 'import' exist in api_key_type
-  const serverEnumCheck = await migrationClient`
-    SELECT 1 FROM pg_enum WHERE enumlabel = 'server'
-      AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'api_key_type')
-  `;
-  if (serverEnumCheck.length === 0) {
-    await migrationClient.unsafe(`ALTER TYPE api_key_type ADD VALUE 'server'`);
-  }
-  const importEnumCheckPost = await migrationClient`
-    SELECT 1 FROM pg_enum WHERE enumlabel = 'import'
-      AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'api_key_type')
-  `;
-  if (importEnumCheckPost.length === 0) {
-    await migrationClient.unsafe(`ALTER TYPE api_key_type ADD VALUE 'import'`);
-  }
 
   // Set up partitioned events table
   const result = await migrationClient`
@@ -257,19 +164,6 @@ export async function setupTestDb() {
         "timestamp" TIMESTAMPTZ NOT NULL,
         received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       ) PARTITION BY RANGE ("timestamp");
-    `);
-  }
-
-  // Rename platform → environment on events table if still using old column name
-  const evtColCheck = await migrationClient`
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'events' AND column_name = 'platform'
-  `;
-  if (evtColCheck.length > 0) {
-    await migrationClient.unsafe(`
-      ALTER TABLE events RENAME COLUMN platform TO environment;
-      UPDATE events SET environment = 'backend' WHERE environment = 'server';
-      ALTER TABLE events ALTER COLUMN environment TYPE environment USING environment::environment
     `);
   }
 
@@ -321,22 +215,6 @@ export async function setupTestDb() {
     `);
   }
 
-  // Remove stale log_level enum values if present
-  const staleEnumCheck = await migrationClient`
-    SELECT enumlabel FROM pg_enum
-    WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'log_level')
-      AND enumlabel IN ('tracking', 'attention')
-  `;
-  if (staleEnumCheck.length > 0) {
-    for (const row of staleEnumCheck) {
-      try { await migrationClient.unsafe(`UPDATE events SET level = 'info' WHERE level = '${row.enumlabel}'`); } catch {}
-    }
-    await migrationClient.unsafe(`ALTER TYPE log_level RENAME TO log_level_old`);
-    await migrationClient.unsafe(`CREATE TYPE log_level AS ENUM ('info', 'debug', 'warn', 'error')`);
-    try { await migrationClient.unsafe(`ALTER TABLE events ALTER COLUMN level TYPE log_level USING level::text::log_level`); } catch {}
-    await migrationClient.unsafe(`DROP TYPE log_level_old`);
-  }
-
   // Set up partitioned funnel_events table
   const feResult = await migrationClient`
     SELECT relkind FROM pg_class WHERE relname = 'funnel_events'
@@ -386,23 +264,6 @@ export async function setupTestDb() {
 
 export const testEmailService = new TestEmailService();
 
-export interface TestPushDelivery {
-  userId: string;
-  type: NotificationType;
-  payload: NotificationPayload;
-}
-
-/** Records mobile push deliveries instead of hitting APNs. Cleared in truncateAll(). */
-export const testPushDeliveries: TestPushDelivery[] = [];
-
-export const testPushAdapter: ChannelAdapter = {
-  channel: "mobile_push",
-  async deliver(ctx: ChannelDeliveryContext): Promise<ChannelDeliveryResult> {
-    testPushDeliveries.push({ userId: ctx.userId, type: ctx.type, payload: ctx.payload });
-    return { status: "sent" };
-  },
-};
-
 /** A fast test handler that completes immediately. */
 export const testJobHandler: JobHandler = async (ctx, params) => {
   const delay = (params.delay_ms as number) ?? 0;
@@ -425,15 +286,16 @@ export async function buildApp() {
     log: { info: () => {}, warn: () => {}, error: () => {} },
     emailService: testEmailService as EmailService,
   });
-  jobRunner.register("revenuecat_sync", testJobHandler);
-  jobRunner.register("apple_ads_sync", testJobHandler);
+  // stats_aggregate_daily is the project-scoped job the trigger-API tests
+  // drive; a fast stub keeps them off the real aggregator.
+  jobRunner.register("stats_aggregate_daily", testJobHandler);
   jobRunner.register("test_job", testJobHandler);
 
   const notificationDispatcher = new NotificationDispatcher({
     db,
     jobRunner,
     log: { info: () => {}, warn: () => {}, error: () => {} },
-    adapters: [inAppAdapter, createEmailAdapter(testEmailService as EmailService), testPushAdapter],
+    adapters: [inAppAdapter, createEmailAdapter(testEmailService as EmailService)],
   });
   jobRunner.setNotificationDispatcher(notificationDispatcher);
   jobRunner.register("notification_deliver", notificationDeliverHandler(notificationDispatcher));
@@ -471,10 +333,6 @@ export async function buildApp() {
   await app.register(teamFunnelsRoutes, { prefix: "/v1" });
   await app.register(auditLogsRoutes, { prefix: "/v1/teams/:teamId" });
   await app.register(userPropertiesRoutes, { prefix: "/v1" });
-  await app.register(attributionRoutes, { prefix: "/v1" });
-  await app.register(integrationsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(revenuecatRoutes, { prefix: "/v1" });
-  await app.register(appleSearchAdsRoutes, { prefix: "/v1" });
   await app.register(jobsRoutes, { prefix: "/v1/teams/:teamId" });
   await app.register(jobsByIdRoutes, { prefix: "/v1" });
   await app.register(issuesRoutes, { prefix: "/v1/projects/:projectId" });
@@ -483,16 +341,9 @@ export async function buildApp() {
   await app.register(teamFeedbackRoutes, { prefix: "/v1" });
   await app.register(questionnaireRoutes, { prefix: "/v1/projects/:projectId" });
   await app.register(teamQuestionnaireRoutes, { prefix: "/v1" });
-  await app.register(reviewsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamReviewsRoutes, { prefix: "/v1" });
-  await app.register(ratingsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamRatingsRoutes, { prefix: "/v1" });
-  await app.register(adsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamAdsRoutes, { prefix: "/v1" });
   await app.register(statsRoutes, { prefix: "/v1/projects/:projectId" });
   await app.register(teamStatsRoutes, { prefix: "/v1" });
   await app.register(notificationsRoutes, { prefix: "/v1" });
-  await app.register(devicesRoutes, { prefix: "/v1" });
   await app.register(mcpRoute);
 
   await app.ready();
@@ -503,8 +354,6 @@ export async function truncateAll() {
   const client = postgres(TEST_DB_URL, { max: 1 });
   await client`DELETE FROM notification_deliveries`.catch(() => {});
   await client`DELETE FROM notifications`.catch(() => {});
-  await client`DELETE FROM user_devices`.catch(() => {});
-  testPushDeliveries.length = 0;
   await client`DELETE FROM event_attachments`.catch(() => {});
   await client`DELETE FROM feedback_comments`.catch(() => {});
   await client`DELETE FROM feedback`.catch(() => {});
@@ -514,7 +363,6 @@ export async function truncateAll() {
   await client`DELETE FROM issues`.catch(() => {});
   await client`DELETE FROM event_deletions`.catch(() => {});
   await client`DELETE FROM job_runs`.catch(() => {});
-  await client`DELETE FROM project_integrations`.catch(() => {});
   await client`DELETE FROM audit_logs`;
   await client`DELETE FROM app_user_apps`;
   await client`DELETE FROM app_users`;
@@ -705,7 +553,7 @@ export async function seedTestData() {
 
 /**
  * Direct INSERT into app_users for tests that need to seed a row without
- * going through /v1/ingest or /v1/identity/attribution. Returns the row id.
+ * going through /v1/ingest or /v1/identity/claim. Returns the row id.
  * Defaults match the most common test shape: a real (non-anonymous) user
  * row with no claimed_from and no properties. Identity-claim tests that
  * need an anonymous row pass `{ isAnonymous: true }` explicitly.
@@ -850,13 +698,6 @@ export async function addTeamMember(
   await client.end();
 }
 
-export interface IntegrationRow {
-  id: string;
-  config: Record<string, unknown>;
-  enabled: boolean;
-  deleted_at: Date | null;
-}
-
 /**
  * Minimal JobContext for tests that drive a job handler directly without the
  * full JobRunner. Each call gets its own postgres connection so concurrent
@@ -873,20 +714,3 @@ export function makeJobContext(): JobContext {
   };
 }
 
-/**
- * Raw integration lookup for tests that need to inspect `config`, `enabled`,
- * or soft-delete state directly — e.g. asserting that server-managed keys
- * were generated/redacted/rotated correctly, bypassing the API's redaction.
- */
-export async function readIntegration(
-  projectId: string,
-  provider: string,
-): Promise<IntegrationRow | null> {
-  const client = postgres(TEST_DB_URL, { max: 1 });
-  const [row] = await client`
-    SELECT id, config, enabled, deleted_at FROM project_integrations
-    WHERE project_id = ${projectId} AND provider = ${provider}
-  `;
-  await client.end();
-  return (row as IntegrationRow | undefined) ?? null;
-}

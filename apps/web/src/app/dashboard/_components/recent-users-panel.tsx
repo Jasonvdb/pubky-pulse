@@ -11,8 +11,6 @@ import { useTeam } from "@/contexts/team-context";
 import { useAppColorMap, useProjectInfoMap } from "@/hooks/use-project-colors";
 import { ProjectDot } from "@/lib/project-color";
 import { CountryEmoji } from "@/components/country-flag";
-import { AttributionBadge } from "@/components/attribution-badge";
-import { BillingBadge } from "@/components/billing-badge";
 import { UserTypeBadge } from "@/components/badges/user-type-badge";
 import { VersionBadge, pickLatestForUser } from "@/components/version-badge";
 import { DashboardSection } from "./dashboard-section";
@@ -95,8 +93,6 @@ export function RecentUsersPanel({
                 ) : null}
               </div>
               <div className="shrink-0 flex items-center gap-1">
-                <BillingBadge properties={user.properties} size="sm" />
-                <AttributionBadge properties={user.properties} size="sm" />
                 <VersionBadge
                   version={user.last_app_version}
                   latestVersion={pickLatestForUser(user.apps ?? [], appLatestVersionMap)}

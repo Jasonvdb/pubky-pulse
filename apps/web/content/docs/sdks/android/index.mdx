@@ -52,11 +52,9 @@ Every event automatically includes:
 
 ## Not yet on Android
 
-A few Swift SDK features have no Android analog yet:
+One Swift SDK feature has no Android analog yet:
 
-- **Install attribution.** The Swift SDK auto-captures Apple Search Ads attribution; on Android, install attribution comes from Google Play / the Play Install Referrer and is out of scope for v1. The `attributionEnabled` configuration flag is reserved.
 - **Automatic network-request instrumentation.** There is no automatic `URLSession`-equivalent HTTP tracking yet; the `networkTrackingEnabled` flag is reserved.
-- **Push registration.** Push on Android is Firebase Cloud Messaging (FCM), not APNs; the SDK does not register FCM tokens for you.
 
 ## Getting Started
 

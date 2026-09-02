@@ -5,7 +5,6 @@ import type { CreateAppRequest, UpdateAppRequest } from "@owlmetry/shared";
 import { APP_PLATFORMS, DEFAULT_API_KEY_PERMISSIONS, generateApiKeySecret } from "@owlmetry/shared";
 import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
 import { serializeApp, getClientSecret, getClientSecretMap } from "../utils/serialize.js";
-import { getWorldwideRatingDeltaMap } from "../utils/ratings.js";
 import { logAuditEvent } from "../utils/audit.js";
 
 export async function appsRoutes(app: FastifyInstance) {
@@ -33,20 +32,12 @@ export async function appsRoutes(app: FastifyInstance) {
         .where(and(inArray(apps.team_id, teamIds), isNull(apps.deleted_at)))
         .orderBy(asc(apps.created_at), asc(apps.id));
 
-      // Only Apple apps ever have app_store_ratings rows, so skip the delta
-      // query entirely for non-Apple-only teams. /v1/apps is on the dashboard
-      // hot path.
-      const appleAppIds = rows.filter(r => r.platform === "apple").map(r => r.id);
-      const [secretMap, deltaMap] = await Promise.all([
-        getClientSecretMap(app.db, rows.map(r => r.id)),
-        getWorldwideRatingDeltaMap(app.db, appleAppIds),
-      ]);
+      const secretMap = await getClientSecretMap(app.db, rows.map(r => r.id));
 
       return {
         apps: rows.map(r => serializeApp({
           ...r,
           client_secret: secretMap.get(r.id) ?? null,
-          worldwide_rating_count_delta: deltaMap.get(r.id) ?? null,
         })),
       };
     }
@@ -161,20 +152,6 @@ export async function appsRoutes(app: FastifyInstance) {
         resource_id: created.id,
         metadata: { name, platform, bundle_id: bundle_id || null },
       });
-
-      // Fire-and-forget: refresh latest_app_version + ratings + apple_app_store_id
-      // immediately for Apple apps so the new app shows a version badge and rating
-      // card without waiting for the next hourly run.
-      if (platform === "apple" && bundle_id) {
-        app.jobRunner
-          .trigger("app_version_sync", {
-            triggeredBy: "system:on-app-create",
-            params: { app_id: created.id },
-          })
-          .catch((err) => {
-            app.log.warn({ err, app_id: created.id }, "app_version_sync on-create failed (fire-and-forget)");
-          });
-      }
 
       return reply.code(201).send(serializeApp(created));
     }

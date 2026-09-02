@@ -59,10 +59,7 @@ import { TableSkeleton } from "@/components/ui/skeletons";
 // Warnings shown under specific permissions when granted to an agent key.
 // Add an entry here when a permission grants the agent the ability to take an
 // action with public-facing or otherwise high-blast-radius consequences.
-const PERMISSION_WARNINGS: Partial<Record<Permission, string>> = {
-  "reviews:write":
-    "Agent keys with this permission can post, edit, and delete public App Store review replies on your team's behalf — these replies are visible to anyone reading the listing.",
-};
+const PERMISSION_WARNINGS: Partial<Record<Permission, string>> = {};
 
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();

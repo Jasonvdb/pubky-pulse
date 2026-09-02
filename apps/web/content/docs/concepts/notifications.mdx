@@ -1,29 +1,27 @@
 ---
 title: Notifications
-description: Multi-channel notification system — per-user inbox, email, and mobile push fan-out from a single producer call.
+description: Multi-channel notification system — per-user inbox and email fan-out from a single producer call.
 ---
 
 Notifications are the unified path for telling users something happened — a new feedback item arrived, an issue digest is ready, a manual job they triggered finished. Producers (the issue-scan job, feedback ingest, manual job runs) write a single record; the dispatcher fans it out across whichever channels each user has enabled.
 
-## Three Primitives
+## Two Primitives
 
-The system is backed by three tables. Keeping them separate means a failed email retry doesn't touch the inbox row, and "did the mobile push actually send?" is answerable without grepping a status grab-bag.
+The system is backed by two tables. Keeping them separate means a failed email retry doesn't touch the inbox row, and "did the email actually send?" is answerable without grepping a status grab-bag.
 
 | Table | Purpose |
 |-------|---------|
 | `notifications` | Per-user inbox row. One per recipient, written synchronously on enqueue. Carries the pre-rendered `title`, `body`, optional deep `link`, structured `data`, `read_at`, `deleted_at`. |
 | `notification_deliveries` | Per-channel attempt log. One row per `(notification, channel)`. Status moves `pending → sent | failed | skipped`. The `in_app` row is created and marked `sent` synchronously alongside the inbox insert. |
-| `user_devices` | Push token registry. One channel (`mobile_push`) with a per-row `platform` (`ios` | `android`) so the dispatcher can pick APNs vs FCM per device, plus headroom for Telegram chat IDs / webhook URLs in the future as new channels. Keyed by token (unique) so Apple reissuing the same token to a different user atomically reassigns ownership. |
 
 ## Channels
 
-Notifications fan out across **channels**. The current set is `in_app`, `email`, and `mobile_push`; adding Telegram, Slack, or webhook channels means dropping in a new `ChannelAdapter` and extending `NOTIFICATION_CHANNELS` — no producer change.
+Notifications fan out across **channels**. The current set is `in_app` and `email`; adding Telegram, Slack, or webhook channels means dropping in a new `ChannelAdapter` and extending `NOTIFICATION_CHANNELS` — no producer change.
 
 | Channel | Description |
 |---------|-------------|
 | `in_app` | Inbox row in the dashboard at `/dashboard/notifications`, with an unread badge on the user-menu avatar (polled every 30s). Always written synchronously. |
 | `email` | HTML email via Resend (or console logger in dev). Per-type formatters (`sendIssueDigest`, `sendJobAlert`) plus a generic fallback. |
-| `mobile_push` | Push to every registered mobile device. The adapter routes per `user_devices.platform`: iOS rows go to APNs HTTP/2 with the unread count as badge, Android rows are reserved for the FCM transport that will land later. Token-based APNs auth with an Apple `.p8` key — see [APNs configuration](/docs/self-hosting/configuration#mobile-push-apns) for env vars. |
 
 ## Notification Types
 
@@ -31,13 +29,11 @@ Each notification has a `type` that determines its formatters and which channels
 
 | Type | Trigger | Channels | Default On |
 |------|---------|----------|------------|
-| `issue.new` | Fires from the `issue_scan` job at the end of every run when one or more **production** issues were created or regressed. One push per team per scan, summarizing all of that run's new + regressed issues — bypasses the per-project digest cadence so push lands in close to real time. Dev-build crashes are excluded. | `in_app`, `email`, `mobile_push` | `in_app`, `mobile_push` (email off by default) |
-| `issue.digest` | Per-project periodic digest of new and regressed issues, sent by the `issue_notify` job at the project's configured frequency. | `in_app`, `email`, `mobile_push` | `email` only (in_app + mobile_push off so the digest doesn't double up with the instant `issue.new` push) |
-| `feedback.new` | A user submitted feedback in one of the team's apps. | `in_app`, `email`, `mobile_push` | All three |
-| `questionnaire.response_new` | A user submitted a questionnaire response in one of the team's apps. Defaults skew to in-app only because responses can be high-volume — push and email are opt-in. | `in_app`, `email`, `mobile_push` | `in_app` only (email + mobile_push off by default) |
-| `job.completed` | A manual job run with `--notify` finished — only the triggering user is notified, never the whole team. | `in_app`, `email`, `mobile_push` | All three |
-| `app.rating_changed` | The `app_store_ratings_sync` job detected an increase in an app's worldwide rating count between runs — i.e. new ratings have appeared on the App Store. One notification per app per run, fanned out to every team member. First-sync (no prior baseline) is suppressed. | `in_app`, `email`, `mobile_push` | `in_app`, `mobile_push` (email off by default) |
-| `app.review_new` | The `app_store_connect_reviews_sync` job pulled at least one new written review from App Store Connect for one of the team's apps. Fired once per app per run when the app already had reviews on file (no first-sync flood). The body includes the count and a snippet of the newest review. | `in_app`, `email`, `mobile_push` | All three |
+| `issue.new` | Fires from the `issue_scan` job at the end of every run when one or more **production** issues were created or regressed. One notification per team per scan, summarizing all of that run's new + regressed issues — bypasses the per-project digest cadence so it lands in close to real time. Dev-build crashes are excluded. | `in_app`, `email` | `in_app` (email off by default) |
+| `issue.digest` | Per-project periodic digest of new and regressed issues, sent by the `issue_notify` job at the project's configured frequency. | `in_app`, `email` | `email` only (in_app off so the digest doesn't double up with the instant `issue.new` alert) |
+| `feedback.new` | A user submitted feedback in one of the team's apps. | `in_app`, `email` | Both |
+| `questionnaire.response_new` | A user submitted a questionnaire response in one of the team's apps. Defaults skew to in-app only because responses can be high-volume — email is opt-in. | `in_app`, `email` | `in_app` only (email off by default) |
+| `job.completed` | A manual job run with `--notify` finished — only the triggering user is notified, never the whole team. | `in_app`, `email` | Both |
 | `team.invitation` | Listed for documentation but **not** routed through the dispatcher. Sent transactionally via `EmailService` directly because the recipient may not yet be a user. | — | — |
 
 Adding a new type is three steps: append to `NOTIFICATION_TYPES`, add an entry to `NOTIFICATION_TYPE_META` with default channel state, and wire a producer call site to `dispatcher.enqueue(...)`.
@@ -56,13 +52,13 @@ The dashboard's profile page at `/dashboard/profile/notifications` renders one r
 Two knobs cooperate:
 
 - **Per-project `issue_alert_frequency`** (`none`, `hourly`, `6_hourly`, `daily`, `weekly`) is the **rate-limit / batching policy** — how often the `issue_notify` job assembles a digest for that project. It applies to all team members.
-- **Per-user channel toggles** decide **where the digest goes** for each recipient — inbox only, plus email, plus mobile push, etc.
+- **Per-user channel toggles** decide **where the digest goes** for each recipient — inbox only, email only, or both.
 
-A project on `daily` digests with three team members where one disables email and another disables push will send three digests at the same hour, each over the channels the recipient has enabled.
+A project on `daily` digests with three team members where one disables email and another disables the inbox row will send three digests at the same hour, each over the channels the recipient has enabled.
 
 ## System-Job Alerts Stay Direct
 
-System job failures (`db_pruning`, `partition_creation`, `attachment_cleanup`, `app_version_sync`, etc.) are a **server-owner concern**, not a team-member concern. They keep going to `SYSTEM_JOBS_ALERT_EMAIL` via the direct email path and never enter the dispatcher, the inbox, or push. There's intentionally no `system.alert` notification type.
+System job failures (`db_pruning`, `partition_creation`, `attachment_cleanup`, `app_version_sync`, etc.) are a **server-owner concern**, not a team-member concern. They keep going to `SYSTEM_JOBS_ALERT_EMAIL` via the direct email path and never enter the dispatcher or the inbox. There's intentionally no `system.alert` notification type.
 
 ## Transactional Email Stays Direct Too
 
@@ -73,14 +69,6 @@ Two flows bypass the dispatcher because the recipient may not yet have a `users`
 
 Both reach the email channel directly and are never written to a notifications inbox.
 
-## APNs Setup
-
-The iOS branch of `mobile_push` uses **token-based auth** with an ES256-signed JWT (the same EC P-256 pattern Apple uses for App Store Connect API, Apple Search Ads, and Sign in with Apple). One Apple Developer account → one set of env vars covers the whole server. Configure them at `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_P8`, `APNS_BUNDLE_ID`, and `APNS_ENV` — see [Self-hosting configuration](/docs/self-hosting/configuration#mobile-push-apns).
-
-If `APNS_KEY_P8` is unset the `mobile_push` adapter is omitted at boot and every iOS push delivery is marked `skipped`, so dev / local environments work without push setup.
-
-The adapter sends sandbox-environment pushes to `api.sandbox.push.apple.com` and production pushes to `api.push.apple.com`. APNs replies of **410 Unregistered** or **400 BadDeviceToken** hard-delete the offending `user_devices` row so the server stops retrying — the next time the device opens the app it will register a fresh token.
-
 ## Background Jobs
 
 Two jobs back the system:
@@ -90,16 +78,14 @@ Two jobs back the system:
 
 ## Permissions
 
-Notifications and devices are **user-scoped, not team-scoped**. The REST routes accept JWT cookies only — agent API keys receive 403. There is intentionally **no MCP tool surface** for notifications: an agent has no inbox.
+Notifications are **user-scoped, not team-scoped**. The REST routes accept JWT cookies only — agent API keys receive 403. There is intentionally **no MCP tool surface** for notifications: an agent has no inbox.
 
 ## Related Resources
 
 - [`/dashboard/notifications`](/dashboard/notifications) — inbox UI
 - [`/dashboard/profile/notifications`](/dashboard/profile/notifications) — per-channel preferences
 - [Notifications API](/docs/api-reference/notifications) — REST reference
-- [Devices API](/docs/api-reference/devices) — push token registry REST reference
 - [Issues](/docs/concepts/issues) — `issue.digest` producer + per-project alert frequency
 - [Feedback](/docs/concepts/feedback) — `feedback.new` producer
 - [Questionnaires](/docs/concepts/questionnaires) — `questionnaire.response_new` producer
-- [Store Ratings & Reviews](/docs/concepts/reviews) — `app.rating_changed` and `app.review_new` producers
 - [Background Jobs](/docs/concepts/background-jobs) — `job.completed` producer when triggered with `--notify`

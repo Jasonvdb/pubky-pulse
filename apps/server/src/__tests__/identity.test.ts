@@ -731,8 +731,8 @@ describe("claim + late-arriving ingest race", () => {
 });
 
 /**
- * Reproduction of the Signature Creator orphan bug — anon row created by the
- * attribution endpoint, then a Firebase-anon-auth setUser fires the claim
+ * Reproduction of the orphan-row bug — an anon app_users row created by an
+ * early set-properties call, then an anonymous-auth setUser fires the claim
  * before the SDK's own log Tasks have reached the EventTransport buffer. The
  * server must register claimed_from on the real user row even when zero
  * events are reassigned, and the merge of an existing anon row must run
@@ -741,7 +741,7 @@ describe("claim + late-arriving ingest race", () => {
  */
 describe("POST /v1/identity/claim — robustness against zero-event races", () => {
   it("merges a pre-existing anon app_users row when zero events are present", async () => {
-    // Mimics the production case: the attribution endpoint created the anon
+    // Mimics the production case: a set-properties call created the anon
     // app_users row before any events were ingested. The claim arrives while
     // the events are still in flight on the SDK side.
     const projectId = await getProjectIdForBundle(TEST_BUNDLE_ID);
@@ -750,7 +750,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
 
     await insertAppUser(projectId, anonId, {
       isAnonymous: true,
-      properties: { attribution_source: "none" },
+      properties: { signup_source: "organic" },
     });
 
     const res = await claim({ anonymous_id: anonId, user_id: realId });
@@ -768,7 +768,7 @@ describe("POST /v1/identity/claim — robustness against zero-event races", () =
     expect(realRow).toBeDefined();
     expect(realRow!.is_anonymous).toBe(false);
     expect(realRow!.claimed_from).toEqual([anonId]);
-    expect(realRow!.properties).toEqual({ attribution_source: "none" });
+    expect(realRow!.properties).toEqual({ signup_source: "organic" });
   });
 
   it("creates a real app_users row with claimed_from when no rows exist at all", async () => {

@@ -2,16 +2,11 @@ export const JOB_TYPES = [
   "db_pruning",
   "soft_delete_cleanup",
   "partition_creation",
-  "revenuecat_sync",
-  "revenuecat_user_backfill",
   "retention_cleanup",
   "issue_scan",
   "issue_notify",
   "attachment_cleanup",
-  "apple_ads_sync",
   "app_version_sync",
-  "app_store_ratings_sync",
-  "app_store_connect_reviews_sync",
   "notification_deliver",
   "notification_cleanup",
   "questionnaire_draft_cleanup",
@@ -69,30 +64,6 @@ export const JOB_TYPE_META: Record<
     default_schedule: "0 4 * * *",
     params: [],
   },
-  revenuecat_sync: {
-    label: "RevenueCat Sync",
-    description:
-      "Syncs subscriber data from RevenueCat (subscriptions, entitlements, attribution, lifetime USD revenue). With no project_id, fans out across every project that has an active RevenueCat integration. With project_id set, syncs that single project only (manual-trigger path).",
-    scope: "system",
-    default_schedule: "0 3 * * *",
-    params: [
-      {
-        name: "project_id",
-        description:
-          "Sync only the given project instead of fanning out across all projects with an active RevenueCat integration",
-        type: "string",
-        required: false,
-      },
-    ],
-  },
-  revenuecat_user_backfill: {
-    label: "RevenueCat User Backfill",
-    description:
-      "Pages through every customer in the linked RevenueCat project and creates or updates the corresponding app_users row (subscription state, lifetime USD revenue, attribution). Idempotent — re-running is safe. Anonymous RevenueCat IDs ($RCAnonymousID:*) are skipped. Can take hours on large projects (~3 RC API calls per customer at the 480 req/min Customer Information budget).",
-    scope: "project",
-    default_schedule: null,
-    params: [],
-  },
   retention_cleanup: {
     label: "Data Retention Cleanup",
     description:
@@ -123,18 +94,10 @@ export const JOB_TYPE_META: Record<
     default_schedule: "0 5 * * *",
     params: [],
   },
-  apple_ads_sync: {
-    label: "Apple Ads Sync",
-    description:
-      "Resolves stored Apple Search Ads IDs to readable names AND syncs campaign + ad-group spend / impressions / taps / installs from the Reports API into ad_campaign_lifetime + ad_adgroup_lifetime (filtered by adamId so each project only stores rows for its own apps). Project-scoped: trigger from the dashboard or via POST /v1/projects/:id/ads/sync. The daily 04:45 UTC cron fires the same handler with no project_id, which fans out across every project that has an active Apple Search Ads integration.",
-    scope: "project",
-    default_schedule: "45 4 * * *",
-    params: [],
-  },
   app_version_sync: {
     label: "App Version Sync",
     description:
-      "Refreshes latest_app_version and the numeric Apple App Store ID per app from the Apple App Store iTunes Lookup (for Apple apps with a bundle_id), or computes the version from production events (Android/Web/Backend)",
+      "Refreshes each app's latest_app_version by computing the highest version seen in recent production events",
     scope: "system",
     default_schedule: "15 * * * *",
     params: [
@@ -146,46 +109,10 @@ export const JOB_TYPE_META: Record<
       },
     ],
   },
-  app_store_ratings_sync: {
-    label: "App Store Ratings Sync",
-    description:
-      "Fans out across every Apple iTunes storefront for each Apple app with a bundle_id, recording per-country average rating and rating count as a daily snapshot in app_store_ratings, then refreshing the worldwide-cache columns on apps.",
-    scope: "system",
-    default_schedule: "30 4 * * *",
-    params: [
-      {
-        name: "app_id",
-        description: "Sync only the given app instead of all apps",
-        type: "string",
-        required: false,
-      },
-      {
-        name: "project_id",
-        description: "Sync only apps within the given project",
-        type: "string",
-        required: false,
-      },
-    ],
-  },
-  app_store_connect_reviews_sync: {
-    label: "App Store Connect Reviews Sync",
-    description:
-      "Pulls Apple App Store reviews via the App Store Connect customerReviews API and stores them in app_store_reviews. With no project_id, fans out across every project that has an active App Store Connect integration. With project_id set, syncs that single project only (manual-trigger path).",
-    scope: "system",
-    default_schedule: "30 5 * * *",
-    params: [
-      {
-        name: "project_id",
-        description: "Sync only the given project instead of fanning out across all projects with an active App Store Connect integration",
-        type: "string",
-        required: false,
-      },
-    ],
-  },
   notification_deliver: {
     label: "Notification Delivery",
     description:
-      "Delivers a single queued notification to one external channel (email, mobile push). One job per pending row in notification_deliveries.",
+      "Delivers a single queued notification to one external channel (email). One job per pending row in notification_deliveries.",
     scope: "system",
     default_schedule: null,
     params: [
@@ -217,7 +144,7 @@ export const JOB_TYPE_META: Record<
     label: "Daily Stats Aggregation",
     description:
       "Aggregates counts (events / metric_events / funnel_events / questionnaire_responses) into the *_daily rollup tables for one or more UTC days. With no params, re-aggregates the trailing 3 days for every project (catches late-arriving SDK events). With `start`/`end` (YYYY-MM-DD), iterates that date range — used for one-time backfills. Optional `project_id` narrows to a single project. Writes per-app rows AND a project-level rollup row (app_id NULL) so card reads hit a single row, never a SUM. Anonymous counts; tables are explicitly excluded from retention pruning.",
-    scope: "system",
+    scope: "project",
     default_schedule: "30 0 * * *",
     params: [
       {
@@ -244,7 +171,7 @@ export const JOB_TYPE_META: Record<
     label: "Hourly Stats Aggregation",
     description:
       "Hourly analog of stats_aggregate_daily — writes into the *_hourly rollup tables. With no params, re-aggregates the trailing 3 hours for every project. With `start`/`end` (ISO hour like 2026-05-20T00:00), iterates that hour range. Optional `project_id` narrows scope.",
-    scope: "system",
+    scope: "project",
     default_schedule: "5 * * * *",
     params: [
       {

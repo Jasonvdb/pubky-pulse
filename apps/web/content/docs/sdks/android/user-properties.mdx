@@ -26,8 +26,8 @@ Set properties whenever user-level data changes:
 // After a successful purchase
 fun handlePurchaseComplete(product: Product) {
     Owl.setUserProperties(mapOf(
-        "rc_subscriber" to "true",
-        "rc_product" to product.id,
+        "subscriber" to "true",
+        "subscription_product" to product.id,
     ))
 }
 

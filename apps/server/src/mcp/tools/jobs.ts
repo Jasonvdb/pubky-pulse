@@ -10,7 +10,7 @@ export function registerJobsTools(server: McpServer, app: FastifyInstance, agent
     description: "List background job runs for a team. Supports filtering by type, status, project, and date range.",
     inputSchema: {
       team_id: z.string().uuid().describe("The team ID"),
-      job_type: z.string().optional().describe("Filter by job type (e.g., revenuecat_sync)"),
+      job_type: z.string().optional().describe("Filter by job type (e.g., stats_aggregate_daily)"),
       status: z.enum(JOB_STATUSES).optional().describe("Filter by status"),
       project_id: z.string().uuid().optional().describe("Filter by project"),
       since: z.string().optional().describe("Start time"),
@@ -39,7 +39,7 @@ export function registerJobsTools(server: McpServer, app: FastifyInstance, agent
       "Trigger a background job. Only one instance per job type (per project) can be running at a time. Requires jobs:write permission.",
     inputSchema: {
       team_id: z.string().uuid().describe("The team ID"),
-      job_type: z.string().describe("Job type (e.g., revenuecat_sync)"),
+      job_type: z.string().describe("Job type (e.g., stats_aggregate_daily)"),
       project_id: z.string().uuid().optional().describe("Project ID (required for project-scoped jobs)"),
       params: z.record(z.string(), z.unknown()).optional().describe("Job-specific parameters"),
       notify: z.boolean().optional().describe("Send email notification on completion"),

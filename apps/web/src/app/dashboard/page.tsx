@@ -3,9 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { Bug, CheckCircle2, ClipboardList, Filter, ScrollText, UserSearch, Waypoints, MessageSquare, Star } from "lucide-react";
+import { Bug, CheckCircle2, ClipboardList, Filter, ScrollText, UserSearch, Waypoints, MessageSquare } from "lucide-react";
 import type {
-  AppResponse,
   CompletionsCountResponse,
   EventsCountResponse,
   ProjectResponse,
@@ -17,7 +16,6 @@ import { useDailyStats } from "@/hooks/use-daily-stats";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { formatLongDate } from "@/lib/format-date";
-import { computeRatingSummary } from "@/lib/rating-summary";
 import { formatStatNumber } from "@/lib/format-number";
 import {
   resolveSparklineWindowDays,
@@ -77,10 +75,6 @@ export default function DashboardPage() {
   );
   const projects = projectsData?.projects ?? [];
 
-  const { data: appsData, isLoading: appsLoading } = useSWR<{ apps: AppResponse[] }>(
-    teamId ? `/v1/apps?team_id=${teamId}` : null
-  );
-
   const { counts: issueCounts, isLoading: issuesLoading } = useIssueCounts({
     team_id: teamId,
     data_mode: dataMode,
@@ -132,19 +126,6 @@ export default function DashboardPage() {
         : null,
       { refreshInterval: 60_000 }
     );
-
-  const { data: reviewsCountData, isLoading: reviewsCountLoading } =
-    useSWR<{ count: number }>(
-      teamId ? `/v1/reviews/count?team_id=${teamId}${projectQs}` : null,
-      { refreshInterval: 60_000 }
-    );
-
-  const { data: reviewsDeltaData } = useSWR<{ count: number }>(
-    teamId
-      ? `/v1/reviews/count?team_id=${teamId}&since=${eventsSince}${projectQs}`
-      : null,
-    { refreshInterval: 60_000 }
-  );
 
   // Sparkline series for the 6 trendable cards. All requests share the same
   // window + data mode so the lines move in lockstep with the magnitude
@@ -231,22 +212,6 @@ export default function DashboardPage() {
     funnelsStarted === 0
       ? undefined
       : `${Math.round((funnelsCompleted / funnelsStarted) * 100)}%`;
-
-  // Aggregate rating across every Apple app in the team (or just the selected
-  // project's apps when the picker narrows). Worldwide cache on each app is
-  // itself a weighted aggregate across storefronts (recomputed daily by
-  // app_store_ratings_sync). Weight again here by per-app rating count so a
-  // 5-star app with 1 rating doesn't outweigh a 4-star app with 50,000.
-  // Apps without a synced rating yet are skipped.
-  const ratingSummary = useMemo(() => {
-    const apps = appsData?.apps ?? [];
-    const scoped = selectedProjectId
-      ? apps.filter((a) => a.project_id === selectedProjectId)
-      : apps;
-    return computeRatingSummary(scoped);
-  }, [appsData, selectedProjectId]);
-  const ratingValue = ratingSummary ? `★ ${ratingSummary.avg.toFixed(2)}` : "—";
-  const ratingSecondary = ratingSummary ? formatStatNumber(ratingSummary.total) : undefined;
 
   const today = formatLongDate(new Date());
   const firstName = user?.name?.split(" ")[0];
@@ -372,23 +337,6 @@ export default function DashboardPage() {
           isLoading={questionnaireCountLoading}
           href="/dashboard/questionnaires"
           sparkline={{ values: responsesSpark.values, isLoading: responsesSpark.isLoading }}
-        />
-        <StatCard
-          label="Reviews"
-          icon={Star}
-          value={reviewsCountData?.count ?? 0}
-          delta={reviewsDeltaData?.count}
-          isLoading={reviewsCountLoading}
-          href="/dashboard/reviews"
-        />
-        <StatCard
-          label="Avg Rating · All Apps"
-          icon={Star}
-          value={ratingValue}
-          secondary={ratingSecondary}
-          delta={ratingSummary?.delta}
-          isLoading={appsLoading}
-          href="/dashboard/reviews"
         />
       </StatRow>
 

@@ -28,16 +28,6 @@ export const RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES: Readonly<Record<string, 
 export const APP_PLATFORMS = ["apple", "android", "web", "backend"] as const;
 export const ENVIRONMENTS = ["ios", "ipados", "macos", "watchos", "android", "web", "backend"] as const;
 
-/**
- * Platforms a registered push device (`user_devices.platform`) can be on. The
- * mobile_push adapter routes per-row by this field — iOS goes through APNs
- * today, Android is reserved for the FCM transport that will land later.
- * Distinct from `APP_PLATFORMS` (which classifies an app's broad surface) and
- * from `ENVIRONMENTS` (which records the OS an event was emitted from).
- */
-export const DEVICE_PLATFORMS = ["ios", "android"] as const;
-export type DevicePlatform = (typeof DEVICE_PLATFORMS)[number];
-
 export const ALLOWED_ENVIRONMENTS_FOR_PLATFORM: Record<
   (typeof APP_PLATFORMS)[number],
   readonly (typeof ENVIRONMENTS)[number][]
@@ -97,9 +87,6 @@ export function formatDuration(ms: number): string {
 export const MAX_USER_PROPERTY_KEY_LENGTH = 50;
 export const MAX_USER_PROPERTY_VALUE_LENGTH = 200;
 export const MAX_USER_PROPERTIES_COUNT = 50;
-
-// App Store Connect's hard limit on a developer response body.
-export const MAX_REVIEW_RESPONSE_LENGTH = 5970;
 
 export const PG_UNIQUE_VIOLATION = "23505";
 

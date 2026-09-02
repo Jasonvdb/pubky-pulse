@@ -52,7 +52,6 @@ Register the `Application` subclass in your manifest:
 | `compressionEnabled` | `Boolean` | `true` | Gzip-compress request bodies before sending. |
 | `networkTrackingEnabled` | `Boolean` | `true` | Reserved for automatic HTTP request tracking (not yet implemented on Android). |
 | `consoleLogging` | `Boolean` | `true` | Echo events to Logcat. Set to `false` to suppress. |
-| `attributionEnabled` | `Boolean` | `true` | Reserved for install-attribution capture (no Android analog yet — see [below](#no-apple-search-ads-on-android)). |
 
 ## Full Example with All Options
 
@@ -65,7 +64,6 @@ Owl.configure(
     compressionEnabled = true,
     networkTrackingEnabled = true,
     consoleLogging = true,
-    attributionEnabled = true,
 )
 ```
 
@@ -92,9 +90,9 @@ Owl.configure(
 
 Wrap the call in `try`/`catch` as shown above.
 
-## No Apple Search Ads on Android
+## Not yet on Android
 
-The Swift SDK auto-captures Apple Search Ads attribution on configure. The Android SDK has **no ASA equivalent**. Install attribution on Android comes from Google Play / the Play Install Referrer and is out of scope for v1 — the `attributionEnabled` flag is reserved and currently a no-op. Likewise, **automatic network-request instrumentation** (`networkTrackingEnabled`) and **push registration** (FCM, not APNs) are not yet provided by the SDK.
+**Automatic network-request instrumentation** is not yet provided by the Android SDK — `networkTrackingEnabled` is reserved and currently a no-op. Track HTTP failures explicitly with `Owl.error` in the meantime.
 
 ## Calling Configure More Than Once
 

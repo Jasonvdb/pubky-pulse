@@ -8,8 +8,6 @@ import {
   date,
   integer,
   bigint,
-  smallint,
-  numeric,
   boolean,
   jsonb,
   index,
@@ -150,13 +148,6 @@ export const apps = pgTable(
     bundle_id: varchar("bundle_id", { length: 255 }),
     latest_app_version: varchar("latest_app_version", { length: 50 }),
     latest_app_version_updated_at: timestamp("latest_app_version_updated_at", { withTimezone: true }),
-    latest_app_version_source: varchar("latest_app_version_source", { length: 20 }),
-    apple_app_store_id: bigint("apple_app_store_id", { mode: "number" }),
-    worldwide_average_rating: numeric("worldwide_average_rating", { precision: 3, scale: 2 }),
-    worldwide_rating_count: integer("worldwide_rating_count"),
-    worldwide_current_version_rating: numeric("worldwide_current_version_rating", { precision: 3, scale: 2 }),
-    worldwide_current_version_rating_count: integer("worldwide_current_version_rating_count"),
-    ratings_synced_at: timestamp("ratings_synced_at", { withTimezone: true }),
     // The languages this app ships, used to compute the localization gap
     // (demand for a language the app doesn't ship). Auto-reported by the SDK
     // from `Bundle.main.localizations` (source 'sdk', authoritative); 'manual'
@@ -296,12 +287,6 @@ export const appUsers = pgTable(
     // (wanted) only populates as users upgrade to the SDK that captures it.
     last_locale: varchar("last_locale", { length: 20 }),
     last_preferred_language: varchar("last_preferred_language", { length: 35 }),
-    // Lifetime USD revenue (no `rc_` prefix — source-agnostic so future
-    // providers like Superwall/Stripe can land without a column rename).
-    // Today only the RevenueCat sync writes here, summing
-    // `total_revenue_in_usd` across the V2 subscriptions response.
-    total_revenue_usd_cents: bigint("total_revenue_usd_cents", { mode: "number" }),
-    revenue_synced_at: timestamp("revenue_synced_at", { withTimezone: true }),
     // Dev vs prod, mirroring events.is_dev so user listings/counts can filter by
     // data_mode like every other surface. Derived from CLIENT events only
     // (apple/android/web apps) via upsertAppUsers — backend-platform apps never
@@ -313,9 +298,6 @@ export const appUsers = pgTable(
     uniqueIndex("app_users_project_user_idx").on(table.project_id, table.user_id),
     index("app_users_project_anonymous_idx").on(table.project_id, table.is_anonymous),
     index("app_users_project_last_seen_idx").on(table.project_id, table.last_seen_at),
-    index("app_users_project_revenue_idx")
-      .on(table.project_id, table.total_revenue_usd_cents)
-      .where(sql`${table.total_revenue_usd_cents} IS NOT NULL`),
     index("app_users_project_is_dev_idx").on(table.project_id, table.is_dev),
   ]
 );
@@ -527,32 +509,6 @@ export const funnelEvents = pgTable(
     index("funnel_events_app_user_timestamp_idx").on(table.app_id, table.user_id, table.timestamp),
     index("funnel_events_app_step_user_timestamp_idx").on(table.app_id, table.step_name, table.user_id, table.timestamp),
     index("funnel_events_app_client_event_id_idx").on(table.app_id, table.client_event_id),
-  ]
-);
-
-// Project Integrations — per-project third-party service configs (e.g. RevenueCat)
-export const projectIntegrations = pgTable(
-  "project_integrations",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    project_id: uuid("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    provider: varchar("provider", { length: 50 }).notNull(),
-    config: jsonb("config").$type<Record<string, unknown>>().notNull(),
-    enabled: boolean("enabled").notNull().default(true),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updated_at: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-    deleted_at: timestamp("deleted_at", { withTimezone: true }),
-  },
-  (table) => [
-    uniqueIndex("project_integrations_project_provider_idx").on(table.project_id, table.provider),
-    index("project_integrations_project_id_idx").on(table.project_id),
   ]
 );
 
@@ -958,8 +914,8 @@ export const questionnaireResponseComments = pgTable(
 );
 
 // Notifications — per-user inbox row, the durable record of a user-facing event.
-// Channel-agnostic: in-app rendering reads this directly; email + push are separate
-// delivery rows. type/channel are varchar (not enum) to keep the schema open as new
+// Channel-agnostic: in-app rendering reads this directly; email is a separate
+// delivery row. type/channel are varchar (not enum) to keep the schema open as new
 // notification types and channels are added — runtime validation lives in
 // @owlmetry/shared NOTIFICATION_TYPES + NOTIFICATION_CHANNELS.
 export const notifications = pgTable(
@@ -995,7 +951,7 @@ export const notifications = pgTable(
 
 // Notification Deliveries — per-channel attempt log. One row per (notification, channel)
 // queued or attempted. Decoupled from `notifications` so retrying a failed email doesn't
-// rewrite the inbox row, and so we can answer "did the push send?" without grep-ing a
+// rewrite the inbox row, and so we can answer "did the email send?" without grep-ing a
 // status grab-bag jsonb. The `in_app` channel row is created+marked sent synchronously
 // alongside the inbox row insert.
 export const notificationDeliveries = pgTable(
@@ -1022,37 +978,6 @@ export const notificationDeliveries = pgTable(
   ]
 );
 
-// User Devices — push token registry, channel-tagged so a single table covers iOS APNs
-// today and FCM/Telegram chat IDs/webhook URLs in the future. Keyed by token (unique):
-// when a device wipes and reissues the same token to a different user, the next
-// register call atomically reassigns user_id rather than colliding.
-export const userDevices = pgTable(
-  "user_devices",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    user_id: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    channel: varchar("channel", { length: 32 }).notNull(),
-    platform: varchar("platform", { length: 16 }).notNull(),
-    token: text("token").notNull(),
-    environment: varchar("environment", { length: 16 }).notNull().default("production"),
-    app_version: varchar("app_version", { length: 50 }),
-    device_model: varchar("device_model", { length: 100 }),
-    os_version: varchar("os_version", { length: 50 }),
-    last_seen_at: timestamp("last_seen_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("user_devices_token_idx").on(table.token),
-    index("user_devices_user_id_idx").on(table.user_id),
-  ]
-);
-
 // Audit trail for event data deletions (retention cleanup + soft-delete cleanup)
 export const eventDeletions = pgTable(
   "event_deletions",
@@ -1072,220 +997,6 @@ export const eventDeletions = pgTable(
   ]
 );
 
-// App Store Reviews — reviews captured from Apple App Store / Google Play Store.
-// Distinct from in-app `feedback` (which has a session+user+device context). Schema
-// supports both stores from day 1; Apple reviews are populated via the App Store
-// Connect API (per-project integration). Dedupe on (app_id, store, external_id).
-// Hard-deleted by the sync job when a review disappears from ASC — App Store is
-// the sole source of truth.
-export const appStoreReviews = pgTable(
-  "app_store_reviews",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    team_id: uuid("team_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    project_id: uuid("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    app_id: uuid("app_id")
-      .notNull()
-      .references(() => apps.id, { onDelete: "cascade" }),
-    store: varchar("store", { length: 20 }).notNull(),
-    external_id: varchar("external_id", { length: 255 }).notNull(),
-    rating: smallint("rating").notNull(),
-    title: text("title"),
-    body: text("body").notNull(),
-    reviewer_name: varchar("reviewer_name", { length: 255 }),
-    country_code: varchar("country_code", { length: 2 }),
-    app_version: varchar("app_version", { length: 50 }),
-    language_code: varchar("language_code", { length: 10 }),
-    developer_response: text("developer_response"),
-    developer_response_at: timestamp("developer_response_at", { withTimezone: true }),
-    // ASC's customerReviewResponses.id — needed to DELETE the response on Apple's side.
-    // Replies that arrived via the daily sync before the reply feature shipped will have
-    // this null until they're either re-fetched or replaced via the PUT route.
-    developer_response_id: varchar("developer_response_id", { length: 255 }),
-    // ASC's response state: PUBLISHED | PENDING_PUBLISH.
-    developer_response_state: varchar("developer_response_state", { length: 20 }),
-    // Owlmetry user who submitted the reply via the PUT route. Null when the
-    // reply was created outside Owlmetry (sync-job ingested) or by an agent key.
-    responded_by_user_id: uuid("responded_by_user_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    created_at_in_store: timestamp("created_at_in_store", { withTimezone: true }).notNull(),
-    ingested_at: timestamp("ingested_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updated_at: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    uniqueIndex("app_store_reviews_app_store_external_idx").on(
-      table.app_id,
-      table.store,
-      table.external_id,
-    ),
-    index("app_store_reviews_project_created_idx").on(
-      table.project_id,
-      table.created_at_in_store,
-    ),
-    index("app_store_reviews_app_created_idx").on(table.app_id, table.created_at_in_store),
-    index("app_store_reviews_project_rating_idx").on(table.project_id, table.rating),
-  ]
-);
-
-// App Store Ratings — per-country aggregate ratings (avg + count) captured as a
-// daily snapshot from iTunes Lookup. Each (app, store, country, snapshot_date)
-// is a unique row; "current state" reads pick the latest snapshot via
-// DISTINCT ON ... ORDER BY snapshot_date DESC. A tombstone row is one with
-// average_rating IS NULL — written when iTunes returns no result for a
-// storefront that previously had data, signalling the app was delisted from
-// that region. Driven by app_store_ratings_sync (system-scoped, daily 04:30
-// UTC). The `apps` table caches a worldwide rollup recomputed at the end of
-// each sync so dashboard cards stay one-row-read fast.
-export const appStoreRatings = pgTable(
-  "app_store_ratings",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    team_id: uuid("team_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    project_id: uuid("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    app_id: uuid("app_id")
-      .notNull()
-      .references(() => apps.id, { onDelete: "cascade" }),
-    store: varchar("store", { length: 20 }).notNull(),
-    country_code: varchar("country_code", { length: 2 }).notNull(),
-    average_rating: numeric("average_rating", { precision: 3, scale: 2 }),
-    rating_count: integer("rating_count").notNull().default(0),
-    current_version_average_rating: numeric("current_version_average_rating", { precision: 3, scale: 2 }),
-    current_version_rating_count: integer("current_version_rating_count"),
-    app_version: varchar("app_version", { length: 50 }),
-    snapshot_date: date("snapshot_date", { mode: "string" }).notNull(),
-  },
-  (table) => [
-    uniqueIndex("app_store_ratings_app_store_country_date_idx").on(
-      table.app_id,
-      table.store,
-      table.country_code,
-      table.snapshot_date,
-    ),
-    index("app_store_ratings_project_date_idx").on(table.project_id, table.snapshot_date),
-    index("app_store_ratings_team_date_idx").on(table.team_id, table.snapshot_date),
-  ]
-);
-
-// Per-(project, network, campaign) lifetime rollup of ad-network spend +
-// performance metrics. Sourced from each network's reporting API and matched
-// to an Owlmetry app via the ad platform's app store id (Apple's `adamId`)
-// against `apps.apple_app_store_id`. Rows whose ad belongs to an app outside
-// the project are not persisted — keeps a project's `/dashboard/ads` page
-// scoped to the apps it actually owns even when a single Apple Search Ads
-// org spans multiple apps. `total_spend_usd_cents` is null when the org's
-// reporting currency isn't USD; `spend_local_micros` retains the raw value
-// for a future multi-currency v2.
-export const adCampaignLifetime = pgTable(
-  "ad_campaign_lifetime",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    team_id: uuid("team_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    project_id: uuid("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    app_id: uuid("app_id")
-      .notNull()
-      .references(() => apps.id, { onDelete: "cascade" }),
-    apple_app_store_id: bigint("apple_app_store_id", { mode: "number" }).notNull(),
-    network: varchar("network", { length: 32 }).notNull(),
-    campaign_id: varchar("campaign_id", { length: 64 }).notNull(),
-    campaign_name: varchar("campaign_name", { length: 500 }),
-    campaign_status: varchar("campaign_status", { length: 32 }),
-    campaign_start_date: date("campaign_start_date", { mode: "string" }),
-    campaign_end_date: date("campaign_end_date", { mode: "string" }),
-    total_spend_usd_cents: bigint("total_spend_usd_cents", { mode: "number" }),
-    spend_currency: varchar("spend_currency", { length: 8 }),
-    spend_local_micros: bigint("spend_local_micros", { mode: "number" }),
-    total_impressions: bigint("total_impressions", { mode: "number" }).notNull().default(0),
-    total_taps: bigint("total_taps", { mode: "number" }).notNull().default(0),
-    total_installs: bigint("total_installs", { mode: "number" }).notNull().default(0),
-    last_synced_at: timestamp("last_synced_at", { withTimezone: true }).notNull(),
-  },
-  (table) => [
-    uniqueIndex("ad_campaign_lifetime_project_network_campaign_idx").on(
-      table.project_id,
-      table.network,
-      table.campaign_id,
-    ),
-    // Supports the name-match leg of the route's LEFT JOIN: rows that came
-    // from RC backfill carry only the campaign name, not the numeric ID.
-    index("ad_campaign_lifetime_project_network_name_idx").on(
-      table.project_id,
-      table.network,
-      table.campaign_name,
-    ),
-    index("ad_campaign_lifetime_project_app_network_idx").on(
-      table.project_id,
-      table.app_id,
-      table.network,
-    ),
-    index("ad_campaign_lifetime_team_network_idx").on(table.team_id, table.network),
-  ]
-);
-
-export const adAdGroupLifetime = pgTable(
-  "ad_adgroup_lifetime",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    team_id: uuid("team_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    project_id: uuid("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    app_id: uuid("app_id")
-      .notNull()
-      .references(() => apps.id, { onDelete: "cascade" }),
-    network: varchar("network", { length: 32 }).notNull(),
-    campaign_id: varchar("campaign_id", { length: 64 }).notNull(),
-    ad_group_id: varchar("ad_group_id", { length: 64 }).notNull(),
-    ad_group_name: varchar("ad_group_name", { length: 500 }),
-    ad_group_status: varchar("ad_group_status", { length: 32 }),
-    ad_group_start_date: date("ad_group_start_date", { mode: "string" }),
-    ad_group_end_date: date("ad_group_end_date", { mode: "string" }),
-    total_spend_usd_cents: bigint("total_spend_usd_cents", { mode: "number" }),
-    spend_currency: varchar("spend_currency", { length: 8 }),
-    spend_local_micros: bigint("spend_local_micros", { mode: "number" }),
-    total_impressions: bigint("total_impressions", { mode: "number" }).notNull().default(0),
-    total_taps: bigint("total_taps", { mode: "number" }).notNull().default(0),
-    total_installs: bigint("total_installs", { mode: "number" }).notNull().default(0),
-    last_synced_at: timestamp("last_synced_at", { withTimezone: true }).notNull(),
-  },
-  (table) => [
-    uniqueIndex("ad_adgroup_lifetime_project_network_adgroup_idx").on(
-      table.project_id,
-      table.network,
-      table.ad_group_id,
-    ),
-    index("ad_adgroup_lifetime_project_network_name_idx").on(
-      table.project_id,
-      table.network,
-      table.ad_group_name,
-    ),
-    index("ad_adgroup_lifetime_project_network_campaign_idx").on(
-      table.project_id,
-      table.network,
-      table.campaign_id,
-    ),
-  ]
-);
-
 // ─── Time-series aggregation rollups ──────────────────────────────────────────
 //
 // Daily + hourly count rollups for events / metric_events / funnel_events /
@@ -1295,8 +1006,7 @@ export const adAdGroupLifetime = pgTable(
 //
 // Conventions shared across all 8 tables:
 //
-//   - `team_id` denormalized for fast team-scoped reads (same pattern as
-//     `app_store_ratings`).
+//   - `team_id` denormalized for fast team-scoped reads.
 //   - `app_id` nullable: a row with `app_id IS NULL` is a project-level rollup
 //     summing every app's contribution for that (project, is_dev, bucket, dim).
 //     Both per-app rows AND the rollup row are written by the aggregation job

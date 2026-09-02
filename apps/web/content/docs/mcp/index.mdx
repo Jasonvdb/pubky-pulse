@@ -6,12 +6,12 @@ description: Connect AI agents directly to Owlmetry via the Model Context Protoc
 The Owlmetry MCP endpoint lets AI agents connect directly to your Owlmetry server over HTTP. There is nothing to install or keep up to date — agents configure a URL once and always get the latest tools, so every deploy is instantly live.
 
 <Callout>
-**MCP is the agent interface.** Point your coding agent (Claude Code, Cursor, VS Code Copilot, Windsurf, Zed, JetBrains, Cline, Roo Code) at the endpoint. No installation, no updates, 81 tools available instantly.
+**MCP is the agent interface.** Point your coding agent (Claude Code, Cursor, VS Code Copilot, Windsurf, Zed, JetBrains, Cline, Roo Code) at the endpoint. No installation, no updates, 62 tools available instantly.
 </Callout>
 
 Ready to connect? Jump to [Setup](/docs/mcp/setup) for editor-specific configuration.
 
-The endpoint exposes 81 tools covering every operation Owlmetry supports: managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, questionnaires, and attachments; running integrations and background jobs; ranking ad campaigns by revenue; tracking App Store ratings + reviews; and viewing audit logs.
+The endpoint exposes 62 tools covering every operation Owlmetry supports: managing projects, apps, metrics, and funnels; querying events and analytics; triaging issues, feedback, questionnaires, and attachments; running background jobs; and viewing audit logs.
 
 ## How it works
 
@@ -35,12 +35,8 @@ The endpoint needs only a URL and an API key pasted into your editor's config fi
 | Feedback | `list-feedback`, `get-feedback`, `update-feedback-status`, `add-feedback-comment` | 4 |
 | Questionnaires | `list-questionnaires`, `get-questionnaire`, `create-questionnaire`, `update-questionnaire`, `delete-questionnaire`, `list-questionnaire-responses`, `get-questionnaire-response`, `update-questionnaire-response-status`, `add-questionnaire-response-comment`, `get-questionnaire-analytics` | 10 |
 | Attachments | `list-attachments`, `get-attachment`, `delete-attachment`, `get-project-attachment-usage` | 4 |
-| Integrations | `list-providers`, `list-integrations`, `add-integration`, `update-integration`, `remove-integration`, `sync-integration`, `copy-integration`, `get-revenuecat-webhook-setup` | 8 |
 | Jobs | `list-jobs`, `get-job`, `trigger-job`, `cancel-job` | 4 |
 | Audit Logs | `list-audit-logs` | 1 |
-| Ads | `list-ad-campaigns`, `list-ad-groups`, `list-ad-leaves`, `sync-ads` | 4 |
-| Ratings | `list-app-ratings`, `list-ratings-by-country`, `sync-app-ratings` | 3 |
-| Reviews | `list-reviews`, `get-review`, `respond-to-review`, `delete-review-response` | 4 |
 | Stats | `query-stats-bucketed` | 1 |
 
 ## Agent resources

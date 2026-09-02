@@ -2,18 +2,14 @@
 
 import type { ReactNode } from "react";
 import type { AppUserResponse } from "@owlmetry/shared";
-import { ATTRIBUTION_COLUMN_KEYS } from "@owlmetry/shared/attribution";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { VersionBadge, pickLatestForUser } from "@/components/version-badge";
 import { CountryCell } from "@/components/country-flag";
-import { BillingBadge } from "@/components/billing-badge";
-import { AttributionBadge } from "@/components/attribution-badge";
 import { AppBadge } from "@/components/badges/app-badge";
 import { UserTypeBadge } from "@/components/badges/user-type-badge";
 import { formatDateTime } from "@/lib/format-date";
 import { formatSdkLabel } from "@/lib/format-sdk";
-import { formatUsd } from "@/lib/currency";
 import { timeAgoOrDate } from "@/app/dashboard/_components/time-ago";
 
 export interface UserColumnHelpers {
@@ -27,7 +23,7 @@ export interface UserColumnHelpers {
 export interface UserColumnDef {
   id: string;
   label: string;
-  /** Picker grouping (e.g. "Apple Search Ads"). Omit for built-ins. */
+  /** Optional grouping shown in the column picker. Omit for built-ins. */
   group?: string;
   headerClassName?: string;
   cellClassName?: string;
@@ -98,13 +94,12 @@ const BUILTIN_COLUMNS: Record<string, UserColumnDef> = {
     cellClassName: "py-1.5",
     render: (user) => {
       if (!user.properties) return <span className="text-xs text-muted-foreground">-</span>;
+      // `_`-prefixed keys are internal bookkeeping, not user-authored data.
       const otherEntries = Object.entries(user.properties).filter(
-        ([k]) => !k.startsWith("rc_") && !k.startsWith("asa_") && !k.startsWith("_") && k !== "attribution_source",
+        ([k]) => !k.startsWith("_"),
       );
       return (
         <div className="flex flex-wrap items-center gap-1">
-          <BillingBadge properties={user.properties} />
-          <AttributionBadge properties={user.properties} />
           {otherEntries.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -182,41 +177,10 @@ const BUILTIN_COLUMNS: Record<string, UserColumnDef> = {
       return label || <span className="text-muted-foreground">—</span>;
     },
   },
-  lifetime_revenue: {
-    id: "lifetime_revenue",
-    label: "Lifetime Revenue",
-    headerClassName: "w-[140px]",
-    cellClassName: "text-xs py-1.5 tabular-nums text-right",
-    render: (user) => {
-      const cents = user.total_revenue_usd_cents;
-      if (cents === null || cents === undefined) {
-        return <span className="text-muted-foreground">—</span>;
-      }
-      return formatUsd(cents / 100);
-    },
-  },
 };
-
-const attributionColumns: Record<string, UserColumnDef> = Object.fromEntries(
-  ATTRIBUTION_COLUMN_KEYS.map((k) => [
-    `attr:${k.propertyKey}`,
-    {
-      id: `attr:${k.propertyKey}`,
-      label: k.label,
-      group: k.source,
-      headerClassName: "w-[160px]",
-      cellClassName: "font-mono text-xs py-1.5 truncate max-w-[200px]",
-      render: (user) => {
-        const v = user.properties?.[k.propertyKey];
-        return v ? <span title={v}>{v}</span> : <span className="text-muted-foreground">—</span>;
-      },
-    } satisfies UserColumnDef,
-  ]),
-);
 
 export const USER_COLUMN_REGISTRY: Record<string, UserColumnDef> = {
   ...BUILTIN_COLUMNS,
-  ...attributionColumns,
 };
 
 export const DEFAULT_USER_COLUMN_ORDER: string[] = [

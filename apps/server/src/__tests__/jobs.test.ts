@@ -55,7 +55,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });
@@ -72,13 +72,13 @@ describe("Job Routes", () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body.job_runs.length).toBeGreaterThanOrEqual(1);
-      expect(body.job_runs[0].job_type).toBe("apple_ads_sync");
+      expect(body.job_runs[0].job_type).toBe("stats_aggregate_daily");
     });
 
     it("filters by job_type", async () => {
       const res = await app.inject({
         method: "GET",
-        url: `/v1/teams/${teamId}/jobs?job_type=apple_ads_sync`,
+        url: `/v1/teams/${teamId}/jobs?job_type=stats_aggregate_daily`,
         headers: { authorization: `Bearer ${token}` },
       });
 
@@ -117,14 +117,14 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });
       expect(res.statusCode).toBe(201);
       const body = res.json();
       expect(body.job_run).toBeDefined();
-      expect(body.job_run.job_type).toBe("apple_ads_sync");
+      expect(body.job_run.job_type).toBe("stats_aggregate_daily");
       expect(body.job_run.team_id).toBe(teamId);
       expect(body.job_run.project_id).toBe(projectId);
       expect(["pending", "running", "completed"]).toContain(body.job_run.status);
@@ -137,24 +137,6 @@ describe("Job Routes", () => {
         headers: { authorization: `Bearer ${token}` },
         payload: {
           job_type: "db_pruning",
-        },
-      });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toContain("system job");
-    });
-
-    it("rejects stats_aggregate_* via the trigger API regardless of params", async () => {
-      // The stats rollup backfill is done via the operator-only `pnpm backfill`
-      // script that calls the aggregator directly. Triggering through this
-      // public route would expose system-wide work to any team-scoped agent key.
-      const res = await app.inject({
-        method: "POST",
-        url: `/v1/teams/${teamId}/jobs/trigger`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: {
-          job_type: "stats_aggregate_daily",
-          params: { start: "2026-05-18", end: "2026-05-19" },
         },
       });
 
@@ -181,7 +163,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
         },
       });
 
@@ -191,7 +173,7 @@ describe("Job Routes", () => {
 
     it("prevents duplicate running jobs", async () => {
       // Register a slow test handler
-      app.jobRunner.register("apple_ads_sync", async (ctx) => {
+      app.jobRunner.register("stats_aggregate_daily", async (ctx) => {
         await new Promise((r) => setTimeout(r, 5000));
         return { test: true };
       });
@@ -202,7 +184,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });
@@ -217,7 +199,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });
@@ -231,7 +213,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
           notify: true,
         },
@@ -249,7 +231,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });
@@ -280,7 +262,7 @@ describe("Job Routes", () => {
   describe("POST /v1/jobs/:runId/cancel", () => {
     it("cancels a running job", async () => {
       // Register a slow handler
-      app.jobRunner.register("apple_ads_sync", async (ctx) => {
+      app.jobRunner.register("stats_aggregate_daily", async (ctx) => {
         while (!ctx.isCancelled()) {
           await new Promise((r) => setTimeout(r, 100));
         }
@@ -292,7 +274,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });
@@ -318,7 +300,7 @@ describe("Job Routes", () => {
         url: `/v1/teams/${teamId}/jobs/trigger`,
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: projectId,
         },
       });

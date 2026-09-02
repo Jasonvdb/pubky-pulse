@@ -3,12 +3,6 @@ import { apps } from "@owlmetry/db";
 import { compareVersions } from "@owlmetry/shared";
 import type postgres from "postgres";
 import type { JobHandler } from "../services/job-runner.js";
-import { lookupItunes } from "../utils/itunes-lookup.js";
-
-interface AppleAppMetadata {
-  version: string;
-  trackId: number | null;
-}
 
 // 90-day window keeps partition pruning effective and matches the cadence at
 // which apps actually release. Anything older is irrelevant for "latest".
@@ -38,73 +32,35 @@ async function computeLatestFromEvents(
 export const appVersionSyncHandler: JobHandler = async (ctx, params) => {
   const targetAppId = typeof params.app_id === "string" ? params.app_id : null;
 
-  const baseQuery = ctx.db
-    .select({
-      id: apps.id,
-      platform: apps.platform,
-      bundle_id: apps.bundle_id,
-    })
-    .from(apps);
+  const baseQuery = ctx.db.select({ id: apps.id }).from(apps);
 
   const allApps = targetAppId
     ? await baseQuery.where(and(eq(apps.id, targetAppId), isNull(apps.deleted_at)))
     : await baseQuery.where(isNull(apps.deleted_at));
 
   let processed = 0;
-  let appStoreSynced = 0;
   let computedSynced = 0;
   let nullified = 0;
-  let errors = 0;
 
   const client = ctx.createClient();
   try {
     for (const app of allApps) {
       if (ctx.isCancelled()) break;
 
-      let version: string | null = null;
-      let source: "app_store" | "computed" | null = null;
-      let appleMetadata: AppleAppMetadata | null = null;
-
-      if (app.platform === "apple" && app.bundle_id) {
-        const lookup = await lookupItunes(app.bundle_id, "us");
-        if (lookup.kind === "found" && lookup.result.version) {
-          version = lookup.result.version;
-          source = "app_store";
-          appleMetadata = {
-            version: lookup.result.version,
-            trackId: typeof lookup.result.trackId === "number" ? lookup.result.trackId : null,
-          };
-          appStoreSynced++;
-        } else if (lookup.kind === "error") {
-          ctx.log.warn(
-            { app_id: app.id, bundle_id: app.bundle_id, message: lookup.message },
-            "iTunes lookup failed, falling back to computed",
-          );
-          errors++;
-        }
+      const version = await computeLatestFromEvents(client, app.id);
+      if (version) {
+        computedSynced++;
+      } else {
+        nullified++;
       }
 
-      if (version === null) {
-        const computed = await computeLatestFromEvents(client, app.id);
-        if (computed) {
-          version = computed;
-          source = "computed";
-          computedSynced++;
-        } else {
-          nullified++;
-        }
-      }
-
-      const updateSet: Record<string, unknown> = {
-        latest_app_version: version,
-        latest_app_version_source: source,
-        latest_app_version_updated_at: new Date(),
-      };
-      if (appleMetadata && appleMetadata.trackId !== null) {
-        updateSet.apple_app_store_id = appleMetadata.trackId;
-      }
-
-      await ctx.db.update(apps).set(updateSet).where(eq(apps.id, app.id));
+      await ctx.db
+        .update(apps)
+        .set({
+          latest_app_version: version,
+          latest_app_version_updated_at: new Date(),
+        })
+        .where(eq(apps.id, app.id));
 
       processed++;
       if (processed % 10 === 0) {
@@ -119,13 +75,10 @@ export const appVersionSyncHandler: JobHandler = async (ctx, params) => {
     await client.end();
   }
 
-  const synced = appStoreSynced + computedSynced;
   return {
     apps_processed: processed,
-    app_store_synced: appStoreSynced,
     computed_synced: computedSynced,
     no_version_available: nullified,
-    errors,
-    _silent: synced === 0 && errors === 0,
+    _silent: computedSynced === 0,
   };
 };

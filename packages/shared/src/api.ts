@@ -4,8 +4,6 @@ import type { FunnelDefinition, FunnelStep, FunnelAnalytics, FunnelDefinitionRes
 import type { MetricDefinition, MetricSchemaDefinition, MetricAggregationRules, MetricPhase, StoredMetricEvent } from "./metrics.js";
 import type { AuditAction, AuditActorType, AuditResourceType } from "./audit.js";
 import type { IssueAlertFrequency } from "./issues.js";
-import type { PushChannel } from "./preferences.js";
-import type { DevicePlatform } from "./constants.js";
 
 // Data mode for global development/production filtering
 export const DATA_MODES = ["production", "development", "all"] as const;
@@ -187,111 +185,12 @@ export interface UpdateAppRequest {
 
 export type AppResponse = Omit<
   App,
-  "created_at" | "deleted_at" | "latest_app_version_updated_at" | "ratings_synced_at"
+  "created_at" | "deleted_at" | "latest_app_version_updated_at"
 > & {
   created_at: string;
   client_secret: string | null;
   latest_app_version_updated_at: string | null;
-  ratings_synced_at: string | null;
 };
-
-// Store reviews — public reviews scraped from the App Store / Play Store.
-export const REVIEW_STORES = ["app_store", "play_store"] as const;
-export type ReviewStore = (typeof REVIEW_STORES)[number];
-
-export const REVIEW_RESPONSE_STATES = ["PUBLISHED", "PENDING_PUBLISH"] as const;
-export type ReviewResponseState = (typeof REVIEW_RESPONSE_STATES)[number];
-
-export interface ReviewResponse {
-  id: string;
-  app_id: string;
-  app_name: string;
-  project_id: string;
-  store: ReviewStore;
-  external_id: string;
-  rating: number;
-  title: string | null;
-  body: string;
-  reviewer_name: string | null;
-  country_code: string | null;
-  app_version: string | null;
-  language_code: string | null;
-  developer_response: string | null;
-  developer_response_at: string | null;
-  /** ASC's customerReviewResponses.id — needed for DELETE; null for replies created outside Owlmetry pre-feature. */
-  developer_response_id: string | null;
-  developer_response_state: ReviewResponseState | null;
-  /** Owlmetry user who submitted the reply via the API; null for sync-ingested or agent-key replies. */
-  responded_by_user_id: string | null;
-  created_at_in_store: string;
-  ingested_at: string;
-}
-
-export interface UpdateReviewResponseRequest {
-  body: string;
-}
-
-export interface ReviewsListResponse {
-  reviews: ReviewResponse[];
-  cursor: string | null;
-  has_more: boolean;
-}
-
-export interface ReviewsQueryParams {
-  app_id?: string;
-  store?: ReviewStore;
-  rating?: number;
-  rating_lte?: number;
-  rating_gte?: number;
-  country_code?: string;
-  has_developer_response?: boolean;
-  search?: string;
-  cursor?: string;
-  limit?: number;
-}
-
-// Per-country App Store rating aggregates. Populated daily by app_store_ratings_sync
-// from iTunes Lookup. Tombstone rows have average_rating === null when the app
-// previously had data in this storefront but iTunes returned no result this run.
-export interface PerCountryRating {
-  country_code: string;
-  average_rating: number | null;
-  rating_count: number;
-  // Change in rating_count since the previous daily snapshot. Null when no
-  // prior snapshot exists for this country (first-day data).
-  rating_count_delta: number | null;
-  current_version_average_rating: number | null;
-  current_version_rating_count: number | null;
-  app_version: string | null;
-  snapshot_date: string;
-}
-
-export interface AppRatingSummary {
-  worldwide_average: number | null;
-  worldwide_count: number;
-  // Sum of rating_count_delta across countries with prior data; null if no
-  // country has a prior snapshot for this app.
-  worldwide_rating_count_delta: number | null;
-  current_version_average: number | null;
-  current_version_count: number | null;
-  synced_at: string | null;
-}
-
-export interface AppRatingsResponse {
-  ratings: PerCountryRating[];
-  summary: AppRatingSummary;
-}
-
-export interface RatingsByCountryRow {
-  country_code: string;
-  average_rating: number;
-  rating_count: number;
-  rating_count_delta: number | null;
-}
-
-export interface RatingsByCountryResponse {
-  countries: RatingsByCountryRow[];
-}
 
 // Projects (serialized)
 export type ProjectResponse = Omit<Project, "created_at" | "deleted_at"> & {
@@ -504,9 +403,6 @@ export interface AppUserResponse {
   last_locale: string | null;
   /** Wanted language (Locale.preferredLanguages.first), e.g. "fr-CA". Null until SDK upgrade. */
   last_preferred_language: string | null;
-  /** Lifetime USD revenue in cents (e.g. 4295 → $42.95). Null pre-RC-sync. */
-  total_revenue_usd_cents: number | null;
-  revenue_synced_at: string | null;
   /** Dev vs prod, derived from client events (last-write-wins). Backend events never set it. */
   is_dev: boolean;
 }
@@ -520,8 +416,6 @@ export interface AppUsersResponse {
 export interface AppUsersQueryParams {
   search?: string;
   is_anonymous?: string;
-  /** Comma-separated list of billing tiers to include: "paid", "trial", "free". */
-  billing_status?: string;
   /** Filter by dev vs prod (default production). Filters on app_users.is_dev. */
   data_mode?: DataMode;
   /** Sort order. "last_seen" (default) sorts by last_seen_at desc; "first_seen" sorts by first_seen_at desc. */
@@ -582,38 +476,6 @@ export interface SetUserPropertiesRequest {
 export interface SetUserPropertiesResponse {
   updated: true;
   properties: Record<string, string>;
-}
-
-// Project Integrations
-export interface IntegrationResponse {
-  id: string;
-  project_id: string;
-  provider: string;
-  config: Record<string, string>;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface WebhookSetup {
-  webhook_url: string;
-  authorization_header: string;
-  environment: string;
-  events_filter: string;
-}
-
-export interface CreateIntegrationResponse extends IntegrationResponse {
-  webhook_setup?: WebhookSetup;
-}
-
-export interface CreateIntegrationRequest {
-  provider: string;
-  config: Record<string, unknown>;
-}
-
-export interface UpdateIntegrationRequest {
-  config?: Record<string, unknown>;
-  enabled?: boolean;
 }
 
 // Metrics
@@ -850,33 +712,6 @@ export interface StatsBucketedResponse {
 
 export interface MarkAllReadResponse {
   marked: number;
-}
-
-// Devices (push token registry)
-export interface RegisterDeviceRequest {
-  channel: PushChannel;
-  platform: DevicePlatform;
-  token: string;
-  environment?: "production" | "sandbox";
-  app_version?: string;
-  device_model?: string;
-  os_version?: string;
-}
-
-export interface DeviceResponse {
-  id: string;
-  channel: string;
-  platform: string;
-  environment: string;
-  app_version: string | null;
-  device_model: string | null;
-  os_version: string | null;
-  last_seen_at: string;
-  created_at: string;
-}
-
-export interface DevicesListResponse {
-  devices: DeviceResponse[];
 }
 
 // Re-export for convenience

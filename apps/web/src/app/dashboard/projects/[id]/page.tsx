@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
-import { Plus, Pencil, Trash2, ScrollText, Users, Plug, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, ScrollText, Users } from "lucide-react";
 import Link from "next/link";
 import { useBreadcrumbs } from "@/contexts/breadcrumb-context";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CopyButton } from "@/components/copy-button";
-import { RatingBadge } from "@/components/rating-badge";
-import { RatingByCountryGrid } from "@/components/rating-by-country-grid";
 import { api, ApiError } from "@/lib/api";
 import { ProjectDot } from "@/lib/project-color";
 import type { ProjectDetailResponse, AppResponse } from "@owlmetry/shared";
@@ -188,12 +186,6 @@ export default function ProjectDetailPage() {
           <Button variant="outline" size="sm">
             <ScrollText className="h-3.5 w-3.5 mr-1.5" />
             View All Events
-          </Button>
-        </Link>
-        <Link href={`/dashboard/integrations?project_id=${id}`}>
-          <Button variant="outline" size="sm">
-            <Plug className="h-3.5 w-3.5 mr-1.5" />
-            View Integrations
           </Button>
         </Link>
       </div>
@@ -623,26 +615,6 @@ function AppCard({ app, projectColor, onChanged }: { app: AppResponse; projectCo
             <span className="font-mono text-xs">{app.bundle_id}</span>
           </div>
         )}
-        {(app.platform === "apple" || app.platform === "android") && (
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Store rating</span>
-            {app.platform === "apple" ? (
-              <RatingBadge
-                rating={app.worldwide_average_rating}
-                count={app.worldwide_rating_count}
-                currentVersionRating={app.worldwide_current_version_rating}
-                currentVersionRatingCount={app.worldwide_current_version_rating_count}
-              />
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Star className="h-3 w-3" /> Play Store ratings coming soon
-              </span>
-            )}
-          </div>
-        )}
-        {app.platform === "apple" && app.worldwide_rating_count !== null && app.worldwide_rating_count > 0 && (
-          <RatingByCountryGrid projectId={app.project_id} appId={app.id} />
-        )}
         {app.client_secret && (
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Client Secret</span>
@@ -669,15 +641,6 @@ function AppCard({ app, projectColor, onChanged }: { app: AppResponse; projectCo
             <ScrollText className="h-3 w-3" />
             Events
           </Link>
-          {app.platform === "apple" && (app.worldwide_average_rating ?? 0) > 0 && (
-            <Link
-              href={`/dashboard/reviews?app_id=${app.id}`}
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Star className="h-3 w-3" />
-              Reviews
-            </Link>
-          )}
         </div>
       </CardContent>
     </Card>

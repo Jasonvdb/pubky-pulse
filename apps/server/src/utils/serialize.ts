@@ -53,8 +53,6 @@ export function serializeAppUser(u: {
   last_sdk_version?: string | null;
   last_locale?: string | null;
   last_preferred_language?: string | null;
-  total_revenue_usd_cents?: number | null;
-  revenue_synced_at?: Date | null;
   is_dev?: boolean;
 }) {
   return {
@@ -78,8 +76,6 @@ export function serializeAppUser(u: {
     last_sdk_version: u.last_sdk_version ?? null,
     last_locale: u.last_locale ?? null,
     last_preferred_language: u.last_preferred_language ?? null,
-    total_revenue_usd_cents: u.total_revenue_usd_cents ?? null,
-    revenue_synced_at: u.revenue_synced_at?.toISOString() ?? null,
     is_dev: u.is_dev ?? false,
   };
 }
@@ -161,25 +157,11 @@ export function serializeApp(a: {
   name: string; platform: string; bundle_id: string | null;
   latest_app_version?: string | null;
   latest_app_version_updated_at?: Date | null;
-  latest_app_version_source?: string | null;
-  apple_app_store_id?: number | null;
-  worldwide_average_rating?: string | number | null;
-  worldwide_rating_count?: number | null;
-  // Only the list endpoint populates this; single-app reads return null.
-  worldwide_rating_count_delta?: number | null;
-  worldwide_current_version_rating?: string | number | null;
-  worldwide_current_version_rating_count?: number | null;
-  ratings_synced_at?: Date | null;
   supported_languages?: string[] | null;
   supported_languages_source?: string | null;
   client_secret?: string | null;
   created_at: Date; deleted_at: Date | null;
 }) {
-  // numeric columns come back as strings from postgres-js — convert to number for the API.
-  const toNum = (v: string | number | null | undefined): number | null => {
-    if (v === null || v === undefined) return null;
-    return typeof v === "number" ? v : Number.parseFloat(v);
-  };
   return {
     id: a.id,
     team_id: a.team_id,
@@ -189,14 +171,6 @@ export function serializeApp(a: {
     bundle_id: a.bundle_id,
     latest_app_version: a.latest_app_version ?? null,
     latest_app_version_updated_at: a.latest_app_version_updated_at?.toISOString() ?? null,
-    latest_app_version_source: (a.latest_app_version_source ?? null) as "app_store" | "computed" | null,
-    apple_app_store_id: a.apple_app_store_id ?? null,
-    worldwide_average_rating: toNum(a.worldwide_average_rating),
-    worldwide_rating_count: a.worldwide_rating_count ?? null,
-    worldwide_rating_count_delta: a.worldwide_rating_count_delta ?? null,
-    worldwide_current_version_rating: toNum(a.worldwide_current_version_rating),
-    worldwide_current_version_rating_count: a.worldwide_current_version_rating_count ?? null,
-    ratings_synced_at: a.ratings_synced_at?.toISOString() ?? null,
     supported_languages: a.supported_languages ?? null,
     supported_languages_source: (a.supported_languages_source ?? null) as "sdk" | "manual" | null,
     client_secret: a.client_secret ?? null,

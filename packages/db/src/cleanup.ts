@@ -20,7 +20,6 @@ export interface CleanupResult {
   feedback: number;
   feedbackComments: number;
   issueComments: number;
-  projectIntegrations: number;
   questionnaires: number;
   questionnaireResponseComments: number;
 }
@@ -53,7 +52,6 @@ export async function cleanupSoftDeletedResources(client: postgres.Sql): Promise
     feedback: 0,
     feedbackComments: 0,
     issueComments: 0,
-    projectIntegrations: 0,
     questionnaires: 0,
     questionnaireResponseComments: 0,
   };
@@ -273,12 +271,6 @@ export async function cleanupSoftDeletedResources(client: postgres.Sql): Promise
     WHERE deleted_at IS NOT NULL AND deleted_at < ${cutoff}
   `;
   result.issueComments = Number(issueCommentsDeleted.count ?? 0);
-
-  const projectIntegrationsDeleted = await client`
-    DELETE FROM project_integrations
-    WHERE deleted_at IS NOT NULL AND deleted_at < ${cutoff}
-  `;
-  result.projectIntegrations = Number(projectIntegrationsDeleted.count ?? 0);
 
   return result;
 }

@@ -8,7 +8,6 @@ import {
   getTokenAndTeamId,
   createUserAndGetToken,
   addTeamMember,
-  testPushDeliveries,
   TEST_DB_URL,
 } from "./setup.js";
 
@@ -41,19 +40,10 @@ async function setUserPreference(userId: string, prefs: Record<string, unknown>)
   await dbClient`UPDATE users SET preferences = ${JSON.stringify(prefs)}::jsonb WHERE id = ${userId}`;
 }
 
-async function registerDevice(userId: string, token: string) {
-  await dbClient`
-    INSERT INTO user_devices (user_id, channel, platform, token, environment)
-    VALUES (${userId}, 'mobile_push', 'ios', ${token}, 'production')
-  `;
-}
-
 describe("NotificationDispatcher", () => {
   it("creates one inbox row + per-channel deliveries for each user", async () => {
     const u2 = await createUserAndGetToken(app, "member2@owlmetry.com");
     await addTeamMember(teamId, u2.userId, "member");
-    await registerDevice(ownerUserId, "device-owner-1");
-    await registerDevice(u2.userId, "device-member-1");
 
     const result = await app.notificationDispatcher.enqueue({
       type: "feedback.new",
@@ -71,24 +61,18 @@ describe("NotificationDispatcher", () => {
     const deliveries = await dbClient`
       SELECT channel, status FROM notification_deliveries
     `;
-    // Defaults: in_app + email + mobile_push for feedback.new × 2 users = 6 deliveries.
-    expect(deliveries).toHaveLength(6);
+    // Defaults: in_app + email for feedback.new × 2 users = 4 deliveries.
+    expect(deliveries).toHaveLength(4);
     const inApp = deliveries.filter((d) => d.channel === "in_app");
     const email = deliveries.filter((d) => d.channel === "email");
-    const push = deliveries.filter((d) => d.channel === "mobile_push");
     expect(inApp).toHaveLength(2);
     expect(email).toHaveLength(2);
-    expect(push).toHaveLength(2);
     expect(inApp.every((d) => d.status === "sent")).toBe(true);
-
-    // Wait for in-process delivery jobs to complete.
-    await new Promise((r) => setTimeout(r, 200));
-    expect(testPushDeliveries.length).toBe(2);
   });
 
   it("respects per-channel preference overrides", async () => {
     await setUserPreference(ownerUserId, {
-      notifications: { types: { "feedback.new": { email: false, mobile_push: false } } },
+      notifications: { types: { "feedback.new": { email: false } } },
     });
 
     await app.notificationDispatcher.enqueue({

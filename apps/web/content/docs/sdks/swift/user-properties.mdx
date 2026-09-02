@@ -26,8 +26,8 @@ Set properties whenever user-level data changes:
 // After a successful purchase
 func handlePurchaseComplete(product: Product) {
     Owl.setUserProperties([
-        "rc_subscriber": "true",
-        "rc_product": product.id,
+        "subscriber": "true",
+        "subscription_product": product.id,
     ])
 }
 

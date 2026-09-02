@@ -1180,7 +1180,7 @@ export async function teamQuestionnaireRoutes(app: FastifyInstance) {
 
   // GET /v1/questionnaires?team_id=… — list every questionnaire across
   // accessible projects in the team. Powers the dashboard's "all projects"
-  // view (mirrors the team-scoped /v1/feedback and /v1/ads/campaigns routes).
+  // view (mirrors the team-scoped /v1/feedback route).
   // No pagination cursor — questionnaires is low volume; capped by LIMIT.
   app.get<{ Querystring: QuestionnaireQueryParams }>(
     "/questionnaires",

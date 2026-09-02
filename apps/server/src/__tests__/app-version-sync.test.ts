@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import postgres from "postgres";
 import { TEST_DB_URL } from "./setup.js";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -42,7 +42,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Reset apps before each test so iTunes-vs-computed assertions don't leak
+  // Fresh apps per test so version assertions don't leak between them
   appleAppId = await createApp({ platform: "apple", bundle_id: "com.example.test", name: "Apple App" });
   backendAppId = await createApp({ platform: "backend", bundle_id: null, name: "Backend App" });
   androidAppId = await createApp({ platform: "android", bundle_id: "com.example.android", name: "Android App" });
@@ -68,64 +68,19 @@ function jobCtx() {
 }
 
 describe("app_version_sync", () => {
-  it("hits iTunes Lookup for Apple apps and stores version with source='app_store'", async () => {
-    const fetchMock = vi.fn(async (url: RequestInfo | URL) => {
-      expect(String(url)).toContain("itunes.apple.com");
-      expect(String(url)).toContain("com.example.test");
-      return new Response(
-        JSON.stringify({
-          resultCount: 1,
-          // Include a trackId so we can confirm apple_app_store_id capture.
-          // Rating fields (averageUserRating, userRatingCount, etc.) are
-          // intentionally absent — this job no longer writes them.
-          results: [{ trackId: 9876543, version: "5.4.2", bundleId: "com.example.test" }],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
+  it("nullifies latest_app_version when an app has no production events", async () => {
     const { appVersionSyncHandler } = await import("../jobs/app-version-sync.js");
     const result = await appVersionSyncHandler(jobCtx(), { app_id: appleAppId });
 
-    expect(result.app_store_synced).toBe(1);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(result.computed_synced).toBe(0);
+    expect(result.no_version_available).toBe(1);
 
-    const [row] = await db.select().from(apps).where(eq(apps.id, appleAppId));
-    expect(row.latest_app_version).toBe("5.4.2");
-    expect(row.latest_app_version_source).toBe("app_store");
-    expect(row.latest_app_version_updated_at).toBeTruthy();
-    expect(row.apple_app_store_id).toBe(9876543);
-    // Rating fields (now in app_store_ratings) are written by a different job.
-    expect(row.worldwide_average_rating).toBeNull();
-    expect(row.worldwide_rating_count).toBeNull();
-    expect(row.ratings_synced_at).toBeNull();
-
-    vi.unstubAllGlobals();
-  });
-
-  it("falls back to computed when iTunes returns 404", async () => {
-    const fetchMock = vi.fn(async () => new Response("Not Found", { status: 404 }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    // No production events in DB → computed should produce null
-    const { appVersionSyncHandler } = await import("../jobs/app-version-sync.js");
-    const result = await appVersionSyncHandler(jobCtx(), { app_id: appleAppId });
-
-    expect(result.app_store_synced).toBe(0);
     const [row] = await db.select().from(apps).where(eq(apps.id, appleAppId));
     expect(row.latest_app_version).toBeNull();
-
-    vi.unstubAllGlobals();
+    expect(row.latest_app_version_updated_at).toBeTruthy();
   });
 
-  it("counts an error and falls back to computed when iTunes throws", async () => {
-    const fetchMock = vi.fn(async () => {
-      throw new Error("network unreachable");
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    // Seed a production event so the computed fallback has something to find
+  it("computes from production events for Apple apps", async () => {
     const sessionId = "00000000-0000-0000-0000-cccccccc0001";
     const now = new Date();
     await dbClient`
@@ -136,18 +91,14 @@ describe("app_version_sync", () => {
     const { appVersionSyncHandler } = await import("../jobs/app-version-sync.js");
     const result = await appVersionSyncHandler(jobCtx(), { app_id: appleAppId });
 
-    expect(result.errors).toBe(1);
-    expect(result.app_store_synced).toBe(0);
     expect(result.computed_synced).toBe(1);
 
     const [row] = await db.select().from(apps).where(eq(apps.id, appleAppId));
     expect(row.latest_app_version).toBe("7.0.0");
-    expect(row.latest_app_version_source).toBe("computed");
-
-    vi.unstubAllGlobals();
+    expect(row.latest_app_version_updated_at).toBeTruthy();
   });
 
-  it("computes from production events for non-Apple apps using semver-aware max", async () => {
+  it("computes the max version semver-aware, ignoring dev events", async () => {
     // Insert a backend event with multiple versions, including the lexicographic-trap pair 1.10.0 vs 1.9.0
     const sessionId = "00000000-0000-0000-0000-bbbbbbbbb001";
     const now = new Date();
@@ -169,7 +120,6 @@ describe("app_version_sync", () => {
     expect(result.computed_synced).toBe(1);
     const [row] = await db.select().from(apps).where(eq(apps.id, backendAppId));
     expect(row.latest_app_version).toBe("1.10.0"); // semver-aware: 1.10 > 1.9
-    expect(row.latest_app_version_source).toBe("computed");
   });
 
   it("only syncs the requested app when app_id is passed", async () => {

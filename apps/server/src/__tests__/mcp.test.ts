@@ -56,16 +56,6 @@ const EXPECTED_TOOLS_BY_DOMAIN = {
     "delete-funnel",
     "query-funnel",
   ],
-  integrations: [
-    "list-providers",
-    "list-integrations",
-    "add-integration",
-    "get-revenuecat-webhook-setup",
-    "update-integration",
-    "copy-integration",
-    "remove-integration",
-    "sync-integration",
-  ],
   jobs: ["list-jobs", "get-job", "trigger-job", "cancel-job"],
   auditLogs: ["list-audit-logs"],
   issues: [
@@ -93,9 +83,6 @@ const EXPECTED_TOOLS_BY_DOMAIN = {
     "add-questionnaire-response-comment",
     "get-questionnaire-analytics",
   ],
-  reviews: ["list-reviews", "get-review", "respond-to-review", "delete-review-response"],
-  ratings: ["list-app-ratings", "list-ratings-by-country", "sync-app-ratings"],
-  ads: ["list-ad-campaigns", "list-ad-groups", "list-ad-leaves", "sync-ads"],
   attachments: [
     "list-attachments",
     "get-attachment",
@@ -119,12 +106,9 @@ const EXPECTED_INSTRUCTION_KEYWORDS = [
   "Issues",
   "Feedback",
   "Questionnaires",
-  "Reviews & ratings",
   "Locale demand",
-  "Ads insights",
   "Time-series rollups",
   "Attachments",
-  "Integrations",
 ];
 
 /** Send an MCP JSON-RPC request to /mcp */
@@ -932,68 +916,6 @@ describe("MCP endpoint", () => {
     });
   });
 
-  // ── Integrations ──────────────────────────────────────────────────────
-
-  describe("integrations", () => {
-    it("list-providers returns available providers", async () => {
-      const { key } = await createFullAgentKey();
-      const { parsed, isError } = parseToolResult(
-        await callTool(key, "list-providers", { project_id: testData.projectId }),
-      );
-      expect(isError).toBe(false);
-      expect(parsed.providers.length).toBeGreaterThanOrEqual(1);
-      const names = parsed.providers.map((p: { id: string }) => p.id);
-      expect(names).toContain("revenuecat");
-    });
-
-    it("add → list → update → remove integration lifecycle", async () => {
-      const { key } = await createFullAgentKey();
-
-      // Add
-      const addRes = await callTool(key, "add-integration", {
-        project_id: testData.projectId,
-        provider: "revenuecat",
-        config: { api_key: "rc_test_key_123" },
-      });
-      const { parsed: added, isError: addErr } = parseToolResult(addRes);
-      expect(addErr).toBe(false);
-      expect(added.provider).toBe("revenuecat");
-      expect(added.webhook_setup).toBeDefined();
-      expect(added.webhook_setup.webhook_url).toContain("/v1/webhooks/revenuecat/");
-      expect(added.webhook_setup.authorization_header).toMatch(/^Bearer whsec_/);
-
-      // Verify second content block has formatted webhook setup text
-      const addBody = addRes.json();
-      expect(addBody.result.content).toHaveLength(2);
-      expect(addBody.result.content[1].text).toContain("RevenueCat Webhook Setup");
-
-      // List
-      const { parsed: listed } = parseToolResult(
-        await callTool(key, "list-integrations", { project_id: testData.projectId }),
-      );
-      expect(listed.integrations.length).toBe(1);
-
-      // Update (disable)
-      const { parsed: updated } = parseToolResult(
-        await callTool(key, "update-integration", {
-          project_id: testData.projectId,
-          provider: "revenuecat",
-          enabled: false,
-        }),
-      );
-      expect(updated.enabled).toBe(false);
-
-      // Remove
-      const { parsed: removed } = parseToolResult(
-        await callTool(key, "remove-integration", {
-          project_id: testData.projectId,
-          provider: "revenuecat",
-        }),
-      );
-      expect(removed.deleted).toBe(true);
-    });
-  });
-
   // ── Jobs ──────────────────────────────────────────────────────────────
 
   describe("jobs", () => {
@@ -1009,14 +931,13 @@ describe("MCP endpoint", () => {
     it("trigger-job and get-job round-trip", async () => {
       const { key, teamId } = await createFullAgentKey();
 
-      // Use apple_ads_sync — the only project-scoped job remaining now that
-      // revenuecat_sync runs on a daily cron at system scope. The job will
-      // 400 because there's no apple-ads integration, but trigger-job creates
-      // a job_run row before the handler runs, which is what we test here.
+      // stats_aggregate_daily is project-scoped, so it is triggerable through
+      // the team jobs endpoint. trigger-job creates the job_run row before the
+      // handler runs, which is what this test asserts on.
       const { parsed: triggered, isError: triggerErr } = parseToolResult(
         await callTool(key, "trigger-job", {
           team_id: teamId,
-          job_type: "apple_ads_sync",
+          job_type: "stats_aggregate_daily",
           project_id: testData.projectId,
         }),
       );
@@ -1029,7 +950,7 @@ describe("MCP endpoint", () => {
         await callTool(key, "get-job", { run_id: triggered.job_run.id }),
       );
       expect(getErr).toBe(false);
-      expect(details.job_run.job_type).toBe("apple_ads_sync");
+      expect(details.job_run.job_type).toBe("stats_aggregate_daily");
     });
   });
 

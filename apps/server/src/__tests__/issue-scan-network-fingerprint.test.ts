@@ -82,7 +82,7 @@ async function listIssues() {
 describe("issue_scan splits sdk:network_request errors by host+path+method", () => {
   it("creates separate issues for different hosts", async () => {
     await ingestNetworkErrors([
-      { url: "https://api.revenuecat.com/v1/subscribers" },
+      { url: "https://api.vendor.com/v1/subscribers" },
       { url: "https://api.example.com/v1/users" },
     ]);
 
@@ -94,7 +94,7 @@ describe("issue_scan splits sdk:network_request errors by host+path+method", () 
     const titles = rows.map((r) => r.title).sort();
     expect(titles).toEqual([
       "Network error: GET api.example.com/v1/users",
-      "Network error: GET api.revenuecat.com/v1/subscribers",
+      "Network error: GET api.vendor.com/v1/subscribers",
     ]);
   });
 
@@ -173,38 +173,38 @@ describe("issue_scan splits sdk:network_request errors by host+path+method", () 
   });
 
   it("groups errors with the same host+path even when path contains Firebase-style alphanumeric IDs", async () => {
-    // Real production data: every RevenueCat error embeds a 28-char Firebase
-    // UID in /v1/subscribers/{uid}/offerings. Without tokeny templating each
-    // affected user would create their own issue (e.g. 31 issues for 3DKit's
-    // current single sdk:network_request issue).
+    // Real production data: every error from this vendor embeds a 28-char
+    // Firebase UID in /v1/subscribers/{uid}/offerings. Without tokeny
+    // templating each affected user would create their own issue (e.g. 31
+    // issues instead of one sdk:network_request issue).
     await ingestNetworkErrors([
-      { url: "https://api.revenuecat.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3/offerings" },
-      { url: "https://api.revenuecat.com/v1/subscribers/WvANm2hmnob5bTZR1Tn7uK7KA0r2/offerings" },
-      { url: "https://api.revenuecat.com/v1/subscribers/CdiT9JHLpyMNQhYkujQmKEUxQy63/offerings" },
+      { url: "https://api.vendor.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3/offerings" },
+      { url: "https://api.vendor.com/v1/subscribers/WvANm2hmnob5bTZR1Tn7uK7KA0r2/offerings" },
+      { url: "https://api.vendor.com/v1/subscribers/CdiT9JHLpyMNQhYkujQmKEUxQy63/offerings" },
     ]);
 
     const result = await runScan();
     expect(result.issues_created).toBe(1);
     const rows = await listIssues();
     expect(rows[0].title).toBe(
-      "Network error: GET api.revenuecat.com/v1/subscribers/<id>/offerings",
+      "Network error: GET api.vendor.com/v1/subscribers/<id>/offerings",
     );
   });
 
   it("splits Firebase-UID URLs by trailing path even though the UID itself templates", async () => {
-    // Same production fixture but two different RevenueCat endpoints — should
-    // still split, proving the tokeny templating doesn't over-collapse.
+    // Same production fixture but two different endpoints on the same host —
+    // should still split, proving the tokeny templating doesn't over-collapse.
     await ingestNetworkErrors([
-      { url: "https://api.revenuecat.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3/offerings" },
-      { url: "https://api.revenuecat.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3" },
+      { url: "https://api.vendor.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3/offerings" },
+      { url: "https://api.vendor.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3" },
     ]);
 
     const result = await runScan();
     expect(result.issues_created).toBe(2);
     const titles = (await listIssues()).map((r) => r.title).sort();
     expect(titles).toEqual([
-      "Network error: GET api.revenuecat.com/v1/subscribers/<id>",
-      "Network error: GET api.revenuecat.com/v1/subscribers/<id>/offerings",
+      "Network error: GET api.vendor.com/v1/subscribers/<id>",
+      "Network error: GET api.vendor.com/v1/subscribers/<id>/offerings",
     ]);
   });
 
@@ -316,16 +316,16 @@ describe("issue_scan splits sdk:network_request errors by host+path+method", () 
     expect(result.issues_created).toBe(1);
   });
 
-  it("handles the real RevenueCat + Firebase logging cascade in one session", async () => {
-    // Mirrors a real FaxApp offline session: 3 distinct endpoints fail
-    // (two different RC paths + Firebase batchlog). Burst aliasing collapses
-    // them onto a single issue (same session, same 5s window) and the title
-    // is taken from a non-specialized event in the burst — here the first
-    // RevenueCat URL.
+  it("handles a real multi-vendor logging cascade in one session", async () => {
+    // Mirrors a real offline session: 3 distinct endpoints fail (two paths on
+    // the same vendor host + Firebase batchlog). Burst aliasing collapses them
+    // onto a single issue (same session, same 5s window) and the title is
+    // taken from a non-specialized event in the burst — here the first
+    // vendor URL.
     const sharedSession = "00000000-0000-0000-0000-bbb000000001";
     await ingestNetworkErrors([
-      { url: "https://api.revenuecat.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3/offerings", session_id: sharedSession },
-      { url: "https://api.revenuecat.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3", session_id: sharedSession },
+      { url: "https://api.vendor.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3/offerings", session_id: sharedSession },
+      { url: "https://api.vendor.com/v1/subscribers/qK2nM9lB8JaAfXtKf4EhN2l7yqF3", session_id: sharedSession },
       { url: "https://firebaselogging-pa.googleapis.com/v1/firelog/legacy/batchlog", method: "POST", session_id: sharedSession },
     ]);
 

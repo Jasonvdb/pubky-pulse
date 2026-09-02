@@ -1,1 +1,0 @@
-ALTER TYPE "public"."environment" ADD VALUE 'watchos' BEFORE 'android';

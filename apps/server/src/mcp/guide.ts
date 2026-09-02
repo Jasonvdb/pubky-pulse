@@ -1,6 +1,6 @@
 export const GUIDE_CONTENT = `# Owlmetry — Agent Guide
 
-Owlmetry is a self-hosted analytics platform for mobile and backend apps. It captures events, structured metrics, and funnel conversions from client SDKs (Swift, Node.js), stores them in a partitioned PostgreSQL database, and exposes query and management APIs.
+Owlmetry is a self-hosted analytics platform for web, backend and mobile apps. It captures events, structured metrics, and funnel conversions from client SDKs (Swift, Node.js), stores them in a partitioned PostgreSQL database, and exposes query and management APIs.
 
 You are connected via MCP using an **agent key** (\`owl_agent_...\`). Agent keys are for reading data and managing resources. **Client keys** (\`owl_client_...\`) are used by SDKs for event ingestion — you will not ingest events yourself, but you will retrieve client keys when creating apps for SDK configuration. **Import keys** (\`owl_import_...\`) are for bulk-importing historical event data — you can create these with the \`create-import-key\` tool.
 
@@ -12,7 +12,7 @@ Owlmetry organises resources in a **Team → Project → Apps** hierarchy:
 - **Project** — groups related apps under one product (e.g., "MyApp" project). Metrics and funnels are defined at the project level so they span all apps in the project. Each project has configurable data retention policies for events (default: 120 days), metrics (default: 365 days), and funnels (default: 365 days).
 - **App** — represents a single deployable artifact. Each app has a \`platform\` (\`apple\`, \`android\`, \`web\`, \`backend\`) and, for non-backend platforms, a \`bundle_id\`. Creating an app auto-generates a \`client_secret\` for SDK use.
 
-Projects group apps cross-platform: an iOS app and its backend API can share the same project, enabling unified funnel and metric analysis across both.
+Projects group apps cross-platform: a web front-end, a mobile app, and their backend API can share the same project, enabling unified funnel and metric analysis across all of them.
 
 ## Discovering IDs
 
@@ -91,66 +91,7 @@ All time parameters (\`since\`, \`until\`) accept:
 Default ranges: events = 24 hours, funnels = 30 days, metrics = 24 hours.
 
 ### User Properties
-Custom key-value properties stored on project-level users. Users are unique per project, not per app — the same user ID seen from multiple apps (e.g., iOS + backend) is a single user. Each user tracks which apps they've been seen from. Properties are set via SDK (\`setUserProperties()\`) or synced from integrations (e.g., RevenueCat). Properties are shallow-merged on update; empty string values delete keys. Limits: 50 keys max, 50-char keys, 200-char values.
-
-### Integrations
-Third-party service connections (RevenueCat, Apple Search Ads) that sync data into user properties. Configured per-project.
-
-**Setting up RevenueCat — the only thing you need from the user is their RevenueCat V2 Secret API key.** Everything else is automatic.
-
-1. Ask the user for their **RevenueCat V2 Secret API key**. They generate it in RevenueCat dashboard → Project Settings → API Keys → + New secret API key. Required permissions (set at the section level using the top-right dropdown on each section, not individual sub-rows): **Customer information → Read only** AND **Project configuration → Read only**. All other sections → No access.
-2. Call \`add-integration\` with just \`api_key\`. Do NOT ask the user for a webhook secret — one is auto-generated.
-3. The response includes a \`webhook_setup\` section with every value the user needs to paste into RevenueCat's webhook form (Settings → Webhooks → + New Webhook): webhook URL, authorization header (contains the auto-generated secret), environment, and events filter. Present these to the user.
-4. After the user confirms the webhook is saved, run \`sync-integration\` to backfill existing subscriber data.
-
-If the user later loses the post-create output (or you need to recover the auth header for an integration created before this tool existed), call \`get-revenuecat-webhook-setup\` with just \`project_id\`. It re-reveals the **same** webhook secret (no rotation), so any deliveries already configured on RevenueCat's side keep working — useful when the dashboard shows a connected RC integration but the user can't find the Bearer header.
-
-**Setting up Apple Search Ads — needed to resolve captured ASA IDs into human-readable names** (campaign name, ad group name, keyword text, ad name). Complementary to RevenueCat: ASA covers every attributed user, RC only subscribers.
-
-**IMPORTANT: DO NOT ask the user for a private key or an openssl command.** Owlmetry generates the EC P-256 keypair server-side. The flow is three calls:
-
-1. Call \`add-integration\` with \`provider: "apple-search-ads"\` and an empty config (\`{}\`). The response includes the generated \`public_key_pem\` under \`config.public_key_pem\` and an instructions block. Relay the public key to the user.
-2. Walk the user through uploading it at ads.apple.com:
-   - Account Settings → User Management → Invite (or reuse) an API user with role \`API Account Read Only\`.
-   - On that user's API tab, paste the public key from step 1. Apple returns \`clientId\`, \`teamId\`, \`keyId\`.
-3. Call \`update-integration\` with \`provider: "apple-search-ads"\` and \`config: { client_id, team_id, key_id }\`. The integration is still pending at this point.
-4. Call \`update-integration\` again with \`config: { org_id }\` (the numeric "Account ID" shown in the ads.apple.com profile menu top-right). The integration auto-enables when all four IDs are present — do NOT pass \`enabled\`.
-5. (Optional) Call \`sync-integration\` with \`provider: "apple-search-ads"\` to backfill names for users attributed before the integration was connected. New attributions enrich automatically via a fire-and-forget hook in the attribution route.
-
-The server strips \`private_key_pem\` and \`public_key_pem\` from any user-supplied config on POST/PATCH — it only generates them itself. If the user asks to rotate the keypair, remove the integration and re-add (which creates a new keypair; they'll need to upload the new public key to Apple).
-
-### Attribution
-
-Where a user came from, stored as user properties on \`app_users\`. Today only **Apple Search Ads** is implemented — future Meta / Google Ads support will write into the same keys.
-
-**Auto-captured by the Swift SDK** on \`Owl.configure()\` (iOS / iPadOS / macOS). No code required. The SDK fetches the AdServices attribution token, posts it to Owlmetry, and writes the resolved attribution onto the user's properties.
-
-User properties written:
-- \`attribution_source\` — \`apple_search_ads\` on a successful attribution, \`none\` when the install is organic, or \`apple_test_install\` when Apple returned its non-production fixture (TestFlight, Xcode dev build on a real device, or simulator — see below). Query/group on this key rather than a network-specific flag; future networks will reuse it.
-- On successful ASA attribution, additional ASA-specific IDs are written: \`asa_campaign_id\`, \`asa_ad_group_id\`, \`asa_keyword_id\`, \`asa_claim_type\`, \`asa_ad_id\`, \`asa_creative_set_id\`. Human-readable names (campaign name, keyword text, etc.) are resolved into extra properties when the Apple Search Ads integration is configured for the project (see **Integrations** above).
-- \`attribution_source = "apple_test_install"\` is set with **no** \`asa_*\` fields when Apple's AdServices API returns its deliberate non-production fixture (same numeric ID across campaign, ad group, and ad — structurally impossible from real Apple data). This fires for TestFlight builds, Xcode-deployed dev builds, and the simulator. Filter these out of acquisition reporting alongside organic installs by excluding \`attribution_source IN ('none', 'apple_test_install')\`, or include them with a separate badge to spot a developer's own install showing up.
-
-**Opt out**: pass \`attributionEnabled: false\` to \`Owl.configure()\` on the Swift SDK.
-
-**RevenueCat backfill**: when the RevenueCat integration is enabled, \`sync-integration\` (or per-user sync on webhook events) also pulls ASA attribution out of RevenueCat's subscriber attributes and writes the same properties. This is how users who onboarded **before** the app shipped SDK-side attribution capture get attributed — no extra setup, happens automatically during any RevenueCat sync.
-
-**Debugging "none"**: the SDK emits \`sdk:attribution_capture\` events for each capture attempt with outcomes (\`success\`, \`pending\`, \`gave_up\`, \`token_fetch_failed\`, \`invalid_token\`, \`transport_failure\`). When a specific install shows \`attribution_source = "none"\` and you need to know why, \`query-events\` with \`message: "sdk:attribution_capture"\` and the user's \`user_id\` (or their session) will show the outcome and retry history.
-
-### Advertising Insights
-
-Ranks acquisition campaigns by USD revenue and ROAS. The hierarchy is **campaign → ad group → keyword | ad** (ad groups contain both keywords and ads in Apple Search Ads — keyword-driven and auto-driven placements get attributed differently). Today only \`attribution_source = "apple_search_ads"\` is populated; the schema and tools accept any value in \`ATTRIBUTION_NETWORK_DIMENSIONS\`, so future Meta/Google/TikTok networks slot in without API changes.
-
-**Trailing 12-month window** applied symmetrically to both sides of ROAS: spend is summed from \`ad_campaign_lifetime\` (synced daily from Apple's Reports API in 4×90-day chunks — Apple caps single requests at ~90 days), and revenue is filtered server-side to users with \`app_users.first_seen_at\` inside the same window. Without the matching filter, users acquired before the spend window's start would inflate ROAS by contributing revenue against zero matchable spend. Each response echoes the window in \`window_days\` so clients can label the time range.
-
-**Where the numbers come from**: per-user lifetime revenue is summed across the RevenueCat V2 \`/subscriptions\` response (\`total_revenue_in_usd\` per subscription, refunds netted by RC) and stored as a typed \`total_revenue_usd_cents\` column on \`app_users\`. Two refresh paths keep it fresh: (1) every RC subscription webhook fire-and-forgets a per-user resync against RC's API — typically within seconds of the transaction; (2) the daily \`revenuecat_sync\` cron at 03:00 UTC fans out across every project and reconciles anyone whose webhook was dropped.
-
-**Tool reference**:
-- \`list-ad-campaigns\` — top campaigns for a project, sorted by revenue desc. Each row has \`user_count\`, \`paid_user_count\` (lifetime ever-paid), \`retained_user_count\` (currently on an auto-renewing paid subscription, excludes trials), \`total_revenue_usd\`, \`arpu\`. Optional \`app_id\` scopes to one app; useful for cross-app projects where you want per-app attribution numbers.
-- \`list-ad-groups\` — drill into a campaign. Same row shape.
-- \`list-ad-leaves\` — within an ad group, returns \`keywords\` and \`ads\` arrays side-by-side. Look at both — for keyword-targeted campaigns the keyword side dominates; for Search Match / Discovery campaigns the ad side will.
-- \`sync-ads\` — admin-only manual refresh. Fires \`revenuecat_sync\` (lifetime revenue) and \`apple_ads_sync\` (resolves any unresolved ASA IDs to readable names) for the project.
-
-**Empty results**: a project with no users carrying \`attribution_source = 'apple_search_ads'\` returns an empty list. Check the integration setup — Apple Search Ads attribution is captured by the Swift SDK (auto, no code) and backfilled by RevenueCat sync; both should be enabled for a project to populate this surface.
+Custom key-value properties stored on project-level users. Users are unique per project, not per app — the same user ID seen from multiple apps (e.g., iOS + backend) is a single user. Each user tracks which apps they've been seen from. Properties are set via SDK (\`setUserProperties()\`). Properties are shallow-merged on update; empty string values delete keys. Limits: 50 keys max, 50-char keys, 200-char values.
 
 ### Issues
 Error events are automatically scanned hourly and grouped into **issues** via fingerprinting (normalized error message + source module, plus optional discriminator). The discriminator is set for two cases: \`sdk:network_request\` errors discriminate on \`METHOD host/templated_path\` from \`_http_url\`/\`_http_method\`, and any error event carrying an \`_error_type\` reserved attribute (set by the SDKs when consumers call \`Owl.error(error)\` with an Error/Exception value) discriminates on the runtime type so different error classes with identical wording stay on separate issues. Each issue tracks:
@@ -159,7 +100,7 @@ Error events are automatically scanned hourly and grouped into **issues** via fi
 - **Status lifecycle**: \`new\` → \`in_progress\` (claimed by agent/user) → \`resolved\` (the app version where the fix was applied is **required** — it powers regression detection) → may \`regress\` if the error reappears in a newer version. Two off-ramps stop notifications without claiming a fix: \`silenced\` (terminal — stays silent even if the error keeps happening; use for transient infra blips), and \`snoozed\` (auto-reverts to \`new\` and re-fires \`issue.new\` on the very next occurrence; use when you suspect a one-off and only want to be alerted if the assumption turns out wrong).
 - **Comments**: investigation notes from users (\`👤\`) and agents (\`🕶️\`). Markdown supported.
 - **Merge**: if two issues turn out to be the same problem, merge them — all fingerprints, occurrences, and comments move to the target.
-- **Notifications**: two types fire on production issues. \`issue.new\` is a push-by-default summary that fires from \`issue_scan\` at the end of every hourly run when anything was just created or regressed (one push per team per scan). \`issue.digest\` is the per-project email-by-default digest gated by \`issue_alert_frequency\` (none/hourly/6-hourly/daily/weekly). See the Notifications section for per-channel defaults.
+- **Notifications**: two types fire on production issues. \`issue.new\` is an in-app-by-default summary that fires from \`issue_scan\` at the end of every hourly run when anything was just created or regressed (one alert per team per scan). \`issue.digest\` is the per-project email-by-default digest gated by \`issue_alert_frequency\` (none/hourly/6-hourly/daily/weekly). See the Notifications section for per-channel defaults.
 
 **Session-burst aliasing**: when multiple error events fire in the same session within 5 seconds, the scan aliases their fingerprints onto a single issue — a loader throwing + a caller logging + an \`op.fail()\` all collapse into one. Conservative: two pre-existing issues never auto-merge, only newly-seen fingerprints attach to a co-occurring existing issue. Dev and prod remain separate.
 
@@ -242,11 +183,11 @@ Aggregation runs every hour at \`:05\` UTC (re-aggregates the trailing 3 hours) 
 Asynchronous server-side tasks with progress tracking and optional email notifications. Used for long-running operations like bulk syncs. Only one instance of each job type (per project) can run at a time — duplicates return an error.
 
 ### Notifications
-Owlmetry has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app, email (Resend), and mobile push (APNs today, FCM later). The mobile_push adapter routes per device by \`user_devices.platform\`. New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`) or the iOS Profile screen.
+Owlmetry has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app and email (Resend). New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`).
 
 **Issue notification types** — there are two:
-- \`issue.new\` fires from \`issue_scan\` at the end of every hourly run, with one push per team summarizing all production issues that were just created or regressed. Defaults: in_app + mobile_push on, email off. Bypasses any cadence throttle, so push lands within ~5 min of detection.
-- \`issue.digest\` fires from \`issue_notify\` at the project's \`issue_alert_frequency\` (none/hourly/6-hourly/daily/weekly). Defaults: email only (in_app + mobile_push off so the digest doesn't double up with the instant \`issue.new\` push). Project-level rate limit / batching policy.
+- \`issue.new\` fires from \`issue_scan\` at the end of every hourly run, with one alert per team summarizing all production issues that were just created or regressed. Defaults: in_app on, email off. Bypasses any cadence throttle, so the alert lands within ~5 min of detection.
+- \`issue.digest\` fires from \`issue_notify\` at the project's \`issue_alert_frequency\` (none/hourly/6-hourly/daily/weekly). Defaults: email only (in_app off so the digest doesn't double up with the instant \`issue.new\` alert). Project-level rate limit / batching policy.
 
 ### Audit Trail
 Every mutation (create, update, delete) on resources is recorded in audit logs with the actor, action, resource type, resource ID, and metadata. Query with \`list-audit-logs\`.
@@ -272,11 +213,11 @@ Every mutation (create, update, delete) on resources is recorded in audit logs w
   - Returns \`client_secret\` for SDK configuration
   - **Naming (strict)**: app names MUST always be \`<project name> <platform>\` — e.g. "Lofi iOS", "Lofi Android", "Lofi Web", "Lofi Backend". Never omit the platform suffix, even if the project name seems to imply a platform.
 - \`update-app\` — Update app name (needs \`apps:write\`)
-- \`list-app-users\` — List users for an app (search, anonymous filter, billing tier filter, \`data_mode\` dev/prod filter, pagination). A user's dev/prod flag is derived from their client (non-backend) events, last-write-wins; \`data_mode\` defaults to \`production\`.
+- \`list-app-users\` — List users for an app (search, anonymous filter, \`data_mode\` dev/prod filter, pagination). A user's dev/prod flag is derived from their client (non-backend) events, last-write-wins; \`data_mode\` defaults to \`production\`.
 - \`list-user-locales\` — Locale demand for deciding where to localize next. Returns \`by_locale\` (users grouped by their **wanted** language — device \`Locale.preferredLanguages.first\`, e.g. \`fr-FR\`, \`pt-BR\` — each with a \`shipped\` flag) and \`by_country\` (works for every user today, no SDK upgrade needed). Narrow with \`project_id\` and/or \`app_id\` to populate the \`shipped\`/gap flags (\`shipped: false\` = demand for a language the app doesn't ship yet); \`team_id\` ⊥ \`project_id\` ⊥ \`app_id\`. \`shipped\` is \`null\` (no flag) across multiple apps. The language signal fills in as users upgrade to the SDK that reports preferred language; until then lean on the country breakdown.
 
 #### Latest version detection
-Every app response includes \`latest_app_version\`, \`latest_app_version_updated_at\`, and \`latest_app_version_source\` (\`"app_store"\` for Apple apps resolved via the iTunes Lookup API; \`"computed"\` for everything else, derived from the highest \`app_version\` seen in production events). Refreshed hourly by the \`app_version_sync\` system job, and immediately on Apple app create. To compare a user/event/issue version against the latest, use string equality with the app's \`latest_app_version\` (semver-aware comparison only matters for ordering — equality is enough to flag "on latest"). Trigger \`app_version_sync\` with \`{ app_id }\` to refresh a single app on demand.
+Every app response includes \`latest_app_version\` and \`latest_app_version_updated_at\`. The value is computed from ingested data: the highest \`app_version\` seen across the app's production events in the last 90 days. Refreshed hourly by the \`app_version_sync\` system job. To compare a user/event/issue version against the latest, use string equality with the app's \`latest_app_version\` (semver-aware comparison only matters for ordering — equality is enough to flag "on latest"). Trigger \`app_version_sync\` with \`{ app_id }\` to refresh a single app on demand.
 
 ### Events
 - \`query-events\` — Filter by project, app, level, user, session, environment, screen, time, data mode. Cursor pagination. Pass \`order: "asc"\` to walk events chronologically (default \`desc\`/newest-first). Pass \`compact: true\` to drop verbose fields. **Not the right tool for issue investigation** — use \`investigate-event\` for that, which builds a richer breadcrumb (full session + cross-app events) directly from an occurrence's \`event_id\`. Reach for \`query-events\` for ad-hoc filter-driven searches.
@@ -338,22 +279,6 @@ Every app response includes \`latest_app_version\`, \`latest_app_version_updated
 ### Time-Series Rollups
 - \`query-stats-bucketed\` — bucketed counts (daily or hourly) for \`events | users | sessions | metric_completions | funnel_completions | questionnaire_responses\`. Pass \`project_id\` or \`team_id\` (mutually exclusive); optional \`app_id\` to narrow; \`days\` / \`hours\` for trailing windows, or \`from\` / \`to\` for explicit ranges. \`slug\` filters to one metric / funnel / questionnaire. Returns a zero-padded chronological series of \`{bucket, value}\` pairs. Use this for sparklines, trend pages, or any "how has X changed over time" question — cheaper and more honest than re-aggregating raw events.
 
-### Advertising Insights
-- \`list-ad-campaigns\` — campaigns ranked by lifetime USD revenue (per attribution_source; defaults to apple_search_ads)
-- \`list-ad-groups\` — drill into a campaign
-- \`list-ad-leaves\` — keywords + ads side-by-side within an ad group
-- \`sync-ads\` — admin-only manual refresh (fires revenuecat_sync + apple_ads_sync for the project)
-
-### Integrations
-- \`list-providers\` — Supported providers and config fields
-- \`list-integrations\` — Configured integrations for a project
-- \`add-integration\` — Add integration (needs \`integrations:write\`): \`project_id\`, \`provider\`, \`config\`
-- \`update-integration\` — Update config or enabled state (needs \`integrations:write\`)
-- \`remove-integration\` — Remove (needs \`integrations:write\`)
-- \`copy-integration\` — One-step clone of a configured integration to another project in the same team (needs \`integrations:write\`, admin role). **Apple Search Ads**: full config (keypair + client/team/key/org IDs) is duplicated verbatim, target enables immediately, and the response includes a \`connection_test\` field from a live Apple \`/acls\` call confirming the clone works end-to-end — no Apple-side setup or separate test required. **RevenueCat**: api_key is copied verbatim; a fresh webhook_secret is generated on the target and returned in \`webhook_setup\` for the user to paste into RC. Credentials are **duplicated, not shared** — rotating the source does not update copies.
-- \`sync-integration\` — Trigger sync: \`provider\` (\`revenuecat\` default, or \`apple-search-ads\`), bulk (omit \`user_id\`, queues job) or single user (with \`user_id\`, synchronous)
-- \`get-revenuecat-webhook-setup\` — Re-reveal the webhook setup block (URL + Bearer + environment + events filter) for an existing RevenueCat integration; needs \`integrations:read\` and admin role. Use when the user lost the post-create output — it returns the **same** secret, so RevenueCat-side deliveries already configured keep working.
-
 ### Jobs
 - \`list-jobs\` — List job runs for a team (filter by type, status, project, date)
 - \`get-job\` — Get job details with progress
@@ -380,8 +305,6 @@ Your agent key has specific permissions. Common permission sets:
 | \`funnels:write\` | create-funnel, update-funnel, delete-funnel |
 | \`issues:read\` | list-issues, get-issue, list-issue-comments |
 | \`issues:write\` | resolve-issue, silence-issue, reopen-issue, claim-issue, merge-issues, add-issue-comment |
-| \`integrations:read\` | list-providers, list-integrations |
-| \`integrations:write\` | add-integration, update-integration, remove-integration, copy-integration, sync-integration |
 | \`jobs:read\` | list-jobs, get-job |
 | \`jobs:write\` | trigger-job, cancel-job |
 | \`audit_logs:read\` | list-audit-logs |
@@ -419,20 +342,13 @@ If a tool returns a permissions error, the agent key is missing the required per
 7. \`add-issue-comment\` → document root cause, the shared pattern, and affected versions
 8. \`resolve-issue\` → mark resolved with fix version
 
-### Connecting integrations (RevenueCat)
-1. Ask the user for their RevenueCat V2 Secret API key (the only input needed)
-2. \`add-integration\` with \`api_key\` only → returns \`webhook_setup\` with all webhook form values
-3. Present the webhook setup to the user to paste into RevenueCat
-4. \`sync-integration\` with \`project_id\` (omit \`user_id\`) → queues a bulk background job to backfill existing subscriber data
-5. \`get-job\` with the returned \`job_run_id\` → monitor sync progress
-
 ## SDK Integration Guides
 
 This guide is served as the MCP resource \`owlmetry://guide\` — fetch it whenever you need the concepts, conventions, or SDK detail behind a tool. MCP is the agent interface: create projects and apps, define metrics and funnels, and query events with the tools (\`create-project\`, \`create-app\`, \`create-metric\`, \`create-funnel\`, \`query-events\`).
 
 Two SDKs instrument apps. What each covers:
 
-- **Swift** — package installation, \`Owl.configure()\`, event logging, automatic screen tracking, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (drop-in \`OwlFeedbackView\` or programmatic \`Owl.sendFeedback\`), **Apple Search Ads attribution** (auto-capture, opt-out, manual submission), and reading \`Owl.sessionId\` to forward to a backend for session correlation.
+- **Swift** — package installation, \`Owl.configure()\`, event logging, automatic screen tracking, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (drop-in \`OwlFeedbackView\` or programmatic \`Owl.sendFeedback\`), and reading \`Owl.sessionId\` to forward to a backend for session correlation.
 - **Node** — package installation, \`Owl.configure()\`, event logging, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback forwarding** (when the team collects feedback through their own frontend and wants it pushed to Owlmetry with \`Owl.sendFeedback\`), and **per-request session/user scoping** (\`Owl.withSession(...)\` / \`Owl.withUser(...)\` / per-call \`options.sessionId\`) for linking backend events to a client session via the \`X-Owl-Session-Id\` header.
 
 ## Key Notes

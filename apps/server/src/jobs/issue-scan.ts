@@ -74,10 +74,10 @@ function pickTitleEvent(items: FingerprintedEvent[]): ErrorEvent {
 }
 
 // Per-event-name fingerprint discriminators. Today only `sdk:network_request`
-// has one — splits per HTTP method + host + path so a failure to
-// api.revenuecat.com doesn't collapse onto the same issue as a failure to your
-// own backend. Add new entries here when other auto-emitted SDK events need
-// similar splitting.
+// has one — splits per HTTP method + host + path so a failure to a third-party
+// API doesn't collapse onto the same issue as a failure to your own backend.
+// Add new entries here when other auto-emitted SDK events need similar
+// splitting.
 
 // Threshold that decides whether a path segment looks like an opaque ID
 // (Firebase UID, Stripe ID, MongoDB ObjectId, Cuid/Nanoid/ULID, etc.) versus

@@ -36,8 +36,6 @@ export type Permission =
   | "metrics:write"
   | "audit_logs:read"
   | "users:write"
-  | "integrations:read"
-  | "integrations:write"
   | "jobs:read"
   | "jobs:write"
   | "issues:read"
@@ -45,9 +43,7 @@ export type Permission =
   | "feedback:read"
   | "feedback:write"
   | "questionnaires:read"
-  | "questionnaires:write"
-  | "reviews:read"
-  | "reviews:write";
+  | "questionnaires:write";
 
 export const VALID_PERMISSIONS: Permission[] = [
   "events:write",
@@ -62,8 +58,6 @@ export const VALID_PERMISSIONS: Permission[] = [
   "metrics:write",
   "audit_logs:read",
   "users:write",
-  "integrations:read",
-  "integrations:write",
   "jobs:read",
   "jobs:write",
   "issues:read",
@@ -72,19 +66,17 @@ export const VALID_PERMISSIONS: Permission[] = [
   "feedback:write",
   "questionnaires:read",
   "questionnaires:write",
-  "reviews:read",
-  "reviews:write",
 ];
 
 export const ALLOWED_PERMISSIONS_BY_KEY_TYPE: Record<ApiKeyType, Permission[]> = {
   client: ["events:write", "users:write"],
-  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "integrations:read", "integrations:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write", "reviews:read", "reviews:write"],
+  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
   import: ["events:write", "users:write"],
 };
 
 export const DEFAULT_API_KEY_PERMISSIONS: Record<ApiKeyType, Permission[]> = {
   client: ["events:write", "users:write"],
-  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "integrations:read", "integrations:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write", "reviews:read", "reviews:write"],
+  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
   import: ["events:write", "users:write"],
 };
 
@@ -174,8 +166,6 @@ export interface Project {
   deleted_at: Date | null;
 }
 
-export type AppVersionSource = "app_store" | "computed";
-
 export interface App {
   id: string;
   team_id: string;
@@ -185,14 +175,6 @@ export interface App {
   bundle_id: string | null;
   latest_app_version: string | null;
   latest_app_version_updated_at: Date | null;
-  latest_app_version_source: AppVersionSource | null;
-  apple_app_store_id: number | null;
-  worldwide_average_rating: number | null;
-  worldwide_rating_count: number | null;
-  worldwide_rating_count_delta: number | null;
-  worldwide_current_version_rating: number | null;
-  worldwide_current_version_rating_count: number | null;
-  ratings_synced_at: Date | null;
   /** Languages this app ships (Bundle.main.localizations), drives the localization gap. */
   supported_languages: string[] | null;
   supported_languages_source: "sdk" | "manual" | null;

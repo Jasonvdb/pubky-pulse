@@ -25,14 +25,6 @@
       "types": "./dist/project-colors.d.ts",
       "import": "./dist/project-colors.js"
     },
-    "./billing": {
-      "types": "./dist/billing.d.ts",
-      "import": "./dist/billing.js"
-    },
-    "./integrations": {
-      "types": "./dist/integrations.d.ts",
-      "import": "./dist/integrations.js"
-    },
     "./version": {
       "types": "./dist/version.d.ts",
       "import": "./dist/version.js"
@@ -44,14 +36,6 @@
     "./questionnaires": {
       "types": "./dist/questionnaires.d.ts",
       "import": "./dist/questionnaires.js"
-    },
-    "./attribution": {
-      "types": "./dist/attribution.d.ts",
-      "import": "./dist/attribution.js"
-    },
-    "./app-store-countries": {
-      "types": "./dist/app-store-countries.d.ts",
-      "import": "./dist/app-store-countries.js"
     }
   },
   "scripts": {

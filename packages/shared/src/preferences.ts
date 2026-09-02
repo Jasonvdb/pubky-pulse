@@ -18,30 +18,17 @@ export interface ColumnConfig {
 }
 
 /** Channels a notification can be delivered through. Future-extensible varchar. */
-export const NOTIFICATION_CHANNELS = ["in_app", "email", "mobile_push"] as const;
+export const NOTIFICATION_CHANNELS = ["in_app", "email"] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
-
-/**
- * Subset of `NOTIFICATION_CHANNELS` that registers a per-device endpoint via
- * `POST /v1/devices`. `in_app` and `email` deliver without a device row, so
- * they're excluded. Adding a new push channel (Telegram, etc.) means appending
- * here too.
- */
-export const PUSH_CHANNELS = ["mobile_push"] as const satisfies readonly NotificationChannel[];
-export type PushChannel = (typeof PUSH_CHANNELS)[number];
 
 /**
  * Notification types known to the system. Adding a new type means:
  *   1. Append to this tuple.
  *   2. Add an entry to NOTIFICATION_TYPE_META.
  *   3. Wire a producer call site to dispatcher.enqueue(type, ...).
- *   4. Mirror the new entry in the iOS app's NOTIFICATION_TYPE_SPECS
- *      (owlmetry-ios/Owlmetry/Tabs/Profile/NotificationPreferencesView.swift) —
- *      the iOS preferences screen is hand-maintained, not generated.
  *
  * The web preferences page (apps/web/src/app/dashboard/profile/notifications/
- * page.tsx) renders directly from this map, so it stays in sync automatically;
- * iOS does not, and will silently drop the new type from its UI until updated.
+ * page.tsx) renders directly from this map, so it stays in sync automatically.
  *
  * `team.invitation` is listed for documentation but never enters the
  * dispatcher — it is sent transactionally via EmailService directly because
@@ -54,8 +41,6 @@ export const NOTIFICATION_TYPES = [
   "questionnaire.response_new",
   "job.completed",
   "team.invitation",
-  "app.rating_changed",
-  "app.review_new",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -71,52 +56,38 @@ export interface NotificationTypeMeta {
 export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMeta> = {
   "issue.new": {
     label: "New issues",
-    description: "Push as soon as a new or regressed issue is detected by the hourly scan. Bypasses the per-project digest cadence.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: true, email: false, mobile_push: true },
+    description: "Notify as soon as a new or regressed issue is detected by the hourly scan. Bypasses the per-project digest cadence.",
+    channels: ["in_app", "email"],
+    defaults: { in_app: true, email: false },
   },
   "issue.digest": {
     label: "Issue digests",
     description: "Periodic summary of new or regressed issues for your projects.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: false, email: true, mobile_push: false },
+    channels: ["in_app", "email"],
+    defaults: { in_app: false, email: true },
   },
   "feedback.new": {
     label: "New feedback",
     description: "When a user submits feedback in one of your apps.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: true, email: true, mobile_push: true },
+    channels: ["in_app", "email"],
+    defaults: { in_app: true, email: true },
   },
-  // iOS app: not surfaced in V1 — when iOS questionnaires ship, mirror this
-  // entry in NOTIFICATION_TYPE_SPECS so the iOS prefs UI picks it up.
   "questionnaire.response_new": {
     label: "New questionnaire responses",
-    description: "When a user submits a questionnaire response in one of your apps. Responses can be high volume; push is opt-in.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: true, email: false, mobile_push: false },
+    description: "When a user submits a questionnaire response in one of your apps. Responses can be high volume; email is opt-in.",
+    channels: ["in_app", "email"],
+    defaults: { in_app: true, email: false },
   },
   "job.completed": {
     label: "Job completion",
     description: "When a manual job you triggered with --notify finishes. Only the triggering user is notified.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: true, email: true, mobile_push: true },
-  },
-  "app.rating_changed": {
-    label: "New ratings",
-    description: "When an app's rating count increases on the App Store — i.e., new ratings have appeared.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: true, email: false, mobile_push: true },
-  },
-  "app.review_new": {
-    label: "New reviews",
-    description: "When new written reviews are pulled from App Store Connect for one of your apps.",
-    channels: ["in_app", "email", "mobile_push"],
-    defaults: { in_app: true, email: true, mobile_push: true },
+    channels: ["in_app", "email"],
+    defaults: { in_app: true, email: true },
   },
   // No "system.alert" type. System job failures (db_pruning, partition_creation,
   // attachment_cleanup, app_version_sync) are server-owner concerns; they keep
   // going to SYSTEM_JOBS_ALERT_EMAIL via direct email and never enter the
-  // dispatcher / inbox / push.
+  // dispatcher / inbox.
   "team.invitation": {
     label: "Team invitations",
     description: "Sent transactionally regardless of preferences.",

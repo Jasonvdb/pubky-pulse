@@ -6,7 +6,7 @@ export function GET() {
   const lines = [
     "# Owlmetry",
     "",
-    "> Self-hosted observability platform for mobile and backend apps. Structured events, performance metrics, and conversion funnels — purpose-built for AI coding agents.",
+    "> Self-hosted observability platform for web, backend and mobile apps. Structured events, performance metrics, and conversion funnels — purpose-built for AI coding agents.",
     "",
     "## Docs",
     "",

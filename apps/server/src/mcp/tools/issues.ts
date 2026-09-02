@@ -68,7 +68,7 @@ export function registerIssuesTools(server: McpServer, app: FastifyInstance, age
   });
 
   server.registerTool("snooze-issue", {
-    description: "Snooze an issue. Like silence (no notifications, no fix version) but auto-reopens to `new` and re-fires the issue.new push the next time it recurs. Use when an error looks like a one-off and you only want to be alerted if the assumption turns out wrong.",
+    description: "Snooze an issue. Like silence (no notifications, no fix version) but auto-reopens to `new` and re-fires the issue.new notification the next time it recurs. Use when an error looks like a one-off and you only want to be alerted if the assumption turns out wrong.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       issue_id: z.string().uuid().describe("The issue ID"),

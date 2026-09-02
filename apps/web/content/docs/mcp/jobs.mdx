@@ -14,7 +14,7 @@ List background job runs for a team. Supports filtering by type, status, project
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `team_id` | UUID | Yes | The team ID |
-| `job_type` | string | No | Filter by job type (e.g., `revenuecat_sync`) |
+| `job_type` | string | No | Filter by job type (e.g., `stats_aggregate_daily`) |
 | `status` | string | No | `pending`, `running`, `completed`, `failed`, or `cancelled` |
 | `project_id` | UUID | No | Filter by project |
 | `since` | string | No | Start time |
@@ -37,7 +37,7 @@ Trigger a background job. Requires `jobs:write` permission.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `team_id` | UUID | Yes | The team ID |
-| `job_type` | string | Yes | Job type (e.g., `revenuecat_sync`) |
+| `job_type` | string | Yes | Job type (e.g., `stats_aggregate_daily`) |
 | `project_id` | UUID | Conditional | Required for project-scoped jobs |
 | `params` | object | No | Job-specific parameters |
 | `notify` | boolean | No | Send email notification on completion |

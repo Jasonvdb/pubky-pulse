@@ -1,1 +1,0 @@
-CREATE INDEX "api_keys_app_id_idx" ON "api_keys" USING btree ("app_id");

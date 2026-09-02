@@ -3,7 +3,7 @@ title: Jobs
 description: Background job management API — list, trigger, view, and cancel job runs.
 ---
 
-Manage [background jobs](/docs/concepts/background-jobs) — asynchronous work like data syncs that run server-side with progress tracking.
+Manage [background jobs](/docs/concepts/background-jobs) — asynchronous work like rollup aggregation that runs server-side with progress tracking.
 
 ## GET /v1/teams/:teamId/jobs
 
@@ -15,7 +15,7 @@ List job runs for a team with optional filters. Results are ordered by creation 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `job_type` | string | Filter by job type (e.g., `revenuecat_sync`). |
+| `job_type` | string | Filter by job type (e.g., `stats_aggregate_daily`). |
 | `status` | string | Filter by status: `pending`, `running`, `completed`, `failed`, `cancelled`. |
 | `project_id` | string | Filter to jobs for a specific project. |
 | `since` | string | Start time. Relative (`1h`, `30m`, `7d`) or ISO 8601. |
@@ -30,14 +30,14 @@ List job runs for a team with optional filters. Results are ordered by creation 
   "job_runs": [
     {
       "id": "uuid",
-      "job_type": "revenuecat_sync",
+      "job_type": "stats_aggregate_daily",
       "status": "completed",
       "team_id": "uuid",
       "project_id": "uuid",
       "triggered_by": "manual:user:uuid",
-      "params": { "project_id": "uuid", "integration_id": "uuid" },
-      "progress": { "processed": 200, "total": 200, "message": "Synced 180 users, 20 skipped" },
-      "result": { "synced": 180, "total": 200, "skipped": 20 },
+      "params": { "project_id": "uuid" },
+      "progress": { "processed": 3, "total": 3, "message": "Aggregated 3/3 days" },
+      "result": { "days": 3, "rows_written": 412 },
       "error": null,
       "notify": false,
       "started_at": "2024-01-15T10:30:01.000Z",
@@ -60,7 +60,7 @@ Trigger a background job. Only project-scoped job types can be triggered via the
 
 ```json
 {
-  "job_type": "revenuecat_sync",
+  "job_type": "stats_aggregate_daily",
   "project_id": "uuid",
   "params": {},
   "notify": true
@@ -80,7 +80,7 @@ Trigger a background job. Only project-scoped job types can be triggered via the
 {
   "job_run": {
     "id": "uuid",
-    "job_type": "revenuecat_sync",
+    "job_type": "stats_aggregate_daily",
     "status": "pending",
     ...
   }
@@ -104,13 +104,13 @@ Get full details of a single job run.
 {
   "job_run": {
     "id": "uuid",
-    "job_type": "revenuecat_sync",
+    "job_type": "stats_aggregate_daily",
     "status": "running",
     "team_id": "uuid",
     "project_id": "uuid",
     "triggered_by": "manual:user:uuid",
     "params": {},
-    "progress": { "processed": 45, "total": 200, "message": "Synced 38 users, 7 skipped" },
+    "progress": { "processed": 1, "total": 3, "message": "Aggregated 1/3 days" },
     "result": null,
     "error": null,
     "notify": true,

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import type { FastifyInstance } from "fastify";
 import postgres from "postgres";
 import { cleanupSoftDeletedResources } from "@owlmetry/db";
-import { INTEGRATION_PROVIDER_IDS } from "@owlmetry/shared";
 import {
   buildApp,
   truncateAll,
@@ -109,7 +108,7 @@ describe("cleanupSoftDeletedResources", () => {
     await client.end();
   });
 
-  it("row-level sweeps feedback/issue/questionnaire/integration soft-deletes past cutoff", async () => {
+  it("row-level sweeps feedback/issue/questionnaire soft-deletes past cutoff", async () => {
     const client = postgres(TEST_DB_URL, { max: 1 });
     const eightDaysAgo = new Date();
     eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
@@ -186,17 +185,6 @@ describe("cleanupSoftDeletedResources", () => {
       VALUES (${responseRecent.id}, 'user', ${testData.userId}, 'Tester', 'recent', ${oneDayAgo})
     `;
 
-    // project_integrations
-    const integrationConfig = JSON.stringify({ webhook_secret: "abc" });
-    await client`
-      INSERT INTO project_integrations (project_id, provider, config, deleted_at)
-      VALUES (${testData.projectId}, ${INTEGRATION_PROVIDER_IDS.REVENUECAT}, ${integrationConfig}::jsonb, ${eightDaysAgo})
-    `;
-    await client`
-      INSERT INTO project_integrations (project_id, provider, config, deleted_at)
-      VALUES (${testData.projectId}, ${INTEGRATION_PROVIDER_IDS.APPLE_SEARCH_ADS}, ${integrationConfig}::jsonb, ${oneDayAgo})
-    `;
-
     const result = await cleanupSoftDeletedResources(client);
 
     expect(result.feedback).toBe(1);
@@ -205,7 +193,6 @@ describe("cleanupSoftDeletedResources", () => {
     expect(result.questionnaireResponses).toBe(1);
     expect(result.questionnaireResponseComments).toBe(1);
     expect(result.questionnaires).toBe(1);
-    expect(result.projectIntegrations).toBe(1);
 
     // Past-cutoff rows are gone
     const oldFeedback = await client`SELECT id FROM feedback WHERE id = ${feedbackOld.id}`;

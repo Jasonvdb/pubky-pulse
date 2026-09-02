@@ -1,84 +1,32 @@
 import Link from "next/link";
 import { PulseLogo } from "@/components/pulse-logo";
+import { GITHUB_URL } from "@/lib/site";
 
-const columns = [
-  {
-    title: "Product",
-    links: [
-      { label: "Features", href: "#features" },
-      { label: "Self-Hosted", href: "#self-hosted" },
-      { label: "Get Started", href: "#get-started" },
-      { label: "About", href: "/about" },
-    ],
-  },
-  {
-    title: "Developers",
-    links: [
-      { label: "Documentation", href: "/docs" },
-      { label: "Swift SDK", href: "/docs/sdks/swift" },
-      { label: "Android SDK", href: "/docs/sdks/android" },
-      { label: "Node.js SDK", href: "/docs/sdks/node" },
-      { label: "API Reference", href: "/docs/api-reference" },
-      { label: "GitHub", href: "https://github.com/pubky/pubky-pulse" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-    ],
-  },
-  {
-    title: "Contact",
-    links: [
-      { label: "GitHub Issues", href: "https://github.com/pubky/pubky-pulse/issues" },
-      { label: "Discussions", href: "https://github.com/pubky/pubky-pulse/discussions" },
-    ],
-  },
-];
+const linkClass =
+  "rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 export function MarketingFooter() {
   return (
-    <footer style={{ background: "oklch(0.10 0.012 55)" }}>
-      <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-5">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <PulseLogo className="h-7 w-7" />
-              <span className="text-lg font-semibold tracking-tight text-white/90">
-                Pubky Pulse
-              </span>
-            </div>
-            <p className="text-sm text-white/35 leading-relaxed">
-              Agent-first observability. Self-hosted by design.
-            </p>
-          </div>
-          {columns.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-white/50 mb-4">
-                {col.title}
-              </h3>
-              <ul className="space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-white/35 transition-colors hover:text-white/70"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="mt-16 flex items-center justify-between border-t border-white/[0.06] pt-8">
-          <p className="text-xs text-white/25">
-            &copy; {new Date().getFullYear()} Pubky Pulse
-          </p>
-          <p className="text-xs text-white/25">Open source — MIT licensed</p>
+    <footer className="border-t border-border bg-background">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
+        <Link href="/" className={`flex items-center gap-2.5 ${linkClass}`}>
+          <PulseLogo className="h-6 w-6 text-brand" />
+          <span className="font-semibold tracking-tight text-foreground">Pubky Pulse</span>
+        </Link>
+
+        <div className="flex items-center gap-6">
+          <Link href="/docs" className={linkClass}>
+            Docs
+          </Link>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+          >
+            GitHub
+          </a>
+          <span>&copy; {new Date().getFullYear()} Pubky</span>
         </div>
       </div>
     </footer>

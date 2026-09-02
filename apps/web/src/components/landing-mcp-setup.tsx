@@ -37,66 +37,57 @@ export function LandingMcpSetup() {
     <div>
       {/* Editor pill selector with fade mask */}
       <div className="relative">
-        <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide">
+        <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-3">
           {EDITORS.map((e, i) => (
             <button
               key={e.name}
               type="button"
               onClick={() => setSelectedEditor(i)}
-              className={`rounded-full px-4 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+              aria-pressed={selectedEditor === i}
+              className={`cursor-pointer whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
                 selectedEditor === i
-                  ? "text-white shadow-[0_0_16px_oklch(0.555_0.163_48.998_/_0.35)]"
-                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "bg-brand text-background"
+                  : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
               }`}
-              style={selectedEditor === i ? { background: "oklch(0.555 0.163 48.998)" } : undefined}
             >
               {e.name}
             </button>
           ))}
         </div>
         {/* Right fade to hint at scrollability */}
-        <div
-          className="pointer-events-none absolute right-0 top-0 bottom-3 w-12"
-          style={{ background: "linear-gradient(to right, transparent, var(--background))" }}
-        />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-12 bg-linear-to-r from-transparent to-background" />
       </div>
 
       {/* Config display */}
-      <div
-        className="relative rounded-xl border border-border overflow-hidden"
-        style={{ background: "oklch(0.13 0.015 55)" }}
-      >
-        {/* Top accent line */}
-        <div
-          className="absolute inset-x-0 top-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, oklch(0.555 0.163 48.998 / 0.4), transparent)" }}
-        />
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+      <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-white/[0.07] ring-1 ring-white/[0.05]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-white/[0.07] ring-1 ring-white/[0.05]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-white/[0.07] ring-1 ring-white/[0.05]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
             </div>
-            <span className="text-xs font-medium text-white/50 ml-2">{editor.name}</span>
+            <span className="ml-2 text-xs font-medium text-muted-foreground">{editor.name}</span>
           </div>
           <TerminalCopyButton text={configText} />
         </div>
-        <pre className="px-5 py-4 text-[13px] leading-relaxed font-mono overflow-x-auto">
-          <code className="text-white/80">{hasRealKey ? (
-            configText.split(activeKey).map((part, i, arr) => (
-              <span key={i}>
-                {part}
-                {i < arr.length - 1 && <span className="text-green-400">{activeKey}</span>}
-              </span>
-            ))
-          ) : configText}</code>
+        <pre className="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed">
+          <code className="text-card-foreground">
+            {hasRealKey
+              ? configText.split(activeKey).map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && <span className="text-brand">{activeKey}</span>}
+                  </span>
+                ))
+              : configText}
+          </code>
         </pre>
       </div>
 
       {/* Note — only show when no real key */}
       {!hasRealKey && (
-        <p className="mt-2.5 text-[11px] text-muted-foreground/70 tracking-wide">
+        <p className="mt-2.5 text-[11px] tracking-wide text-muted-foreground">
           Sign in above to get your key auto-filled
         </p>
       )}

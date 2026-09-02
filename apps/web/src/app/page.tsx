@@ -1,656 +1,168 @@
-import Image from "next/image";
-import {
-  Bot,
-  Activity,
-  Timer,
-  Filter,
-  Smartphone,
-  Shield,
-  ArrowRight,
-  Bug,
-  MessageSquare,
-  ClipboardList,
-  Bell,
-  Users,
-  History,
-  Database,
-} from "lucide-react";
+import Link from "next/link";
 import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { TerminalCopyButton } from "@/components/terminal-copy-button";
-import { AuthCTA } from "@/components/auth-cta";
-import { LandingMcpSetup } from "@/components/landing-mcp-setup";
 import { LandingAuth } from "@/components/landing-auth";
+import { LandingMcpSetup } from "@/components/landing-mcp-setup";
+import { PulseLogo } from "@/components/pulse-logo";
+import { Button } from "@/components/ui/button";
+import { GITHUB_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
-const features = [
-  {
-    icon: Bot,
-    title: "Agent-Native API",
-    description: "Your coding agent sets up tracking, queries data, and diagnoses issues — no dashboard needed, though there's one if you want it.",
-  },
-  {
-    icon: Activity,
-    title: "Events",
-    description: "Know exactly what happened and when. Structured events with log levels, session tracking, and screen context give you a complete picture of every user journey.",
-  },
-  {
-    icon: Timer,
-    title: "Metrics",
-    description: "Find your slowest screens and flakiest network calls. Time any operation end-to-end and catch performance regressions before users notice.",
-  },
-  {
-    icon: Filter,
-    title: "Funnels",
-    description: "See where users drop off. Define multi-step funnels and compare conversion across app versions and environments.",
-  },
-  {
-    icon: Bug,
-    title: "Issue Tracker",
-    description: "Error events cluster into issues automatically. Semver-aware regression detection, kanban workflow, and same-session burst aliasing so one bug doesn't triple-count.",
-  },
-  {
-    icon: MessageSquare,
-    title: "User Feedback",
-    description: "Collect free-text feedback from your apps or your own frontend. Kanban board with status lifecycle, comments, and session-linked event replay for every submission.",
-  },
-  {
-    icon: ClipboardList,
-    title: "In-App Questionnaires",
-    description: "Ask your users questions in-app — text, choice, 1–5 rating, 0–10 NPS. Drafts save on every step so users can resume across launches, and per-question analytics show exactly where they drop off.",
-  },
-  {
-    icon: Smartphone,
-    title: "Multi-Platform SDKs",
-    description: "Drop in the Node.js, Swift, or Android SDK and start collecting data in minutes — a Web SDK is coming soon. Batching, compression, and retry happen automatically.",
-  },
-  {
-    icon: Shield,
-    title: "Open Source",
-    description: "The entire codebase is open under the MIT license. Run it on your own infrastructure — no hosted tier, no vendor holding your data.",
-  },
+const AGENT_PROMPT =
+  "Set up Pubky Pulse for this project and instrument the app with event tracking.";
+
+const AGENT_DONE = [
+  "Authenticated",
+  "Project created",
+  "App created",
+  "SDK installed",
+  "Instrumentation added",
 ];
 
-const operatorFeatures = [
-  {
-    icon: Bell,
-    title: "Notifications",
-    description: "Multi-channel alerts — in-app inbox and email. Issue alerts, feedback, and job completion. Per-user preferences per type.",
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: SITE_NAME,
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Web, Node.js, iOS, Android",
+  description:
+    "Self-hosted events, metrics, funnels, issues and feedback for web, backend and mobile apps, wired up and queried by your coding agent over MCP.",
+  url: SITE_URL,
+  image: `${SITE_URL}/pulse-mark.svg`,
+  offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
+  license: "https://opensource.org/licenses/MIT",
+  isAccessibleForFree: true,
+  author: {
+    "@type": "Organization",
+    name: "Pubky",
+    url: SITE_URL,
+    sameAs: [GITHUB_URL],
   },
-  {
-    icon: Users,
-    title: "Team Management",
-    description: "Invite teammates by email with 7-day token expiry. Role-based access (owner > admin > member) with per-resource permission checks.",
-  },
-  {
-    icon: History,
-    title: "Audit Trail",
-    description: "Auto-logged create, update, and delete across every resource. Queryable via dashboard, MCP, and API.",
-  },
-  {
-    icon: Database,
-    title: "Per-Project Retention",
-    description: "Configure event, metric, and funnel retention windows per project. Daily cleanup job plus a database auto-pruning safety net.",
-  },
-];
+};
 
-const steps = [
-  {
-    number: "01",
-    title: "Add the MCP server",
-    description: "Paste a config snippet into your editor's MCP settings. One JSON block, one minute.",
-  },
-  {
-    number: "02",
-    title: "Agent sets you up",
-    description: "Your agent creates a project and app, configures API keys, and verifies the connection — all through MCP.",
-  },
-  {
-    number: "03",
-    title: "Agent instruments your code",
-    description: "The agent adds the SDK to your app and wires up event tracking, metrics, and funnels.",
-  },
-];
+/** One numbered row of the get-started sequence. */
+function Step({
+  n,
+  title,
+  children,
+}: {
+  n: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-background">
+          {n}
+        </span>
+        <span className="text-sm font-medium text-foreground">{title}</span>
+      </div>
+      <div className="md:pl-11">{children}</div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   return (
     <>
       <MarketingNav />
-      <main>
-      {/* Hero */}
-      <section
-        className="relative overflow-hidden"
-        style={{ background: "oklch(0.12 0.015 55)" }}
-      >
-        {/* Grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: `linear-gradient(oklch(0.555 0.163 48.998) 1px, transparent 1px),
-              linear-gradient(90deg, oklch(0.555 0.163 48.998) 1px, transparent 1px)`,
-            backgroundSize: "48px 48px",
-          }}
-        />
-        {/* Radial glow — larger, warmer */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 35%, oklch(0.555 0.163 48.998 / 0.14) 0%, transparent 55%)",
-          }}
-        />
-        {/* Secondary glow — bottom edge warmth */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 100%, oklch(0.555 0.163 48.998 / 0.06) 0%, transparent 40%)",
-          }}
-        />
+      <main className="bg-background text-foreground">
+        {/* Hero */}
+        <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-32 pb-20 text-center md:pt-40 md:pb-28">
+          <PulseLogo className="h-16 w-16 text-brand" alt="Pubky Pulse" />
 
-        <div className="relative mx-auto max-w-6xl px-6 pt-28 pb-32 md:pt-36 md:pb-40 lg:pt-44 lg:pb-48">
-          <div className="flex flex-col items-center text-center">
-            {/* Pulse with ambient glow */}
-            <div className="landing-stagger-1 relative">
-              <div
-                className="absolute -inset-8 rounded-full blur-2xl opacity-30"
-                style={{ background: "oklch(0.555 0.163 48.998)" }}
-              />
-              <Image
-                src="/pulse-logo.png"
-                alt="Pubky Pulse — agent-first observability for web, backend and mobile apps"
-                width={128}
-                height={128}
-                priority
-                className="relative h-24 w-24 md:h-28 md:w-28 landing-float drop-shadow-[0_0_30px_oklch(0.555_0.163_48.998_/_0.3)]"
-              />
-            </div>
+          <span className="mt-8 inline-flex items-center rounded-full border border-brand bg-brand/16 px-3 py-0.5 text-xs font-semibold text-brand">
+            Alpha
+          </span>
 
-            <div className="mt-8 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 landing-stagger-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80 animate-pulse" />
-              <span className="text-xs font-medium text-white/40 tracking-wide">Alpha</span>
-            </div>
+          <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance md:text-6xl">
+            Observability your agent drives.
+          </h1>
 
-            <h1 className="mt-5 text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-[3.5rem] lg:leading-[1.1] landing-stagger-2">
-              Agent-first observability.
-              <br />
-              <span
-                className="bg-clip-text text-transparent"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, oklch(0.65 0.2 45) 0%, oklch(0.555 0.163 48.998) 50%, oklch(0.5 0.14 55) 100%)",
-                }}
-              >
-                Set up in one prompt.
-              </span>
-            </h1>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            Self-hosted events, metrics, funnels, issues and feedback for web, backend and
+            mobile apps, wired up and queried by your coding agent over MCP.
+          </p>
 
-            <p className="mt-6 max-w-xl text-base text-white/55 leading-relaxed md:text-lg landing-stagger-3">
-              Structured events, performance metrics, and conversion funnels
-              — purpose-built to be driven by Claude Code, Codex, OpenClaw,
-              Cursor, or whichever coding agent you use.
-            </p>
-
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row landing-stagger-4">
-              <a
-                href="#get-started"
-                className="group inline-flex h-11 items-center justify-center rounded-lg px-8 text-sm font-medium text-white transition-all duration-200 hover:shadow-[0_0_24px_oklch(0.555_0.163_48.998_/_0.4)] hover:brightness-110"
-                style={{ background: "oklch(0.555 0.163 48.998)" }}
-              >
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <Button variant="brand" size="lg" asChild>
+              <Link href="#get-started">Get started</Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                GitHub
               </a>
-              <a
-                href="https://github.com/pubky/pubky-pulse"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white/15 px-8 text-sm font-medium text-white/70 transition-all duration-200 hover:border-white/30 hover:bg-white/5 hover:text-white"
-              >
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" /></svg>
-                View on GitHub
-              </a>
-            </div>
+            </Button>
           </div>
-        </div>
+        </section>
 
-      </section>
-
-      {/* Get Started */}
-      <section id="get-started" className="py-24 md:py-32">
-        <div className="mx-auto max-w-6xl px-6">
+        {/* Get started */}
+        <section id="get-started" className="mx-auto max-w-4xl px-6 pb-24 md:pb-32">
           <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-4">
-              Get started
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
               Add one config. Tell your agent. Done.
             </h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Add the MCP server to your editor, then your agent handles auth, project setup, and SDK integration.
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              Add the Pubky Pulse MCP server to your editor, then your agent handles auth,
+              project setup and SDK integration.
             </p>
           </div>
 
-          <div className="mt-14 mx-auto max-w-4xl">
-            {/* Steps with connecting line */}
-            <div className="relative">
-              {/* Vertical connecting line between step badges */}
-              <div className="absolute left-[15px] top-[32px] bottom-[calc(100%-88px)] w-px bg-border md:block hidden" style={{ height: "calc(100% - 64px)" }} />
-
-              {/* Step 1 — Sign in */}
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shrink-0"
-                    style={{ background: "oklch(0.555 0.163 48.998)", boxShadow: "0 0 16px oklch(0.555 0.163 48.998 / 0.25)" }}
-                  >
-                    1
-                  </span>
-                  <span className="text-sm font-medium text-foreground/80">Sign in to get your API key</span>
-                </div>
-                <div className="md:pl-11">
-                  <LandingAuth />
-                </div>
-              </div>
-
-              {/* Step 2 — Pick editor & copy config */}
-              <div className="relative mt-8">
-                <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shrink-0"
-                    style={{ background: "oklch(0.555 0.163 48.998)", boxShadow: "0 0 16px oklch(0.555 0.163 48.998 / 0.25)" }}
-                  >
-                    2
-                  </span>
-                  <span className="text-sm font-medium text-foreground/80">Pick your editor and copy the config</span>
-                </div>
-                <div className="md:pl-11">
-                  <LandingMcpSetup />
-                </div>
-              </div>
-
-              {/* Step 3 — Tell your agent */}
-              <div className="relative mt-8">
-                <div className="flex items-center gap-3 mb-3">
-                  <span
-                    className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shrink-0"
-                    style={{ background: "oklch(0.555 0.163 48.998)", boxShadow: "0 0 16px oklch(0.555 0.163 48.998 / 0.25)" }}
-                  >
-                    3
-                  </span>
-                  <span className="text-sm font-medium text-foreground/80">Tell your agent to set up Pubky Pulse</span>
-                </div>
-                <div className="md:pl-11">
-                  <div
-                    className="relative rounded-xl border border-border overflow-hidden"
-                    style={{ background: "oklch(0.13 0.015 55)" }}
-                  >
-                    {/* Top accent line */}
-                    <div
-                      className="absolute inset-x-0 top-0 h-px"
-                      style={{ background: "linear-gradient(90deg, transparent, oklch(0.555 0.163 48.998 / 0.4), transparent)" }}
-                    />
-                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1.5">
-                          <span className="h-2.5 w-2.5 rounded-full bg-white/[0.07] ring-1 ring-white/[0.05]" />
-                          <span className="h-2.5 w-2.5 rounded-full bg-white/[0.07] ring-1 ring-white/[0.05]" />
-                          <span className="h-2.5 w-2.5 rounded-full bg-white/[0.07] ring-1 ring-white/[0.05]" />
-                        </div>
-                        <span className="text-xs font-medium text-white/50 ml-2">Your Agent</span>
-                      </div>
-                      <TerminalCopyButton text="Set up Pubky Pulse for this project and instrument the app with event tracking." />
-                    </div>
-                    <pre className="px-5 py-4 text-[13px] leading-relaxed font-mono whitespace-pre-wrap break-words">
-                      <code>
-                        <span className="text-white/40">&gt;</span>{" "}
-                        <span className="text-white/70">Set up Pubky Pulse for this project and instrument the app with event tracking.</span>
-                        {"\n\n"}
-                        <span className="text-green-400">✓</span>{" "}
-                        <span className="text-white/55">Authenticated</span>
-                        {"\n"}
-                        <span className="text-green-400">✓</span>{" "}
-                        <span className="text-white/55">Project created</span>
-                        {"\n"}
-                        <span className="text-green-400">✓</span>{" "}
-                        <span className="text-white/55">App created</span>
-                        {"\n"}
-                        <span className="text-green-400">✓</span>{" "}
-                        <span className="text-white/55">SDK installed</span>
-                        {"\n"}
-                        <span className="text-green-400">✓</span>{" "}
-                        <span className="text-white/55">Instrumentation added</span>
-                        {"\n\n"}
-                        <span className="text-white/55">Done. Pubky Pulse is ready.</span>
-                      </code>
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="relative py-24 md:py-32" style={{ background: "oklch(0.12 0.015 55)" }}>
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] mb-4" style={{ color: "oklch(0.555 0.163 48.998)" }}>
-              Capabilities
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight text-white/95 md:text-4xl">
-              Built for agents, usable by humans
-            </h2>
-            <p className="mt-4 text-white/50 max-w-2xl mx-auto">
-              Most observability tools are built for humans staring at dashboards.
-              Pubky Pulse is built for agents making API calls.
-            </p>
-          </div>
-
-          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="group relative rounded-xl border border-white/10 bg-white/[0.03] p-6 transition-all duration-300 hover:border-primary/30 hover:bg-white/[0.05] hover:-translate-y-0.5"
-              >
-                <div
-                  className="absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, transparent, oklch(0.555 0.163 48.998 / 0.5), transparent)",
-                  }}
-                />
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.06] transition-all duration-300 group-hover:bg-white/[0.1]" style={{ color: "oklch(0.555 0.163 48.998)" }}>
-                  <feature.icon className="h-5 w-5" />
-                </div>
-                <h3 className="mt-4 text-base font-semibold text-white/90">{feature.title}</h3>
-                <p className="mt-2 text-sm text-white/45 leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-20 border-t border-white/5 pt-16">
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] mb-4" style={{ color: "oklch(0.555 0.163 48.998)" }}>
-                Built for operators
-              </p>
-              <h3 className="text-2xl font-bold tracking-tight text-white/95 md:text-3xl">
-                The boring things, done right
-              </h3>
-              <p className="mt-4 text-white/50 max-w-2xl mx-auto">
-                Everything you need to run Pubky Pulse in a real team — without paying for a separate ops tool for each one.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {operatorFeatures.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="rounded-xl border border-white/10 bg-white/[0.02] p-5"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.06]" style={{ color: "oklch(0.555 0.163 48.998)" }}>
-                    <feature.icon className="h-4 w-4" />
-                  </div>
-                  <h4 className="mt-4 text-sm font-semibold text-white/90">{feature.title}</h4>
-                  <p className="mt-2 text-xs text-white/45 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section className="py-24 md:py-32">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-4">
-              Use cases
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Ask your agent. Get answers.
-            </h2>
-            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Your agent uses the Pubky Pulse MCP server to query events, trace sessions, analyze funnels, and monitor performance &mdash; all from natural language.
-            </p>
-          </div>
-
-          <div className="mt-16 grid gap-5 md:grid-cols-2">
-            {/* Card 1 — Debug a user report */}
-            <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.13 0.015 55)" }}>
-              <div className="px-5 pt-4 pb-3 border-b border-white/[0.06]">
-                <p className="text-[13px] text-white/70">
-                  <span className="text-white/30 mr-1.5">&gt;</span>
-                  User 42 reported sync issues. What happened?
-                </p>
-              </div>
-              <div className="px-5 py-4 text-[12.5px] leading-relaxed space-y-1.5">
-                <p className="text-white/35">Querying errors for user 42...</p>
-                <p className="text-white/35">Investigating surrounding events...</p>
-                <p className="text-white/35">Tracing session timeline...</p>
-                <div className="pt-2.5 mt-1.5 border-t border-white/[0.04]">
-                  <p className="text-white/55">
-                    Found 5 sync errors in session. Background refresh failing with 409 conflict &mdash; stale local state after app update. Surrounding events show repeated retry loop.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2 — Morning standup */}
-            <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.13 0.015 55)" }}>
-              <div className="px-5 pt-4 pb-3 border-b border-white/[0.06]">
-                <p className="text-[13px] text-white/70">
-                  <span className="text-white/30 mr-1.5">&gt;</span>
-                  What app issues did we have overnight?
-                </p>
-              </div>
-              <div className="px-5 py-4 text-[12.5px] leading-relaxed space-y-1.5">
-                <p className="text-white/35">Pulling errors and warnings from the last 12 hours...</p>
-                <p className="text-white/35">Grouping by message pattern...</p>
-                <div className="pt-2.5 mt-1.5 border-t border-white/[0.04]">
-                  <p className="text-white/55">
-                    17 errors overnight. 12 are &quot;Payment gateway timeout&quot; starting at 3:14 AM &mdash; Stripe had a 47-minute outage. 5 unrelated auth errors from a single device.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3 — Funnel optimization */}
-            <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.13 0.015 55)" }}>
-              <div className="px-5 pt-4 pb-3 border-b border-white/[0.06]">
-                <p className="text-[13px] text-white/70">
-                  <span className="text-white/30 mr-1.5">&gt;</span>
-                  Why is our onboarding conversion dropping?
-                </p>
-              </div>
-              <div className="px-5 py-4 text-[12.5px] leading-relaxed space-y-1.5">
-                <p className="text-white/35">Querying onboarding funnel for the last 7 days...</p>
-                <p className="text-white/35">Comparing step drop-offs by app version...</p>
-                <div className="pt-2.5 mt-1.5 border-t border-white/[0.04]">
-                  <p className="text-white/55">
-                    Drop-off between &quot;Create Account&quot; and &quot;Verify Email&quot; jumped from 12% to 34%. Only affects v2.4.1 &mdash; email verification deeplink is broken on iOS 18.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4 — Performance monitoring */}
-            <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.13 0.015 55)" }}>
-              <div className="px-5 pt-4 pb-3 border-b border-white/[0.06]">
-                <p className="text-[13px] text-white/70">
-                  <span className="text-white/30 mr-1.5">&gt;</span>
-                  Is our photo upload getting slower?
-                </p>
-              </div>
-              <div className="px-5 py-4 text-[12.5px] leading-relaxed space-y-1.5">
-                <p className="text-white/35">Querying photo-upload metric for the last 7 days...</p>
-                <p className="text-white/35">Comparing against the previous week...</p>
-                <div className="pt-2.5 mt-1.5 border-t border-white/[0.04]">
-                  <p className="text-white/55">
-                    p50 steady at 1.2s but p95 climbed from 3.8s to 6.1s this week. Failure rate up 2%. Large files (&gt;5MB) are timing out on cellular connections.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="relative py-24 md:py-32" style={{ background: "oklch(0.12 0.015 55)" }}>
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] mb-4" style={{ color: "oklch(0.555 0.163 48.998)" }}>
-              How it works
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight text-white/95 md:text-4xl">
-              Your agent does the work
-            </h2>
-            <p className="mt-4 text-white/50">
-              Add one config. Your agent handles everything else.
-            </p>
-          </div>
-
-          <div className="mt-16 relative">
-            {/* Connecting line */}
-            <div className="hidden md:block absolute top-7 left-[calc(16.67%+28px)] right-[calc(16.67%+28px)] h-px bg-white/10" />
-
-            <div className="grid gap-12 md:grid-cols-3 md:gap-8">
-              {steps.map((step) => (
-                <div key={step.number} className="relative text-center">
-                  <div
-                    className="relative z-10 mx-auto flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white shadow-lg"
-                    style={{
-                      background: "oklch(0.555 0.163 48.998)",
-                      boxShadow: "0 0 24px oklch(0.555 0.163 48.998 / 0.3)",
-                    }}
-                  >
-                    {step.number}
-                  </div>
-                  <h3 className="mt-6 text-lg font-semibold text-white/90">{step.title}</h3>
-                  <p className="mt-2 text-sm text-white/45 leading-relaxed max-w-xs mx-auto">
-                    {step.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Self-hosted */}
-      <section id="self-hosted" className="py-24 md:py-32">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-4">
-              Self-hosted
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Self-hosted, MIT licensed.
-            </h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Pubky Pulse runs on your own infrastructure against a single
-              PostgreSQL database. No hosted tier, no plans, no quotas &mdash;
-              the whole platform is MIT licensed and yours to deploy.
-            </p>
-            <div className="mt-10 flex justify-center">
-              <a
-                href="https://github.com/pubky/pubky-pulse"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex h-11 items-center justify-center rounded-lg border border-border px-8 text-sm font-medium text-muted-foreground transition-all duration-200 hover:border-foreground/30 hover:bg-muted hover:text-foreground"
-              >
-                View on GitHub
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Closing CTA */}
-      <section className="relative py-24 md:py-32 overflow-hidden bg-primary/[0.04]">
-        {/* Decorative radial */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "radial-gradient(ellipse at 50% 50%, oklch(0.555 0.163 48.998 / 0.06) 0%, transparent 60%)",
-          }}
-        />
-        <div className="relative mx-auto max-w-6xl px-6 text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Let your agent handle observability.
-          </h2>
-          <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
-            Your agent sets up the integration, monitors production,
-            and acts on what it finds.
-          </p>
-          <div className="mt-10">
-            <AuthCTA
-              className="group inline-flex h-12 items-center justify-center rounded-lg px-10 text-sm font-medium text-white transition-all duration-200 hover:shadow-[0_0_24px_oklch(0.555_0.163_48.998_/_0.4)] hover:brightness-110"
-              style={{ background: "oklch(0.555 0.163 48.998)" }}
+          <div className="relative mt-14">
+            {/* Rail joining the three step badges */}
+            <div
+              aria-hidden
+              className="absolute top-8 bottom-8 left-4 hidden border-l border-border md:block"
             />
+
+            <Step n={1} title="Sign in to get your API key">
+              <LandingAuth />
+            </Step>
+
+            <div className="mt-8">
+              <Step n={2} title="Pick your editor and copy the config">
+                <LandingMcpSetup />
+              </Step>
+            </div>
+
+            <div className="mt-8">
+              <Step n={3} title="Tell your agent to set up Pubky Pulse">
+                <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Your agent
+                    </span>
+                    <TerminalCopyButton text={AGENT_PROMPT} />
+                  </div>
+                  <pre className="px-5 py-4 font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                    <code>
+                      <span className="text-muted-foreground">&gt;</span>{" "}
+                      <span className="text-card-foreground">{AGENT_PROMPT}</span>
+                      {"\n\n"}
+                      {AGENT_DONE.map((line) => (
+                        <span key={line}>
+                          <span className="text-brand">✓</span>{" "}
+                          <span className="text-muted-foreground">{line}</span>
+                          {"\n"}
+                        </span>
+                      ))}
+                      {"\n"}
+                      <span className="text-muted-foreground">
+                        Done. Pubky Pulse is ready.
+                      </span>
+                    </code>
+                  </pre>
+                </div>
+              </Step>
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
       <MarketingFooter />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
-            {
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "PubkyPulse",
-              applicationCategory: "DeveloperApplication",
-              operatingSystem: "Web, iOS, iPadOS, macOS, Android, Node.js",
-              description:
-                "Agent-first observability platform. Events, metrics, funnels, in-app questionnaires, and error tracking — for web, backend and mobile apps.",
-              url: "https://pulse.pubky.org",
-              image: "https://pulse.pubky.org/pulse-logo.png",
-              author: {
-                "@type": "Organization",
-                name: "Pubky",
-                url: "https://pulse.pubky.org",
-                logo: "https://pulse.pubky.org/pulse-logo.png",
-                sameAs: ["https://github.com/pubky/pubky-pulse"],
-              },
-              license: "https://opensource.org/licenses/MIT",
-              featureList: [
-                "Agent-native API",
-                "Structured event ingestion",
-                "Performance metrics with lifecycle tracking",
-                "Funnel analytics with drop-off detection",
-                "Error issue tracker with semver-aware regression detection",
-                "User feedback with kanban workflow",
-                "In-app questionnaires with NPS, rating, and resumable drafts",
-                "Multi-channel notifications (in-app, email)",
-                "Team management with role-based access",
-                "Audit trail across every resource",
-                "Per-project event, metric, and funnel retention",
-                "Node.js SDK for backends",
-                "Swift SDK for iOS/iPadOS/macOS",
-                "Android SDK for Kotlin / Jetpack Compose",
-                "Web SDK (coming soon)",
-                "MCP server for coding agents",
-                "Self-hosted with single PostgreSQL",
-              ],
-              isAccessibleForFree: true,
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              name: "PubkyPulse",
-              url: "https://pulse.pubky.org",
-              description:
-                "Self-hosted observability platform for web, backend and mobile apps",
-            },
-          ]),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
     </>
   );

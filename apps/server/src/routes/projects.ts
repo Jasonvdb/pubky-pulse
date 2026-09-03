@@ -151,12 +151,27 @@ export async function projectsRoutes(app: FastifyInstance) {
         .from(apps)
         .where(and(eq(apps.project_id, id), isNull(apps.deleted_at)));
 
-      const secretMap = await getClientSecretMap(app.db, projectApps.map(a => a.id));
       const owners = await getProjectOwners(app.db, id);
+      const actorUserId = resolveActorUserId(auth);
+
+      // The owner list this response already carries decides the client
+      // secrets, so no second ownership query is needed — and a team owner who
+      // does not own this project is a non-owner here like anyone else.
+      const access = {
+        canReadClientSecret: resolveAccessLevel(owners, actorUserId) === "owner",
+      };
+      const secretMap = await getClientSecretMap(
+        app.db,
+        projectApps,
+        access.canReadClientSecret ? new Set([id]) : new Set<string>(),
+      );
 
       return {
-        ...serializeProject(project, owners, resolveActorUserId(auth)),
-        apps: projectApps.map(a => serializeApp({ ...a, client_secret: secretMap.get(a.id) ?? null })),
+        ...serializeProject(project, owners, actorUserId),
+        apps: projectApps.map(a => serializeApp(
+          { ...a, client_secret: secretMap.get(a.id) ?? null },
+          access,
+        )),
       };
     }
   );

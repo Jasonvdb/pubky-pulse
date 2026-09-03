@@ -55,6 +55,39 @@ export async function getProjectOwnerMap(
   return map;
 }
 
+/**
+ * The subset of `projectIds` that `actorUserId` currently owns.
+ *
+ * Credential visibility is decided from this set *before* any secret is
+ * loaded: client and import keys belong to their app's project, so "which
+ * projects do you own" is the whole of the entitlement question for them.
+ *
+ * Passing `projectIds` narrows the query to the page being served; omitting it
+ * asks for every project the actor owns, which is what a key list — whose rows
+ * can point at any app in the team — needs. A `null` actor (a client or import
+ * key, which has no human behind it) owns nothing.
+ */
+export async function getOwnedProjectIds(
+  db: Queryable,
+  actorUserId: string | null,
+  projectIds?: readonly string[],
+): Promise<Set<string>> {
+  if (actorUserId === null) return new Set();
+  if (projectIds && projectIds.length === 0) return new Set();
+
+  const rows = await db
+    .select({ project_id: projectOwners.project_id })
+    .from(projectOwners)
+    .where(
+      and(
+        eq(projectOwners.user_id, actorUserId),
+        projectIds ? inArray(projectOwners.project_id, [...projectIds]) : undefined,
+      ),
+    );
+
+  return new Set(rows.map((r) => r.project_id));
+}
+
 /** The owner list for a single project. */
 export async function getProjectOwners(
   db: Queryable,

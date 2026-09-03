@@ -1070,7 +1070,7 @@ describe("PATCH /v1/auth/keys/:id", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("returns 403 for member role", async () => {
+  it("returns 404 for another member's agent key", async () => {
     const { token, teamId } = await getTokenAndTeamId(app);
     const { keyId } = await createKeyAndGetId(token, teamId);
 
@@ -1086,8 +1086,10 @@ describe("PATCH /v1/auth/keys/:id", () => {
       payload: { name: "Member Update" },
     });
 
-    expect(res.statusCode).toBe(403);
-    expect(res.json().error).toMatch(/admin/i);
+    // Key management is no longer gated on team role but on entitlement: this
+    // key is someone else's agent key, so it is invisible to this member and
+    // reported exactly as a key that does not exist.
+    expect(res.statusCode).toBe(404);
   });
 });
 

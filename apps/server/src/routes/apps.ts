@@ -9,8 +9,10 @@ import { logAuditEvent } from "../utils/audit.js";
 import {
   applyProjectWrite,
   enforceProjectWrite,
+  resolveActorUserId,
   resolveAppInProject,
 } from "../utils/project-access.js";
+import { getOwnedProjectIds } from "../utils/project-owners.js";
 
 export async function appsRoutes(app: FastifyInstance) {
   // List apps for the authenticated user's teams
@@ -37,13 +39,22 @@ export async function appsRoutes(app: FastifyInstance) {
         .where(and(inArray(apps.team_id, teamIds), isNull(apps.deleted_at)))
         .orderBy(asc(apps.created_at), asc(apps.id));
 
-      const secretMap = await getClientSecretMap(app.db, rows.map(r => r.id));
+      // A client secret is a project credential, so only the apps in projects
+      // this caller owns are eligible — and the ownership set is resolved
+      // before the secrets are loaded, so an unowned secret never leaves the
+      // database. Everyone else still sees the app row with a null secret.
+      const ownedProjectIds = await getOwnedProjectIds(
+        app.db,
+        resolveActorUserId(auth),
+        [...new Set(rows.map(r => r.project_id))],
+      );
+      const secretMap = await getClientSecretMap(app.db, rows, ownedProjectIds);
 
       return {
-        apps: rows.map(r => serializeApp({
-          ...r,
-          client_secret: secretMap.get(r.id) ?? null,
-        })),
+        apps: rows.map(r => serializeApp(
+          { ...r, client_secret: secretMap.get(r.id) ?? null },
+          { canReadClientSecret: ownedProjectIds.has(r.project_id) },
+        )),
       };
     }
   );
@@ -56,23 +67,18 @@ export async function appsRoutes(app: FastifyInstance) {
       const auth = request.auth;
       const { id } = request.params;
 
-      const [existing] = await app.db
-        .select()
-        .from(apps)
-        .where(
-          and(
-            eq(apps.id, id),
-            inArray(apps.team_id, getAuthTeamIds(auth)),
-            isNull(apps.deleted_at)
-          )
-        )
-        .limit(1);
+      // Reading an app is a team-membership read, but reading its client
+      // secret is not: the app is resolved together with its project so the
+      // same request also answers "does this caller own that project".
+      const contained = await resolveAppInProject(app, { appId: id }, auth, reply);
+      if (!contained) return;
+      const existing = contained.resource;
+      const access = { canReadClientSecret: contained.is_project_owner };
 
-      if (!existing) {
-        return reply.code(404).send({ error: "App not found" });
-      }
-
-      return serializeApp({ ...existing, client_secret: await getClientSecret(app.db, id) });
+      return serializeApp(
+        { ...existing, client_secret: await getClientSecret(app.db, id, access) },
+        access,
+      );
     }
   );
 
@@ -154,7 +160,9 @@ export async function appsRoutes(app: FastifyInstance) {
         metadata: { name, platform, bundle_id: bundle_id || null },
       });
 
-      return reply.code(201).send(serializeApp(created));
+      // The creator just proved project ownership above, so they are entitled
+      // to the client secret this request minted.
+      return reply.code(201).send(serializeApp(created, { canReadClientSecret: true }));
     }
   );
 
@@ -194,7 +202,12 @@ export async function appsRoutes(app: FastifyInstance) {
         changes: { name: { before: existing.name, after: name } },
       });
 
-      return serializeApp({ ...updated, client_secret: await getClientSecret(app.db, id) });
+      // Only a project owner reaches this line, so the secret is theirs to see.
+      const patchAccess = { canReadClientSecret: true };
+      return serializeApp(
+        { ...updated, client_secret: await getClientSecret(app.db, id, patchAccess) },
+        patchAccess,
+      );
     }
   );
 

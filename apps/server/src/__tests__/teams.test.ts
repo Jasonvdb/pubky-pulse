@@ -9,6 +9,7 @@ import {
   createUserAndGetToken,
   createForeignTeam,
   addTeamMember,
+  addProjectOwner,
   createAgentKey,
   testEmailService,
   TEST_USER,
@@ -885,7 +886,13 @@ async function createAgentKeyForUser(token: string, teamId: string, name: string
   return res.json().api_key.id;
 }
 
-/** Create a client key via the API, attributed to the user whose token is provided. Returns the key ID. */
+/**
+ * Create a client key via the API, attributed to the user whose token is
+ * provided. Returns the key ID.
+ *
+ * A client key is a project credential, so the caller must own the app's
+ * project — callers below grant that ownership first.
+ */
 async function createClientKeyForUser(token: string, appId: string, name: string): Promise<string> {
   const res = await app.inject({
     method: "POST",
@@ -934,6 +941,10 @@ describe("GET /v1/teams/:teamId/members/:userId/agent-keys", () => {
 
     const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     await createAgentKeyForUser(secondToken, teamId, "Active Agent");
+    // Minting a client key now requires owning the app's project, so the
+    // second user is made an owner of it first. The point of the test is
+    // unchanged: the agent-key listing must exclude the client key.
+    await addProjectOwner(testData.projectId, second.userId);
     await createClientKeyForUser(secondToken, testData.appId, "Client Key");
 
     // Soft-delete one agent key
@@ -1009,6 +1020,8 @@ describe("DELETE /v1/teams/:teamId/members/:userId with revoke_agent_keys", () =
 
     const { token: secondToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
     const agentKeyId = await createAgentKeyForUser(secondToken, teamId, "Agent Key");
+    // Owning the project is now the prerequisite for minting its client key.
+    await addProjectOwner(testData.projectId, second.userId);
     const clientKeyId = await createClientKeyForUser(secondToken, testData.appId, "Client Key");
 
     const res = await app.inject({
@@ -1126,7 +1139,26 @@ describe("Role enforcement on existing routes", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("member cannot create API key", async () => {
+  it("member can create their own agent key", async () => {
+    const { teamId } = await getTokenAndTeamId(app);
+    const second = await registerSecondUser();
+    await addTeamMember(teamId, second.userId, "member");
+    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/auth/keys",
+      headers: { authorization: `Bearer ${memberToken}` },
+      payload: { name: "Test Key", key_type: "agent", team_id: teamId },
+    });
+
+    // An agent key carries only its creator's own access, so creating one is
+    // no longer role-gated: it is a personal credential, not a project one.
+    expect(res.statusCode).toBe(201);
+    expect(res.json().api_key.created_by).toBe(second.userId);
+  });
+
+  it("member cannot create a client key for a project they do not own", async () => {
     const { teamId } = await getTokenAndTeamId(app);
     const memberToken = await addMemberAndGetToken(teamId, "member");
 
@@ -1134,7 +1166,7 @@ describe("Role enforcement on existing routes", () => {
       method: "POST",
       url: "/v1/auth/keys",
       headers: { authorization: `Bearer ${memberToken}` },
-      payload: { name: "Test Key", key_type: "agent", team_id: teamId },
+      payload: { name: "Test Key", key_type: "client", app_id: testData.appId },
     });
 
     expect(res.statusCode).toBe(403);

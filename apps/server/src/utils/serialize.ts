@@ -1,12 +1,30 @@
-export function serializeApiKey(k: {
-  id: string; secret: string; key_type: string; app_id: string | null;
-  team_id: string; name: string; created_by: string | null; permissions: unknown;
-  created_at: Date; updated_at: Date; last_used_at: Date | null; expires_at: Date | null;
-  app_name?: string | null; created_by_email?: string | null;
-}) {
+/**
+ * Whether this caller is entitled to the secret of the key being serialized.
+ *
+ * It is a required argument rather than an optional flag so that a route which
+ * forgets to decide does not silently serialize the credential: omitting it is
+ * a compile error, not a leak. The decision itself belongs to the route, which
+ * is the only layer that knows who is asking — see `routes/auth.ts`.
+ */
+export interface ApiKeySecretAccess {
+  canReadSecret: boolean;
+}
+
+export function serializeApiKey(
+  k: {
+    id: string; secret: string; key_type: string; app_id: string | null;
+    team_id: string; name: string; created_by: string | null; permissions: unknown;
+    created_at: Date; updated_at: Date; last_used_at: Date | null; expires_at: Date | null;
+    app_name?: string | null; created_by_email?: string | null;
+  },
+  access: ApiKeySecretAccess,
+) {
   return {
     id: k.id,
-    secret: k.secret,
+    // Redacted secrets serialize as `null`, never as an omitted field and never
+    // as some other key's secret: a client rendering the list can tell "you may
+    // not see this" apart from "this key has no secret".
+    secret: access.canReadSecret ? k.secret : null,
     key_type: k.key_type,
     app_id: k.app_id,
     team_id: k.team_id,
@@ -106,13 +124,33 @@ export function serializeJobRun(r: {
 }
 
 // --- Client secret lookup helpers ---
-// These avoid duplicating the api_keys query across app/project routes.
+// These avoid duplicating the api_keys query across app/project routes, and
+// they are the single funnel through which a client secret can reach a
+// response: both take the caller's resolved access and refuse to *load* a
+// secret the caller is not entitled to, rather than loading everything and
+// hoping the route remembers to filter afterwards.
 
 import { eq, and, inArray, isNull, or, gt, asc } from "drizzle-orm";
 import { apiKeys } from "@pubky-pulse/db";
 import type { Db } from "@pubky-pulse/db";
 
-export async function getClientSecret(db: Db, appId: string): Promise<string | null> {
+/**
+ * Whether this caller may see the client secret of the app being serialized.
+ *
+ * An app's client secret is a project credential, so the answer is "the caller
+ * currently owns the app's project" — a team owner who does not own that
+ * project is a non-owner here, exactly like any other viewer.
+ */
+export interface AppSecretAccess {
+  canReadClientSecret: boolean;
+}
+
+export async function getClientSecret(
+  db: Db,
+  appId: string,
+  access: AppSecretAccess,
+): Promise<string | null> {
+  if (!access.canReadClientSecret) return null;
   const now = new Date();
   const [row] = await db
     .select({ secret: apiKeys.secret })
@@ -130,7 +168,19 @@ export async function getClientSecret(db: Db, appId: string): Promise<string | n
   return row?.secret ?? null;
 }
 
-export async function getClientSecretMap(db: Db, appIds: string[]): Promise<Map<string, string>> {
+/**
+ * Client secrets for many apps in one query, keyed by app id.
+ *
+ * Apps outside `ownedProjectIds` are dropped *before* the query runs, so an
+ * unauthorized secret is never read out of the database in the first place.
+ * Apps with no visible secret are simply absent from the map.
+ */
+export async function getClientSecretMap(
+  db: Db,
+  appRefs: ReadonlyArray<{ id: string; project_id: string }>,
+  ownedProjectIds: ReadonlySet<string>,
+): Promise<Map<string, string>> {
+  const appIds = appRefs.filter((a) => ownedProjectIds.has(a.project_id)).map((a) => a.id);
   if (appIds.length === 0) return new Map();
   const now = new Date();
   const rows = await db
@@ -152,16 +202,19 @@ export async function getClientSecretMap(db: Db, appIds: string[]): Promise<Map<
   return map;
 }
 
-export function serializeApp(a: {
-  id: string; team_id: string; project_id: string;
-  name: string; platform: string; bundle_id: string | null;
-  latest_app_version?: string | null;
-  latest_app_version_updated_at?: Date | null;
-  supported_languages?: string[] | null;
-  supported_languages_source?: string | null;
-  client_secret?: string | null;
-  created_at: Date; deleted_at: Date | null;
-}) {
+export function serializeApp(
+  a: {
+    id: string; team_id: string; project_id: string;
+    name: string; platform: string; bundle_id: string | null;
+    latest_app_version?: string | null;
+    latest_app_version_updated_at?: Date | null;
+    supported_languages?: string[] | null;
+    supported_languages_source?: string | null;
+    client_secret?: string | null;
+    created_at: Date; deleted_at: Date | null;
+  },
+  access: AppSecretAccess,
+) {
   return {
     id: a.id,
     team_id: a.team_id,
@@ -173,7 +226,9 @@ export function serializeApp(a: {
     latest_app_version_updated_at: a.latest_app_version_updated_at?.toISOString() ?? null,
     supported_languages: a.supported_languages ?? null,
     supported_languages_source: (a.supported_languages_source ?? null) as "sdk" | "manual" | null,
-    client_secret: a.client_secret ?? null,
+    // Second gate on the same decision the loaders above already applied: a
+    // caller that hands in a secret it should not have still cannot publish it.
+    client_secret: access.canReadClientSecret ? (a.client_secret ?? null) : null,
     created_at: a.created_at.toISOString(),
   };
 }

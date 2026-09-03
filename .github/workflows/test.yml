@@ -75,4 +75,11 @@ jobs:
           DATABASE_URL: postgres://postgres@localhost:5432/pubky_pulse_test
           JWT_SECRET: test-secret
           HOST: 127.0.0.1
+          # Identity configuration is required — apps/server/src/config.ts
+          # validates it at module load. These mirror the values in
+          # apps/server/vitest.config.ts and the domains the fixtures use.
+          PULSE_ALLOWED_EMAIL_DOMAINS: pulse.pubky.org,example.com
+          PULSE_TEAM_OWNER_EMAIL: test@pulse.pubky.org
+          PULSE_DEFAULT_TEAM_SLUG: test-team
+          PULSE_DEFAULT_TEAM_NAME: Test Team
         run: pnpm test

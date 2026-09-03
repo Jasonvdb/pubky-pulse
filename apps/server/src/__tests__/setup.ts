@@ -3,9 +3,6 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";
-import cors from "@fastify/cors";
-import cookie from "@fastify/cookie";
-import jwt from "@fastify/jwt";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
@@ -17,32 +14,7 @@ const MIGRATIONS_FOLDER = resolve(
 import * as schema from "@pubky-pulse/db";
 import { createDatabaseConnection, ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "@pubky-pulse/db";
 import type { Permission, TeamRole } from "@pubky-pulse/shared";
-import { authRoutes } from "../routes/auth.js";
-import { ingestRoutes } from "../routes/ingest.js";
-import { feedbackIngestRoutes } from "../routes/feedback-ingest.js";
-import { questionnaireIngestRoutes } from "../routes/questionnaire-ingest.js";
-import { ingestAttachmentRoutes } from "../routes/ingest-attachment.js";
-import { attachmentsRoutes } from "../routes/attachments.js";
-import { importRoutes } from "../routes/import.js";
-import { eventsRoutes } from "../routes/events.js";
-import { appsRoutes } from "../routes/apps.js";
-import { projectsRoutes } from "../routes/projects.js";
-import { identityRoutes } from "../routes/identity.js";
-import { appUsersRoutes } from "../routes/app-users.js";
-import { teamsRoutes } from "../routes/teams.js";
-import { invitationRoutes } from "../routes/invitations.js";
-import { metricsRoutes, metricByIdRoutes, teamMetricsRoutes } from "../routes/metrics.js";
-import { funnelsRoutes, funnelByIdRoutes, teamFunnelsRoutes } from "../routes/funnels.js";
-import { auditLogsRoutes } from "../routes/audit-logs.js";
-import { userPropertiesRoutes } from "../routes/user-properties.js";
-import { jobsRoutes, jobsByIdRoutes } from "../routes/jobs.js";
-import { issuesRoutes, teamIssuesRoutes } from "../routes/issues.js";
-import { feedbackRoutes, teamFeedbackRoutes } from "../routes/feedback.js";
-import { questionnaireRoutes, teamQuestionnaireRoutes } from "../routes/questionnaires.js";
-import { statsRoutes, teamStatsRoutes } from "../routes/stats.js";
-import { notificationsRoutes } from "../routes/notifications.js";
-import { mcpRoute } from "../mcp/index.js";
-import { decompressPlugin } from "../middleware/decompress.js";
+import { buildServer } from "../app.js";
 import type { EmailService } from "../services/email.js";
 import { JobRunner } from "../services/job-runner.js";
 import type { JobContext, JobHandler } from "../services/job-runner.js";
@@ -301,51 +273,20 @@ export async function buildApp() {
   jobRunner.setNotificationDispatcher(notificationDispatcher);
   jobRunner.register("notification_deliver", notificationDeliverHandler(notificationDispatcher));
 
-  app.decorate("db", db);
-  app.decorate("databaseUrl", TEST_DB_URL);
-  app.decorate("emailService", testEmailService as EmailService);
-  app.decorate("jobRunner", jobRunner);
-  app.decorate("notificationDispatcher", notificationDispatcher);
-  await app.register(decompressPlugin);
-  await app.register(cookie);
-  await app.register(cors, { origin: true, credentials: true });
-  await app.register(jwt, { secret: "test-secret" });
-
-  app.get("/health", async () => ({ status: "ok" }));
-  await app.register(authRoutes, { prefix: "/v1/auth" });
-  await app.register(ingestRoutes, { prefix: "/v1" });
-  await app.register(feedbackIngestRoutes, { prefix: "/v1" });
-  await app.register(questionnaireIngestRoutes, { prefix: "/v1" });
-  await app.register(ingestAttachmentRoutes, { prefix: "/v1" });
-  await app.register(attachmentsRoutes, { prefix: "/v1" });
-  await app.register(importRoutes, { prefix: "/v1" });
-  await app.register(eventsRoutes, { prefix: "/v1" });
-  await app.register(appsRoutes, { prefix: "/v1" });
-  await app.register(projectsRoutes, { prefix: "/v1" });
-  await app.register(identityRoutes, { prefix: "/v1" });
-  await app.register(appUsersRoutes, { prefix: "/v1" });
-  await app.register(teamsRoutes, { prefix: "/v1" });
-  await app.register(invitationRoutes, { prefix: "/v1" });
-  await app.register(metricsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(metricByIdRoutes, { prefix: "/v1" });
-  await app.register(teamMetricsRoutes, { prefix: "/v1" });
-  await app.register(funnelsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(funnelByIdRoutes, { prefix: "/v1" });
-  await app.register(teamFunnelsRoutes, { prefix: "/v1" });
-  await app.register(auditLogsRoutes, { prefix: "/v1/teams/:teamId" });
-  await app.register(userPropertiesRoutes, { prefix: "/v1" });
-  await app.register(jobsRoutes, { prefix: "/v1/teams/:teamId" });
-  await app.register(jobsByIdRoutes, { prefix: "/v1" });
-  await app.register(issuesRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamIssuesRoutes, { prefix: "/v1" });
-  await app.register(feedbackRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamFeedbackRoutes, { prefix: "/v1" });
-  await app.register(questionnaireRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamQuestionnaireRoutes, { prefix: "/v1" });
-  await app.register(statsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamStatsRoutes, { prefix: "/v1" });
-  await app.register(notificationsRoutes, { prefix: "/v1" });
-  await app.register(mcpRoute);
+  // Plugins and routes come from the shared factory in src/app.ts so the test
+  // app can never register a different route set than src/index.ts. Only the
+  // test-specific wiring — database URL, stubbed email/job handlers, permissive
+  // CORS and the fixed JWT secret — stays here.
+  await buildServer({
+    app,
+    db,
+    databaseUrl: TEST_DB_URL,
+    emailService: testEmailService as EmailService,
+    jobRunner,
+    notificationDispatcher,
+    cors: { origin: true, credentials: true },
+    jwtSecret: "test-secret",
+  });
 
   await app.ready();
   return app;

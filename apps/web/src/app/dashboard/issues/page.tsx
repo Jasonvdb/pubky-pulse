@@ -3,11 +3,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import useSWR from "swr";
-import type { ProjectResponse, IssueResponse, IssueStatus, AppResponse } from "@pubky-pulse/shared";
+import type { IssueResponse, IssueStatus, AppResponse } from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useIssuesByStatus, useIssueCounts, useIssue, issueActions } from "@/hooks/use-issues";
 import { useProjectColorMap } from "@/hooks/use-project-colors";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { formatDateTime } from "@/lib/format-date";
 import { CountryEmoji } from "@/components/country-flag";
 // Deep import bypasses the barrel export which pulls in node:crypto
@@ -109,6 +110,7 @@ function IssueDetailModal({
   projectId,
   projectColor,
   issueId,
+  canWrite,
   open,
   onClose,
   onMutate,
@@ -118,6 +120,8 @@ function IssueDetailModal({
   projectId: string;
   projectColor: string | undefined;
   issueId: string;
+  /** Triage is a project write; commenting is not. */
+  canWrite: boolean;
   open: boolean;
   onClose: () => void;
   onMutate: () => void;
@@ -125,22 +129,27 @@ function IssueDetailModal({
   latestAppVersion: string | null | undefined;
 }) {
   const { issue, isLoading, mutate: mutateIssue } = useIssue(projectId, issueId);
+  const handleWriteFailure = useWriteFailureHandler();
   const [resolveVersion, setResolveVersion] = useState("");
   const [showResolveInput, setShowResolveInput] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   // Only show merge candidates from the same project
   const mergeableSameProject = allIssues.filter((i) => i.id !== issueId && i.project_id === projectId);
 
   const handleStatusChange = async (status: string, version?: string) => {
     setActionLoading(true);
+    setActionError("");
     try {
       await issueActions.updateStatus(projectId, issueId, status, version);
       mutateIssue();
       onMutate();
       setShowResolveInput(false);
       setResolveVersion("");
+    } catch (err) {
+      setActionError(await handleWriteFailure(err, "Failed to update the issue", mutateIssue));
     } finally {
       setActionLoading(false);
     }
@@ -149,6 +158,7 @@ function IssueDetailModal({
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     setActionLoading(true);
+    setActionError("");
     try {
       await issueActions.addComment(projectId, issueId, newComment.trim());
       setNewComment("");
@@ -157,6 +167,8 @@ function IssueDetailModal({
       // updated_at server-side, so it should jump to the top of its column now
       // rather than waiting for the 30s SWR refresh.
       onMutate();
+    } catch (err) {
+      setActionError(await handleWriteFailure(err, "Failed to add the comment", mutateIssue));
     } finally {
       setActionLoading(false);
     }
@@ -210,7 +222,8 @@ function IssueDetailModal({
               )}
             </div>
 
-            {/* Actions */}
+            {/* Actions — triage needs project ownership; comments below do not. */}
+            {canWrite && (
             <div className="flex items-center gap-2 mt-4">
               {showResolveInput ? (
                 <div className="flex flex-col gap-1 w-full">
@@ -284,10 +297,19 @@ function IssueDetailModal({
                                   key={i.id}
                                   onClick={async () => {
                                     setActionLoading(true);
+                                    setActionError("");
                                     try {
                                       await issueActions.merge(projectId, issueId, i.id);
                                       mutateIssue();
                                       onMutate();
+                                    } catch (err) {
+                                      setActionError(
+                                        await handleWriteFailure(
+                                          err,
+                                          "Failed to merge the issues",
+                                          mutateIssue,
+                                        ),
+                                      );
                                     } finally {
                                       setActionLoading(false);
                                     }
@@ -304,6 +326,11 @@ function IssueDetailModal({
                 </DropdownMenu>
               )}
             </div>
+            )}
+
+            {actionError && (
+              <p className="mt-3 text-sm text-destructive">{actionError}</p>
+            )}
 
             {/* Comments */}
             <div className="mt-6">
@@ -433,13 +460,12 @@ export default function IssuesPage() {
   const { dataMode } = useDataMode();
   const teamId = currentTeam?.id;
 
-  const { data: projectsData } = useSWR<{ projects: ProjectResponse[] }>(
-    teamId ? `/v1/projects?team_id=${teamId}` : null
-  );
+  // The project filter offers every project on the team; triage inside an
+  // issue is gated per project by the server-provided access level.
+  const { projects, canWriteProject } = useProjects(teamId);
   const { data: appsData } = useSWR<{ apps: AppResponse[] }>(
     teamId ? `/v1/apps?team_id=${teamId}` : null
   );
-  const projects = projectsData?.projects ?? [];
   const allApps = appsData?.apps ?? [];
   const appLatestVersionMap = useMemo(() => {
     const m = new Map<string, string | null>();
@@ -634,6 +660,7 @@ export default function IssuesPage() {
           projectId={selectedIssue.project_id}
           projectColor={projectColorMap.get(selectedIssue.project_id)}
           issueId={selectedIssueId}
+          canWrite={canWriteProject(selectedIssue.project_id)}
           open={!!selectedIssueId}
           onClose={closeIssue}
           onMutate={revalidateAll}

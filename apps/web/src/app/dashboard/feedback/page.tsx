@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import useSWR from "swr";
 import type {
-  ProjectResponse,
   FeedbackResponse,
   FeedbackStatus,
 } from "@pubky-pulse/shared";
@@ -12,6 +10,7 @@ import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useFeedback, useFeedbackDetail, feedbackActions } from "@/hooks/use-feedback";
 import { useProjectColorMap } from "@/hooks/use-project-colors";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { formatDateTime } from "@/lib/format-date";
 import { formatSdkLabel } from "@/lib/format-sdk";
 import { timeAgo } from "@/app/dashboard/_components/time-ago";
@@ -96,16 +95,20 @@ function FeedbackDetailModal({
   projectId,
   projectColor,
   feedbackId,
+  canWrite,
   onClose,
   onMutate,
 }: {
   projectId: string;
   projectColor: string | undefined;
   feedbackId: string;
+  /** Triage and deletion are project writes; commenting is not. */
+  canWrite: boolean;
   onClose: () => void;
   onMutate: () => void;
 }) {
   const { feedback, isLoading, mutate: mutateDetail } = useFeedbackDetail(projectId, feedbackId);
+  const handleWriteFailure = useWriteFailureHandler();
   // Drive the dialog's open state locally so the visual close is instant.
   // If close only stripped the URL param, a slow App Router transition (e.g.
   // contending with an SWR revalidation) could leave the dialog frozen open
@@ -113,6 +116,7 @@ function FeedbackDetailModal({
   const [open, setOpen] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   // Close the dialog immediately, then sync the URL as a side-effect.
   const handleClose = () => {
@@ -122,22 +126,28 @@ function FeedbackDetailModal({
 
   const handleStatusChange = async (status: FeedbackStatus) => {
     setActionLoading(true);
+    setActionError("");
     try {
       await feedbackActions.updateStatus(projectId, feedbackId, status);
       mutateDetail();
       onMutate();
+    } catch (err) {
+      setActionError(await handleWriteFailure(err, "Failed to update the feedback", mutateDetail));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this feedback? This cannot be undone by agents.")) return;
+    if (!confirm("Delete this feedback? This cannot be undone.")) return;
     setActionLoading(true);
+    setActionError("");
     try {
       await feedbackActions.remove(projectId, feedbackId);
       onMutate();
       handleClose();
+    } catch (err) {
+      setActionError(await handleWriteFailure(err, "Failed to delete the feedback", mutateDetail));
     } finally {
       setActionLoading(false);
     }
@@ -146,10 +156,13 @@ function FeedbackDetailModal({
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     setActionLoading(true);
+    setActionError("");
     try {
       await feedbackActions.addComment(projectId, feedbackId, newComment.trim());
       setNewComment("");
       mutateDetail();
+    } catch (err) {
+      setActionError(await handleWriteFailure(err, "Failed to add the comment", mutateDetail));
     } finally {
       setActionLoading(false);
     }
@@ -228,7 +241,8 @@ function FeedbackDetailModal({
               <div><span className="text-muted-foreground">Updated:</span> {formatDateTime(feedback.updated_at)}</div>
             </div>
 
-            {/* Actions */}
+            {/* Actions — triage needs project ownership; comments below do not. */}
+            {canWrite && (
             <div className="flex items-center gap-2 mt-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -249,6 +263,11 @@ function FeedbackDetailModal({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            )}
+
+            {actionError && (
+              <p className="mt-3 text-sm text-destructive">{actionError}</p>
+            )}
 
             {/* Comments */}
             <div className="mt-6">
@@ -294,10 +313,9 @@ export default function FeedbackPage() {
   const { dataMode } = useDataMode();
   const teamId = currentTeam?.id;
 
-  const { data: projectsData } = useSWR<{ projects: ProjectResponse[] }>(
-    teamId ? `/v1/projects?team_id=${teamId}` : null,
-  );
-  const projects = projectsData?.projects ?? [];
+  // The project filter offers every project on the team; triage inside one
+  // piece of feedback is gated by that project's server-provided access level.
+  const { projects, canWriteProject } = useProjects(teamId);
   const projectColorMap = useProjectColorMap(teamId);
 
   const ALL = "__all__";
@@ -437,6 +455,7 @@ export default function FeedbackPage() {
           projectId={selectedFeedback.project_id}
           projectColor={projectColorMap.get(selectedFeedback.project_id)}
           feedbackId={selectedFeedbackId}
+          canWrite={canWriteProject(selectedFeedback.project_id)}
           onClose={closeFeedback}
           onMutate={() => mutate()}
         />

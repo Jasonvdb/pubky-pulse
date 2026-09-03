@@ -3,8 +3,10 @@
 import type {
   MetricDefinitionResponse,
   MetricStatsEntry,
+  ProjectAccessLevel,
   TeamMetricStatsEntry,
 } from "@pubky-pulse/shared";
+import { AccessLevelBadge } from "@/components/badges/access-level-badge";
 import { ProjectDot } from "@/lib/project-color";
 import { MetricCardGrid } from "./metric-card-grid";
 
@@ -44,6 +46,13 @@ export function bucketByProject(
 interface ProjectMetricsSectionProps {
   projectName: string;
   projectColor: string | null | undefined;
+  /**
+   * This person's access to the project, when it is known. Only the
+   * read-only case is badged: "you can change this" is the ordinary state
+   * and a badge on every heading would be noise, while the group you
+   * cannot act on is worth calling out.
+   */
+  accessLevel?: ProjectAccessLevel;
   bucket: ProjectMetricsBucket;
   resolveStats: (metric: MetricDefinitionResponse) => MetricStatsEntry | undefined;
   projectColors: Map<string, string>;
@@ -53,6 +62,7 @@ interface ProjectMetricsSectionProps {
 export function ProjectMetricsSection({
   projectName,
   projectColor,
+  accessLevel,
   bucket,
   resolveStats,
   projectColors,
@@ -66,6 +76,7 @@ export function ProjectMetricsSection({
         <div className="flex items-center gap-2 min-w-0">
           <ProjectDot color={projectColor} size={10} />
           <h2 className="text-sm font-semibold truncate">{projectName}</h2>
+          {accessLevel === "viewer" && <AccessLevelBadge level="viewer" size="xs" />}
         </div>
         <div className="text-xs text-muted-foreground tabular-nums">
           <span className="text-foreground font-medium">{definitionLabel}</span>

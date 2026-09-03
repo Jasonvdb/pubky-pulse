@@ -18,6 +18,7 @@ function getJobScope(jobType: string): string | undefined {
   return JOB_TYPE_META[jobType as JobType]?.scope;
 }
 import { useJobRuns } from "@/hooks/use-jobs";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { useTeam } from "@/contexts/team-context";
 import { ProjectDot } from "@/lib/project-color";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -84,10 +85,11 @@ export default function JobsPage() {
   const { currentTeam } = useTeam();
   const teamId = currentTeam?.id;
 
-  const { data: projectsData } = useSWR<{ projects: ProjectResponse[] }>(
-    teamId ? `/v1/projects?team_id=${teamId}` : null
-  );
-  const projects = projectsData?.projects ?? [];
+  // Every job run on the team is readable, so the table names every project.
+  // Triggering and cancelling are writes on one project, so both are limited to
+  // the projects this person owns.
+  const { projects, ownedProjects, canWriteProject } = useProjects(teamId);
+  const handleWriteFailure = useWriteFailureHandler();
   const projectById = useMemo(() => {
     const map = new Map<string, ProjectResponse>();
     for (const p of projects) map.set(p.id, p);
@@ -117,6 +119,7 @@ export default function JobsPage() {
   const [triggerError, setTriggerError] = useState("");
   const [triggering, setTriggering] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
   const jobType = filters.get("job_type");
   const status = filters.get("status");
@@ -206,12 +209,13 @@ export default function JobsPage() {
 
   async function handleCancel(runId: string) {
     setCancelling(true);
+    setCancelError("");
     try {
       await api.post(`/v1/jobs/${runId}/cancel`);
       mutate();
       filters.set("job_id", "");
-    } catch {
-      // ignore
+    } catch (err) {
+      setCancelError(await handleWriteFailure(err, "Failed to cancel the job", mutate));
     } finally {
       setCancelling(false);
     }
@@ -227,6 +231,11 @@ export default function JobsPage() {
       {/* Header with trigger button */}
       <div className="flex items-center justify-between">
         <div />
+        {ownedProjects.length === 0 ? (
+          <Button size="sm" disabled title="Jobs run against a project, so you need to own one">
+            Run Job
+          </Button>
+        ) : (
         <Dialog open={triggerOpen} onOpenChange={setTriggerOpen}>
           <DialogTrigger asChild>
             <Button size="sm">Run Job</Button>
@@ -261,7 +270,7 @@ export default function JobsPage() {
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((p) => (
+                        {ownedProjects.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             <span className="flex items-center gap-2">
                               <ProjectDot color={p.color} />
@@ -297,6 +306,7 @@ export default function JobsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
       </StaggerItem>
 
@@ -596,7 +606,9 @@ export default function JobsPage() {
                 </div>
               )}
 
-              {selectedRun.status === "running" && (
+              {/* A run with no project carries no project ownership, so the
+                  server refuses to cancel it for anyone. */}
+              {selectedRun.status === "running" && canWriteProject(selectedRun.project_id) && (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -606,6 +618,8 @@ export default function JobsPage() {
                   {cancelling ? "Cancelling..." : "Cancel Job"}
                 </Button>
               )}
+
+              {cancelError && <p className="text-sm text-destructive">{cancelError}</p>}
             </div>
           )}
         </SheetContent>

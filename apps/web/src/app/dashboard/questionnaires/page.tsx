@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import useSWR from "swr";
 import type { ProjectResponse, QuestionnaireSchema } from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
@@ -12,6 +11,7 @@ import {
   questionnaireActions,
 } from "@/hooks/use-questionnaires";
 import { useProjectColorMap, useProjectInfoMap } from "@/hooks/use-project-colors";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -78,10 +78,10 @@ export default function QuestionnairesPage() {
   const { currentTeam } = useTeam();
   const teamId = currentTeam?.id;
 
-  const { data: projectsData } = useSWR<{ projects: ProjectResponse[] }>(
-    teamId ? `/v1/projects?team_id=${teamId}` : null,
-  );
-  const projects = projectsData?.projects ?? [];
+  // Reads span the whole team; creating a questionnaire writes to one project,
+  // so the dialog only ever offers projects this person owns.
+  const { projects, ownedProjects, accessByProjectId, canWriteProject } =
+    useProjects(teamId);
   const projectInfoMap = useProjectInfoMap(teamId);
   const projectColors = useProjectColorMap(teamId);
 
@@ -141,7 +141,8 @@ export default function QuestionnairesPage() {
           </div>
           <CreateQuestionnaireDialog
             preselectedProjectId={isAllProjects ? undefined : projectId}
-            projects={projects}
+            projects={ownedProjects}
+            canCreate={isAllProjects ? ownedProjects.length > 0 : canWriteProject(projectId)}
             onCreated={() => mutate()}
           />
         </div>
@@ -181,6 +182,7 @@ export default function QuestionnairesPage() {
                   key={bucket.projectId}
                   projectName={info?.name ?? bucket.projectId}
                   projectColor={info?.color}
+                  accessLevel={accessByProjectId.get(bucket.projectId)}
                   bucket={bucket}
                   projectColors={projectColors}
                   startIndex={sectionStart}
@@ -202,12 +204,16 @@ export default function QuestionnairesPage() {
 function CreateQuestionnaireDialog({
   preselectedProjectId,
   projects,
+  canCreate,
   onCreated,
 }: {
   preselectedProjectId: string | undefined;
+  /** Owned projects only — this dialog picks a write target. */
   projects: ProjectResponse[];
+  canCreate: boolean;
   onCreated: () => void;
 }) {
+  const handleWriteFailure = useWriteFailureHandler();
   const [open, setOpen] = useState(false);
   const [dialogProjectId, setDialogProjectId] = useState<string>("");
   const [slug, setSlug] = useState("");
@@ -229,7 +235,7 @@ function CreateQuestionnaireDialog({
     let parsed: QuestionnaireSchema;
     try {
       parsed = JSON.parse(schemaText);
-    } catch (e) {
+    } catch {
       setError("Schema is not valid JSON");
       return;
     }
@@ -248,12 +254,21 @@ function CreateQuestionnaireDialog({
       setSchemaText(JSON.stringify(SAMPLE_SCHEMA, null, 2));
       setDialogProjectId("");
       onCreated();
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to create");
+    } catch (err) {
+      setError(await handleWriteFailure(err, "Failed to create questionnaire", onCreated));
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (!canCreate) {
+    return (
+      <Button disabled title="Only an owner of the project can add questionnaires to it">
+        <Plus className="h-4 w-4 mr-1" />
+        New questionnaire
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

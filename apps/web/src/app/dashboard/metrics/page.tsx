@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import useSWR from "swr";
 import type {
   MetricDefinitionResponse,
   MetricStatsEntry,
@@ -26,6 +25,7 @@ import {
   useTeamMetricStats,
 } from "@/hooks/use-metrics";
 import { useProjectColorMap, useProjectInfoMap } from "@/hooks/use-project-colors";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { ProjectDot } from "@/lib/project-color";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -64,10 +64,10 @@ export default function MetricsPage() {
   const searchParams = useSearchParams();
   const { currentTeam } = useTeam();
   const teamId = currentTeam?.id;
-  const { data: projectsData } = useSWR<{ projects: ProjectResponse[] }>(
-    teamId ? `/v1/projects?team_id=${teamId}` : null
-  );
-  const projects = projectsData?.projects ?? [];
+  // Reads span the whole team; creating a definition writes to one project, so
+  // the dialog only ever offers projects this person owns.
+  const { projects, ownedProjects, accessByProjectId, canWriteProject } =
+    useProjects(teamId);
   const projectInfoMap = useProjectInfoMap(teamId);
   const projectColors = useProjectColorMap(teamId);
 
@@ -134,7 +134,8 @@ export default function MetricsPage() {
           />
           <CreateMetricDialog
             preselectedProjectId={isAllProjects ? undefined : projectId}
-            projects={projects}
+            projects={ownedProjects}
+            canCreate={isAllProjects ? ownedProjects.length > 0 : canWriteProject(projectId)}
             onCreated={() => mutate()}
           />
         </div>
@@ -160,6 +161,7 @@ export default function MetricsPage() {
                   key={bucket.projectId}
                   projectName={info?.name ?? bucket.projectId}
                   projectColor={info?.color}
+                  accessLevel={accessByProjectId.get(bucket.projectId)}
                   bucket={bucket}
                   resolveStats={resolveStats}
                   projectColors={projectColors}
@@ -183,12 +185,16 @@ export default function MetricsPage() {
 function CreateMetricDialog({
   preselectedProjectId,
   projects,
+  canCreate,
   onCreated,
 }: {
   preselectedProjectId: string | undefined;
+  /** Owned projects only — this dialog picks a write target. */
   projects: ProjectResponse[];
+  canCreate: boolean;
   onCreated: () => void;
 }) {
+  const handleWriteFailure = useWriteFailureHandler();
   const [open, setOpen] = useState(false);
   const [dialogProjectId, setDialogProjectId] = useState<string>("");
   const [newName, setNewName] = useState("");
@@ -221,10 +227,19 @@ function CreateMetricDialog({
       setDialogProjectId("");
       onCreated();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create metric");
+      setCreateError(await handleWriteFailure(err, "Failed to create metric", onCreated));
     } finally {
       setCreating(false);
     }
+  }
+
+  if (!canCreate) {
+    return (
+      <Button size="sm" disabled title="Only an owner of the project can add metrics to it">
+        <Plus className="h-4 w-4 mr-1" />
+        New Metric
+      </Button>
+    );
   }
 
   return (

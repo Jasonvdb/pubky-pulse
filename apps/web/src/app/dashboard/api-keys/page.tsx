@@ -37,6 +37,7 @@ import { KeyTypeBadge } from "@/components/badges/key-type-badge";
 import { CopyButton } from "@/components/copy-button";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import { useAppColorMap } from "@/hooks/use-project-colors";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { useTeam } from "@/contexts/team-context";
 import { api, ApiError } from "@/lib/api";
 import { ProjectDot } from "@/lib/project-color";
@@ -94,11 +95,15 @@ function CreateKeyDialog({
   const [expiresInDays, setExpiresInDays] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [createdKey, setCreatedKey] = useState<ApiKeyResponse | null>(null);
 
   const { data: appsData } = useSWR<{ apps: AppResponse[] }>(
     open ? `/v1/apps?team_id=${teamId}` : null
   );
+  // Client and import keys are project credentials, so they can only be created
+  // for an app in a project this person owns. Agent keys are personal and stay
+  // available to everyone.
+  const { accessByProjectId } = useProjects(teamId);
 
   function resetForm() {
     setName("");
@@ -152,7 +157,7 @@ function CreateKeyDialog({
         "/v1/auth/keys",
         body
       );
-      setCreatedKey(result.api_key.secret);
+      setCreatedKey(result.api_key);
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create key");
@@ -162,7 +167,9 @@ function CreateKeyDialog({
   }
 
   const allowedPermissions = ALLOWED_PERMISSIONS_BY_KEY_TYPE[keyType];
-  const teamApps = appsData?.apps ?? [];
+  const selectableApps = (appsData?.apps ?? []).filter(
+    (app) => accessByProjectId.get(app.project_id) === "owner",
+  );
 
   return (
     <Dialog
@@ -188,15 +195,27 @@ function CreateKeyDialog({
 
         {createdKey ? (
           <div className="space-y-4">
-            <div className="rounded-md border border-chart-6/30 bg-chart-6/10 p-3 text-sm">
-              This key will only be shown once. Copy it now.
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 rounded bg-muted px-3 py-2 text-xs break-all">
-                {createdKey}
-              </code>
-              <CopyButton text={createdKey} />
-            </div>
+            {createdKey.secret ? (
+              <>
+                <div className="rounded-md border border-chart-6/30 bg-chart-6/10 p-3 text-sm">
+                  This key will only be shown once. Copy it now.
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-muted px-3 py-2 text-xs break-all">
+                    {createdKey.secret}
+                  </code>
+                  <CopyButton text={createdKey.secret} />
+                </div>
+              </>
+            ) : (
+              // The create response is the one place a secret is returned, so a
+              // null here means the key exists but its secret was withheld.
+              // Never render that as an empty credential to copy.
+              <div className="rounded-md border p-3 text-sm text-muted-foreground">
+                &ldquo;{createdKey.name}&rdquo; was created, but its secret is not
+                available to you. Ask an owner of the key&rsquo;s project for it.
+              </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Done
@@ -234,18 +253,34 @@ function CreateKeyDialog({
             {(keyType === "client" || keyType === "import") && (
               <div className="space-y-2">
                 <Label>App</Label>
-                <Select value={selectedAppId} onValueChange={setSelectedAppId}>
+                <Select
+                  value={selectedAppId}
+                  onValueChange={setSelectedAppId}
+                  disabled={selectableApps.length === 0}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an app" />
+                    <SelectValue
+                      placeholder={
+                        selectableApps.length === 0
+                          ? "No apps in projects you own"
+                          : "Select an app"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {teamApps.map((a) => (
+                    {selectableApps.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.name} ({a.platform})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectableApps.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    A {keyType} key belongs to a project, so you need to own the
+                    project its app is in.
+                  </p>
+                )}
               </div>
             )}
 
@@ -317,6 +352,7 @@ function EditKeyDialog({
   apiKey: ApiKeyResponse;
   onUpdated: () => void;
 }) {
+  const handleWriteFailure = useWriteFailureHandler();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(apiKey.name);
   const [permissions, setPermissions] = useState<Permission[]>([
@@ -350,7 +386,7 @@ function EditKeyDialog({
       setOpen(false);
       onUpdated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to update key");
+      setError(await handleWriteFailure(err, "Failed to update key", onUpdated));
     } finally {
       setLoading(false);
     }
@@ -445,6 +481,7 @@ function RevokeKeyDialog({
   apiKey: ApiKeyResponse;
   onRevoked: () => void;
 }) {
+  const handleWriteFailure = useWriteFailureHandler();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -457,7 +494,7 @@ function RevokeKeyDialog({
       setOpen(false);
       onRevoked();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to revoke key");
+      setError(await handleWriteFailure(err, "Failed to revoke key", onRevoked));
     } finally {
       setLoading(false);
     }
@@ -603,10 +640,16 @@ export default function ApiKeysPage() {
                   </TableCell>
                   <TableCell className="py-1.5">
                     <div className="flex items-center gap-0.5">
-                      <EditKeyDialog
-                        apiKey={key}
-                        onUpdated={() => mutateKeys()}
-                      />
+                      {/* The API grants the secret and the edit to exactly the
+                          same people, so a redacted secret is the server saying
+                          this key is not yours to change. Revoking stays: the
+                          team owner can revoke any key for recovery. */}
+                      {key.secret !== null && (
+                        <EditKeyDialog
+                          apiKey={key}
+                          onUpdated={() => mutateKeys()}
+                        />
+                      )}
                       <RevokeKeyDialog
                         apiKey={key}
                         onRevoked={() => mutateKeys()}

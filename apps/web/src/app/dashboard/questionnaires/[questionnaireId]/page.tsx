@@ -18,6 +18,7 @@ import {
   useQuestionnaireResponseDetail,
   questionnaireActions,
 } from "@/hooks/use-questionnaires";
+import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { formatDateTime } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,14 @@ export default function QuestionnaireDetailPage() {
     openResponseId ?? undefined,
   );
 
+  // Pausing and resuming edits the questionnaire, so it needs ownership of the
+  // project it belongs to — the server-provided access level, not a team role.
+  const { canWriteProject } = useProjects(teamId);
+  const canWrite = canWriteProject(resolvedProjectId);
+  const handleWriteFailure = useWriteFailureHandler();
+  const [actionError, setActionError] = useState("");
+  const [toggling, setToggling] = useState(false);
+
   if (!questionnaire) {
     return (
       <div className="p-6">
@@ -109,29 +118,49 @@ export default function QuestionnaireDetailPage() {
               {questionnaire.description ? ` · ${questionnaire.description}` : null}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span
-              className={
-                questionnaire.is_active
-                  ? "text-chart-2"
-                  : "text-muted-foreground"
-              }
-            >
-              {questionnaire.is_active ? "Active" : "Paused"}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (!resolvedProjectId) return;
-                await questionnaireActions.update(resolvedProjectId, questionnaire.id, {
-                  is_active: !questionnaire.is_active,
-                });
-                await mutateQuestionnaire();
-              }}
-            >
-              {questionnaire.is_active ? "Pause" : "Resume"}
-            </Button>
+          <div className="flex flex-col items-end gap-1 text-sm">
+            <div className="flex items-center gap-2">
+              <span
+                className={
+                  questionnaire.is_active
+                    ? "text-chart-2"
+                    : "text-muted-foreground"
+                }
+              >
+                {questionnaire.is_active ? "Active" : "Paused"}
+              </span>
+              {canWrite && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={toggling}
+                  onClick={async () => {
+                    if (!resolvedProjectId) return;
+                    setToggling(true);
+                    setActionError("");
+                    try {
+                      await questionnaireActions.update(resolvedProjectId, questionnaire.id, {
+                        is_active: !questionnaire.is_active,
+                      });
+                      await mutateQuestionnaire();
+                    } catch (err) {
+                      setActionError(
+                        await handleWriteFailure(
+                          err,
+                          "Failed to update questionnaire",
+                          mutateQuestionnaire,
+                        ),
+                      );
+                    } finally {
+                      setToggling(false);
+                    }
+                  }}
+                >
+                  {questionnaire.is_active ? "Pause" : "Resume"}
+                </Button>
+              )}
+            </div>
+            {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           </div>
         </div>
 

@@ -1061,18 +1061,28 @@ describe("Role enforcement on existing routes", () => {
     return token;
   }
 
-  it("member cannot create project", async () => {
+  it("member can create project and becomes its first owner", async () => {
     const { teamId } = await getTokenAndTeamId(app);
-    const memberToken = await addMemberAndGetToken(teamId, "member");
+    // Registered inline rather than through addMemberAndGetToken because this
+    // test needs the new member's own user id to assert first ownership.
+    const second = await registerSecondUser();
+    await addTeamMember(teamId, second.userId, "member");
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/projects",
-      headers: { authorization: `Bearer ${memberToken}` },
+      headers: { authorization: `Bearer ${second.token}` },
       payload: { team_id: teamId, name: "New Project", slug: "new-project" },
     });
 
-    expect(res.statusCode).toBe(403);
+    // Creation is no longer admin-only: any team member may create a project,
+    // and the creator becomes its first owner in the same transaction.
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.owners.map((o: { user_id: string }) => o.user_id)).toEqual([
+      second.userId,
+    ]);
+    expect(body.access_level).toBe("owner");
   });
 
   it("admin can create project", async () => {

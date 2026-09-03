@@ -18,8 +18,9 @@ import {
 
 /**
  * The route-wiring matrix (handoff §8 "Mutation coverage", §12 "Route-wiring
- * matrix") for the non-comment project-scoped mutations: apps, metric and
- * funnel definitions, attachment deletion and project jobs.
+ * matrix") for the project-scoped mutations: apps, metric and funnel
+ * definitions, attachment deletion, project jobs, issue/feedback/response
+ * triage, and the three comment implementations.
  *
  * `project-access.test.ts` proves the central policy against the helper.
  * This suite proves each endpoint is actually *wired* to it, from the outside,
@@ -41,6 +42,15 @@ import {
  *   - an agent holding the permission whose *creator* does not own the project
  *     gets 403 — agent authorization is an intersection, never a union;
  *   - an owning agent without the route's explicit permission gets 403.
+ *
+ * Comment routes are the one deliberate variation. The comment policy replaces
+ * only the project-owner predicate, so on a `nonOwnersAllowed` row the viewer,
+ * the team owner and a non-owner's agent all succeed — while the permission,
+ * containment and human-only columns stay exactly as they are everywhere else.
+ * Comment *moderation* (deleting a bystander's comment) needs no variation: it
+ * is human-project-owner-only, which is the ordinary row shape with
+ * `agentAllowed: false`. `comment-policy.test.ts` owns the authorship rules
+ * themselves.
  *
  * Canonical actors, as in `project-access.test.ts`:
  *   teamOwner — configured singleton team owner; owns neither project;
@@ -71,6 +81,9 @@ const AGENT_WRITE_PERMISSIONS: Permission[] = [
   "funnels:write",
   "events:write",
   "jobs:write",
+  "issues:write",
+  "feedback:write",
+  "questionnaires:write",
 ];
 
 /** A permission no row in the matrix requires, for the "missing permission" key. */
@@ -86,16 +99,29 @@ let teamId: string;
 let teamOwner: Actor;
 let ownerA: Actor;
 let ownerB: Actor;
+/**
+ * A fourth member who owns nothing and is never a principal in the table. The
+ * moderation rows need a comment authored by someone *other* than every
+ * principal driven through them, so no row can pass on authorship when it is
+ * meant to be testing moderation authority.
+ */
+let bystander: Actor;
 let projectA: string;
 let projectB: string;
 let seededProjectId: string;
 
+/** An agent key, identified for comment authorship as well as authentication. */
+interface AgentKey {
+  id: string;
+  secret: string;
+}
+
 /** Agent key created by ownerA, holding every permission the matrix needs. */
-let agentOfOwnerA: string;
+let agentOfOwnerA: AgentKey;
 /** Agent key created by ownerA, holding none of them. */
-let agentOfOwnerAWithoutPermission: string;
+let agentOfOwnerAWithoutPermission: AgentKey;
 /** Agent key created by ownerB — permission present, creator not an owner of A. */
-let agentOfOwnerB: string;
+let agentOfOwnerB: AgentKey;
 
 /** Runs this suite started, cancelled in afterEach so no handler outlives its test. */
 let startedRuns: string[] = [];
@@ -137,6 +163,7 @@ beforeEach(async () => {
 
   ownerA = await signUp("owner-a@example.com");
   ownerB = await signUp("owner-b@example.com");
+  bystander = await signUp("bystander@example.com");
 
   projectA = await createProjectWithOwner(teamId, ownerA.userId, { name: "Project A" });
   projectB = await createProjectWithOwner(teamId, ownerB.userId, { name: "Project B" });
@@ -161,16 +188,17 @@ async function signUp(email: string): Promise<Actor> {
  * does: `POST /v1/auth/keys` still carries the old team-role gate, and these
  * keys belong to plain members.
  */
-async function insertAgentKey(createdBy: string, permissions: Permission[]): Promise<string> {
+async function insertAgentKey(createdBy: string, permissions: Permission[]): Promise<AgentKey> {
   const secret = `pulse_agent_${randomUUID().replace(/-/g, "")}`;
-  await client`
+  const [row] = await client`
     INSERT INTO api_keys (secret, key_type, app_id, team_id, name, created_by, permissions)
     VALUES (
       ${secret}, 'agent', ${null}, ${teamId}, 'Matrix Test Agent Key', ${createdBy},
       ${JSON.stringify(permissions)}::jsonb
     )
+    RETURNING id
   `;
-  return secret;
+  return { id: row.id as string, secret };
 }
 
 /* ---------------------------------------------------------------------------
@@ -229,6 +257,75 @@ const FUNNEL_STEPS = [
   { name: "Welcome", event_filter: { step_name: "welcome" } },
   { name: "Sign Up", event_filter: { step_name: "signup" } },
 ];
+
+/** The smallest schema `POST /v1/projects/:projectId/questionnaires` accepts. */
+const QUESTIONNAIRE_SCHEMA = {
+  version: 1,
+  questions: [{ id: "q_text", type: "text", title: "Tell us", required: false }],
+};
+
+async function insertIssue(projectId: string, appId: string, title: string): Promise<string> {
+  const [row] = await client`
+    INSERT INTO issues (app_id, project_id, status, title, first_seen_at, last_seen_at)
+    VALUES (${appId}, ${projectId}, 'new', ${title}, now(), now())
+    RETURNING id
+  `;
+  return row.id as string;
+}
+
+async function insertFeedbackItem(projectId: string, appId: string): Promise<string> {
+  const [row] = await client`
+    INSERT INTO feedback (app_id, project_id, message)
+    VALUES (${appId}, ${projectId}, ${"Matrix feedback"})
+    RETURNING id
+  `;
+  return row.id as string;
+}
+
+async function insertQuestionnaire(projectId: string): Promise<{ id: string; slug: string }> {
+  const slug = `matrix-q-${unique()}`;
+  const [row] = await client`
+    INSERT INTO questionnaires (project_id, slug, name, schema)
+    VALUES (
+      ${projectId}, ${slug}, ${"Matrix Questionnaire"}, ${client.json(QUESTIONNAIRE_SCHEMA)}
+    )
+    RETURNING id
+  `;
+  return { id: row.id as string, slug };
+}
+
+async function insertResponse(
+  projectId: string,
+  appId: string,
+  questionnaire: { id: string; slug: string },
+): Promise<string> {
+  const [row] = await client`
+    INSERT INTO questionnaire_responses (questionnaire_id, slug, app_id, project_id, answers)
+    VALUES (
+      ${questionnaire.id}, ${questionnaire.slug}, ${appId}, ${projectId}, ${client.json({})}
+    )
+    RETURNING id
+  `;
+  return row.id as string;
+}
+
+/**
+ * A comment authored by the bystander, for the moderation rows: nobody driven
+ * through the table authored it, so only moderation authority can delete it.
+ */
+async function insertBystanderComment(
+  table: "issue_comments" | "feedback_comments" | "questionnaire_response_comments",
+  parentColumn: string,
+  parentId: string,
+): Promise<string> {
+  const [row] = await client.unsafe(
+    `INSERT INTO ${table} (${parentColumn}, author_type, author_id, author_name, body)
+     VALUES ($1, 'user', $2, 'Bystander', 'someone else''s words')
+     RETURNING id`,
+    [parentId, bystander.userId],
+  );
+  return row.id as string;
+}
 
 /** Start a real run for Project A and wait until it is actually running. */
 async function startCancellableRun(): Promise<string> {
@@ -306,6 +403,55 @@ async function attachmentDeletedAt(id: string): Promise<Date | null> {
   return (row?.deleted_at as Date | null) ?? null;
 }
 
+async function issueStatus(id: string): Promise<string | null> {
+  const [row] = await client`SELECT status FROM issues WHERE id = ${id}`;
+  return (row?.status as string) ?? null;
+}
+
+async function issueExists(id: string): Promise<boolean> {
+  const [row] = await client`SELECT 1 AS present FROM issues WHERE id = ${id}`;
+  return row !== undefined;
+}
+
+async function feedbackRow(id: string): Promise<{ status: string; deleted_at: Date | null }> {
+  const [row] = await client`SELECT status, deleted_at FROM feedback WHERE id = ${id}`;
+  return row as unknown as { status: string; deleted_at: Date | null };
+}
+
+async function questionnaireRow(id: string): Promise<{ name: string; deleted_at: Date | null }> {
+  const [row] = await client`SELECT name, deleted_at FROM questionnaires WHERE id = ${id}`;
+  return row as unknown as { name: string; deleted_at: Date | null };
+}
+
+async function liveQuestionnaireSlugs(projectId: string): Promise<string[]> {
+  const rows = await client`
+    SELECT slug FROM questionnaires
+    WHERE project_id = ${projectId} AND deleted_at IS NULL
+    ORDER BY slug
+  `;
+  return rows.map((r) => r.slug as string);
+}
+
+async function responseRow(id: string): Promise<{ status: string; deleted_at: Date | null }> {
+  const [row] = await client`
+    SELECT status, deleted_at FROM questionnaire_responses WHERE id = ${id}
+  `;
+  return row as unknown as { status: string; deleted_at: Date | null };
+}
+
+async function commentDeletedAt(table: string, id: string): Promise<Date | null> {
+  const [row] = await client.unsafe(`SELECT deleted_at FROM ${table} WHERE id = $1`, [id]);
+  return (row?.deleted_at as Date | null) ?? null;
+}
+
+async function commentCount(table: string, column: string, parentId: string): Promise<number> {
+  const [row] = await client.unsafe(
+    `SELECT COUNT(*)::int AS count FROM ${table} WHERE ${column} = $1`,
+    [parentId],
+  );
+  return Number(row.count);
+}
+
 async function runIdsForProject(projectId: string, jobType: string): Promise<string[]> {
   const rows = await client`
     SELECT id FROM job_runs WHERE project_id = ${projectId} AND job_type = ${jobType}
@@ -345,6 +491,14 @@ interface MutationRow {
    * the deliberately human-only destructive operations of handoff §2.
    */
   agentAllowed: boolean;
+  /**
+   * The route is governed by the comment policy rather than the project-write
+   * policy. The exception replaces *only* the project-owner predicate, so a
+   * read-only member, the team owner and an agent whose creator owns nothing
+   * may all create comments — while the route's explicit key permission,
+   * containment and authentication still apply exactly as elsewhere.
+   */
+  nonOwnersAllowed?: boolean;
   /** The status the happy path returns. */
   ok: number;
   /** Build fresh fixtures and the request for exactly one attempt. */
@@ -616,6 +770,402 @@ const rows: MutationRow[] = [
       };
     },
   },
+
+  /* -------------------------------------------------------------------------
+   * Triage and comments (handoff §8 "Mutation coverage": issues, feedback,
+   * questionnaires). Before this phase these routes had no ownership check at
+   * all — `requirePermission` returns early for every JWT user, so any
+   * same-team member could retriage, merge and delete another project's data.
+   * ---------------------------------------------------------------------- */
+
+  {
+    endpoint: "PATCH /v1/projects/:projectId/issues/:issueId",
+    permission: "issues:write",
+    agentAllowed: true,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const issueId = await insertIssue(projectA, appId, `Matrix Issue ${unique()}`);
+      return {
+        request: {
+          method: "PATCH",
+          url: `/v1/projects/${projectA}/issues/${issueId}`,
+          payload: { status: "in_progress" },
+        },
+        expectApplied: async () => {
+          expect(await issueStatus(issueId)).toBe("in_progress");
+        },
+        expectUntouched: async () => {
+          expect(await issueStatus(issueId)).toBe("new");
+        },
+      };
+    },
+  },
+  {
+    // A merge DESTROYS the source issue, but it is agent-supported by the
+    // locked policy (handoff §2): agents may merge issues.
+    endpoint: "POST /v1/projects/:projectId/issues/:issueId/merge",
+    permission: "issues:write",
+    agentAllowed: true,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const targetId = await insertIssue(projectA, appId, `Matrix Target ${unique()}`);
+      const sourceId = await insertIssue(projectA, appId, `Matrix Source ${unique()}`);
+      return {
+        request: {
+          method: "POST",
+          url: `/v1/projects/${projectA}/issues/${targetId}/merge`,
+          payload: { source_issue_id: sourceId },
+        },
+        expectApplied: async () => {
+          expect(await issueExists(sourceId)).toBe(false);
+          expect(await issueExists(targetId)).toBe(true);
+        },
+        expectUntouched: async () => {
+          expect(await issueExists(sourceId)).toBe(true);
+          expect(await issueExists(targetId)).toBe(true);
+        },
+      };
+    },
+  },
+  {
+    // The comment exception: a read-only member may comment. The row still
+    // proves the *permission* half survives it — an agent without
+    // `issues:write` is refused and no comment lands.
+    endpoint: "POST /v1/projects/:projectId/issues/:issueId/comments",
+    permission: "issues:write",
+    agentAllowed: true,
+    nonOwnersAllowed: true,
+    ok: 201,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const issueId = await insertIssue(projectA, appId, `Matrix Issue ${unique()}`);
+      return {
+        request: {
+          method: "POST",
+          url: `/v1/projects/${projectA}/issues/${issueId}/comments`,
+          payload: { body: "matrix comment" },
+        },
+        expectApplied: async () => {
+          expect(await commentCount("issue_comments", "issue_id", issueId)).toBe(1);
+        },
+        expectUntouched: async () => {
+          expect(await commentCount("issue_comments", "issue_id", issueId)).toBe(0);
+        },
+      };
+    },
+  },
+  {
+    // Moderation: the comment belongs to a bystander, so only a HUMAN project
+    // owner may delete it. An agent never moderates, even one whose creator
+    // owns the project — hence `agentAllowed: false`.
+    endpoint: "DELETE /v1/projects/:projectId/issues/:issueId/comments/:commentId",
+    permission: "issues:write",
+    agentAllowed: false,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const issueId = await insertIssue(projectA, appId, `Matrix Issue ${unique()}`);
+      const commentId = await insertBystanderComment("issue_comments", "issue_id", issueId);
+      return {
+        request: {
+          method: "DELETE",
+          url: `/v1/projects/${projectA}/issues/${issueId}/comments/${commentId}`,
+        },
+        expectApplied: async () => {
+          expect(await commentDeletedAt("issue_comments", commentId)).not.toBeNull();
+        },
+        expectUntouched: async () => {
+          expect(await commentDeletedAt("issue_comments", commentId)).toBeNull();
+        },
+      };
+    },
+  },
+  {
+    endpoint: "PATCH /v1/projects/:projectId/feedback/:feedbackId",
+    permission: "feedback:write",
+    agentAllowed: true,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const feedbackId = await insertFeedbackItem(projectA, appId);
+      return {
+        request: {
+          method: "PATCH",
+          url: `/v1/projects/${projectA}/feedback/${feedbackId}`,
+          payload: { status: "in_review" },
+        },
+        expectApplied: async () => {
+          expect((await feedbackRow(feedbackId)).status).toBe("in_review");
+        },
+        expectUntouched: async () => {
+          expect((await feedbackRow(feedbackId)).status).toBe("new");
+        },
+      };
+    },
+  },
+  {
+    // Human-only: deleting a feedback item is one of the destructive
+    // operations agents are deliberately denied (handoff §2).
+    endpoint: "DELETE /v1/projects/:projectId/feedback/:feedbackId",
+    permission: "feedback:write",
+    agentAllowed: false,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const feedbackId = await insertFeedbackItem(projectA, appId);
+      return {
+        request: {
+          method: "DELETE",
+          url: `/v1/projects/${projectA}/feedback/${feedbackId}`,
+        },
+        expectApplied: async () => {
+          expect((await feedbackRow(feedbackId)).deleted_at).not.toBeNull();
+        },
+        expectUntouched: async () => {
+          expect((await feedbackRow(feedbackId)).deleted_at).toBeNull();
+        },
+      };
+    },
+  },
+  {
+    endpoint: "POST /v1/projects/:projectId/feedback/:feedbackId/comments",
+    permission: "feedback:write",
+    agentAllowed: true,
+    nonOwnersAllowed: true,
+    ok: 201,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const feedbackId = await insertFeedbackItem(projectA, appId);
+      return {
+        request: {
+          method: "POST",
+          url: `/v1/projects/${projectA}/feedback/${feedbackId}/comments`,
+          payload: { body: "matrix comment" },
+        },
+        expectApplied: async () => {
+          expect(await commentCount("feedback_comments", "feedback_id", feedbackId)).toBe(1);
+        },
+        expectUntouched: async () => {
+          expect(await commentCount("feedback_comments", "feedback_id", feedbackId)).toBe(0);
+        },
+      };
+    },
+  },
+  {
+    endpoint: "DELETE /v1/projects/:projectId/feedback/:feedbackId/comments/:commentId",
+    permission: "feedback:write",
+    agentAllowed: false,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const feedbackId = await insertFeedbackItem(projectA, appId);
+      const commentId = await insertBystanderComment(
+        "feedback_comments",
+        "feedback_id",
+        feedbackId,
+      );
+      return {
+        request: {
+          method: "DELETE",
+          url: `/v1/projects/${projectA}/feedback/${feedbackId}/comments/${commentId}`,
+        },
+        expectApplied: async () => {
+          expect(await commentDeletedAt("feedback_comments", commentId)).not.toBeNull();
+        },
+        expectUntouched: async () => {
+          expect(await commentDeletedAt("feedback_comments", commentId)).toBeNull();
+        },
+      };
+    },
+  },
+  {
+    endpoint: "POST /v1/projects/:projectId/questionnaires",
+    permission: "questionnaires:write",
+    agentAllowed: true,
+    ok: 201,
+    prepare: async () => {
+      const slug = `matrix-q-${unique()}`;
+      const before = await liveQuestionnaireSlugs(projectA);
+      return {
+        request: {
+          method: "POST",
+          url: `/v1/projects/${projectA}/questionnaires`,
+          payload: { slug, name: "Matrix Questionnaire", schema: QUESTIONNAIRE_SCHEMA },
+        },
+        expectApplied: async () => {
+          expect(await liveQuestionnaireSlugs(projectA)).toEqual([...before, slug].sort());
+        },
+        expectUntouched: async () => {
+          expect(await liveQuestionnaireSlugs(projectA)).toEqual(before);
+        },
+      };
+    },
+  },
+  {
+    endpoint: "PATCH /v1/projects/:projectId/questionnaires/:questionnaireId",
+    permission: "questionnaires:write",
+    agentAllowed: true,
+    ok: 200,
+    prepare: async () => {
+      const questionnaire = await insertQuestionnaire(projectA);
+      return {
+        request: {
+          method: "PATCH",
+          url: `/v1/projects/${projectA}/questionnaires/${questionnaire.id}`,
+          payload: { name: "Matrix Questionnaire Renamed" },
+        },
+        expectApplied: async () => {
+          expect((await questionnaireRow(questionnaire.id)).name).toBe(
+            "Matrix Questionnaire Renamed",
+          );
+        },
+        expectUntouched: async () => {
+          expect((await questionnaireRow(questionnaire.id)).name).toBe("Matrix Questionnaire");
+        },
+      };
+    },
+  },
+  {
+    // Human-only (handoff §2).
+    endpoint: "DELETE /v1/projects/:projectId/questionnaires/:questionnaireId",
+    permission: "questionnaires:write",
+    agentAllowed: false,
+    ok: 200,
+    prepare: async () => {
+      const questionnaire = await insertQuestionnaire(projectA);
+      return {
+        request: {
+          method: "DELETE",
+          url: `/v1/projects/${projectA}/questionnaires/${questionnaire.id}`,
+        },
+        expectApplied: async () => {
+          expect((await questionnaireRow(questionnaire.id)).deleted_at).not.toBeNull();
+        },
+        expectUntouched: async () => {
+          expect((await questionnaireRow(questionnaire.id)).deleted_at).toBeNull();
+        },
+      };
+    },
+  },
+  {
+    // Agent-supported: changing a response's status is triage, not destruction.
+    endpoint: "PATCH /v1/projects/:projectId/questionnaires/:qId/responses/:responseId",
+    permission: "questionnaires:write",
+    agentAllowed: true,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const questionnaire = await insertQuestionnaire(projectA);
+      const responseId = await insertResponse(projectA, appId, questionnaire);
+      return {
+        request: {
+          method: "PATCH",
+          url: `/v1/projects/${projectA}/questionnaires/${questionnaire.id}/responses/${responseId}`,
+          payload: { status: "in_review" },
+        },
+        expectApplied: async () => {
+          expect((await responseRow(responseId)).status).toBe("in_review");
+        },
+        expectUntouched: async () => {
+          expect((await responseRow(responseId)).status).toBe("new");
+        },
+      };
+    },
+  },
+  {
+    // Human-only (handoff §2).
+    endpoint: "DELETE /v1/projects/:projectId/questionnaires/:qId/responses/:responseId",
+    permission: "questionnaires:write",
+    agentAllowed: false,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const questionnaire = await insertQuestionnaire(projectA);
+      const responseId = await insertResponse(projectA, appId, questionnaire);
+      return {
+        request: {
+          method: "DELETE",
+          url: `/v1/projects/${projectA}/questionnaires/${questionnaire.id}/responses/${responseId}`,
+        },
+        expectApplied: async () => {
+          expect((await responseRow(responseId)).deleted_at).not.toBeNull();
+        },
+        expectUntouched: async () => {
+          expect((await responseRow(responseId)).deleted_at).toBeNull();
+        },
+      };
+    },
+  },
+  {
+    endpoint: "POST /v1/projects/:projectId/questionnaires/:qId/responses/:responseId/comments",
+    permission: "questionnaires:write",
+    agentAllowed: true,
+    nonOwnersAllowed: true,
+    ok: 201,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const questionnaire = await insertQuestionnaire(projectA);
+      const responseId = await insertResponse(projectA, appId, questionnaire);
+      return {
+        request: {
+          method: "POST",
+          url: `/v1/projects/${projectA}/questionnaires/${questionnaire.id}/responses/${responseId}/comments`,
+          payload: { body: "matrix comment" },
+        },
+        expectApplied: async () => {
+          expect(
+            await commentCount(
+              "questionnaire_response_comments",
+              "questionnaire_response_id",
+              responseId,
+            ),
+          ).toBe(1);
+        },
+        expectUntouched: async () => {
+          expect(
+            await commentCount(
+              "questionnaire_response_comments",
+              "questionnaire_response_id",
+              responseId,
+            ),
+          ).toBe(0);
+        },
+      };
+    },
+  },
+  {
+    endpoint:
+      "DELETE /v1/projects/:projectId/questionnaires/:qId/responses/:responseId/comments/:commentId",
+    permission: "questionnaires:write",
+    agentAllowed: false,
+    ok: 200,
+    prepare: async () => {
+      const appId = await insertApp(projectA, `Matrix App ${unique()}`);
+      const questionnaire = await insertQuestionnaire(projectA);
+      const responseId = await insertResponse(projectA, appId, questionnaire);
+      const commentId = await insertBystanderComment(
+        "questionnaire_response_comments",
+        "questionnaire_response_id",
+        responseId,
+      );
+      return {
+        request: {
+          method: "DELETE",
+          url: `/v1/projects/${projectA}/questionnaires/${questionnaire.id}/responses/${responseId}/comments/${commentId}`,
+        },
+        expectApplied: async () => {
+          expect(
+            await commentDeletedAt("questionnaire_response_comments", commentId),
+          ).not.toBeNull();
+        },
+        expectUntouched: async () => {
+          expect(await commentDeletedAt("questionnaire_response_comments", commentId)).toBeNull();
+        },
+      };
+    },
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -660,30 +1210,46 @@ describe.each(rows)("$endpoint", (row) => {
     await expectAllowed(row, ownerA.token);
   });
 
-  it("a same-team viewer is refused with 403 and nothing changes", async () => {
-    await expectRefused(row, ownerB.token);
-  });
+  if (row.nonOwnersAllowed) {
+    it("a same-team viewer succeeds: commenting is the project-owner exception", async () => {
+      await expectAllowed(row, ownerB.token);
+    });
 
-  it("the team owner, not owning the project, is refused with 403 and nothing changes", async () => {
-    await expectRefused(row, teamOwner.token);
-  });
-
-  if (row.agentAllowed) {
-    it("an owning agent with the permission succeeds", async () => {
-      await expectAllowed(row, agentOfOwnerA);
+    it("the team owner, owning no project, succeeds for the same reason", async () => {
+      await expectAllowed(row, teamOwner.token);
     });
   } else {
-    it("an owning agent with the permission is refused: human-only", async () => {
-      await expectRefused(row, agentOfOwnerA);
+    it("a same-team viewer is refused with 403 and nothing changes", async () => {
+      await expectRefused(row, ownerB.token);
+    });
+
+    it("the team owner, not owning the project, is refused with 403 and nothing changes", async () => {
+      await expectRefused(row, teamOwner.token);
     });
   }
 
-  it("an agent with the permission whose creator is not an owner is refused with 403", async () => {
-    await expectRefused(row, agentOfOwnerB);
-  });
+  if (row.agentAllowed) {
+    it("an owning agent with the permission succeeds", async () => {
+      await expectAllowed(row, agentOfOwnerA.secret);
+    });
+  } else {
+    it("an owning agent with the permission is refused: human-only", async () => {
+      await expectRefused(row, agentOfOwnerA.secret);
+    });
+  }
+
+  if (row.nonOwnersAllowed) {
+    it("an agent with the permission whose creator is not an owner also succeeds", async () => {
+      await expectAllowed(row, agentOfOwnerB.secret);
+    });
+  } else {
+    it("an agent with the permission whose creator is not an owner is refused with 403", async () => {
+      await expectRefused(row, agentOfOwnerB.secret);
+    });
+  }
 
   it(`an owning agent without ${row.permission} is refused with 403`, async () => {
-    await expectRefused(row, agentOfOwnerAWithoutPermission);
+    await expectRefused(row, agentOfOwnerAWithoutPermission.secret);
   });
 });
 
@@ -746,7 +1312,7 @@ describe("POST /v1/identity/properties", () => {
   it("refuses an agent key even when its creator owns a project", async () => {
     const key = await insertAgentKey(ownerA.userId, ["users:write"]);
 
-    const res = await setProperties(key);
+    const res = await setProperties(key.secret);
 
     expect(res.statusCode).toBe(403);
     expect(await storedProperties(projectA)).toBeNull();

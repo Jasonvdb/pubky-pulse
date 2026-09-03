@@ -10,6 +10,7 @@ import {
   createUserAndGetToken,
   createForeignTeam,
   addTeamMember,
+  addProjectOwner,
   TEST_CLIENT_KEY,
   TEST_BUNDLE_ID,
 } from "./setup.js";
@@ -443,7 +444,10 @@ describe("comments", () => {
     expect(edit.statusCode).toBe(403);
   });
 
-  it("admin can delete any comment; member cannot delete someone else's", async () => {
+  // Moderation authority moved from team role to *project ownership*: a
+  // read-only member of the team may not delete someone else's comment, and a
+  // human owner of the project may.
+  it("a project owner can delete any comment; a viewer cannot delete someone else's", async () => {
     const id = await ingestFeedback({ message: "x" });
     const c = await app.inject({
       method: "POST",
@@ -453,25 +457,24 @@ describe("comments", () => {
     });
     const commentId = c.json().id;
 
-    // Member cannot delete another user's comment
-    const member = await createUserAndGetToken(app, "member@example.com", "Mem");
-    await addTeamMember(teamId, member.userId, "member");
-    const memberDel = await app.inject({
+    // A same-team member who does not own the project cannot delete it.
+    const viewer = await createUserAndGetToken(app, "member@example.com", "Mem");
+    await addTeamMember(teamId, viewer.userId, "member");
+    const viewerDel = await app.inject({
       method: "DELETE",
       url: `/v1/projects/${projectId}/feedback/${id}/comments/${commentId}`,
-      headers: { Authorization: `Bearer ${member.token}` },
+      headers: { Authorization: `Bearer ${viewer.token}` },
     });
-    expect(memberDel.statusCode).toBe(403);
+    expect(viewerDel.statusCode).toBe(403);
 
-    // Admin on this team can delete
-    const admin = await createUserAndGetToken(app, "admin@example.com", "Adm");
-    await addTeamMember(teamId, admin.userId, "admin");
-    const adminDel = await app.inject({
+    // Promoted to project owner, the same person moderates it.
+    await addProjectOwner(projectId, viewer.userId);
+    const ownerDel = await app.inject({
       method: "DELETE",
       url: `/v1/projects/${projectId}/feedback/${id}/comments/${commentId}`,
-      headers: { Authorization: `Bearer ${admin.token}` },
+      headers: { Authorization: `Bearer ${viewer.token}` },
     });
-    expect(adminDel.statusCode).toBe(200);
+    expect(ownerDel.statusCode).toBe(200);
   });
 });
 

@@ -25,6 +25,12 @@ import { resolveProject } from "../utils/project.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
 import { normalizeLimit, encodeKeysetCursor, decodeKeysetCursor } from "../utils/pagination.js";
 import { resolveCommentAuthor } from "../utils/comment-author.js";
+import { enforceCommentPolicy } from "../utils/comment-policy.js";
+import {
+  applyProjectWrite,
+  resolveFeedbackCommentInProject,
+  resolveFeedbackInProject,
+} from "../utils/project-access.js";
 
 function serializeFeedback(
   row: typeof feedback.$inferSelect,
@@ -243,9 +249,8 @@ export async function feedbackRoutes(app: FastifyInstance) {
     "/feedback/:feedbackId",
     { preHandler: requirePermission("feedback:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, feedbackId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { status } = request.body ?? {};
       if (!status) {
@@ -256,6 +261,13 @@ export async function feedbackRoutes(app: FastifyInstance) {
           error: `Invalid status. Must be one of: ${FEEDBACK_STATUSES.join(", ")}`,
         });
       }
+
+      // Triage is an ordinary project write, authorized against the project the
+      // feedback item actually belongs to. Agent-supported (handoff §2).
+      const contained = await resolveFeedbackInProject(app, { projectId, feedbackId }, auth, reply);
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "feedback:write" })) return;
+      const project = contained.project;
 
       // Single UPDATE … RETURNING closes a TOCTOU vs. a concurrent delete and
       // matches `isNull(deleted_at)` so we can't resurrect a deleted row.
@@ -292,13 +304,27 @@ export async function feedbackRoutes(app: FastifyInstance) {
     "/feedback/:feedbackId",
     { preHandler: requirePermission("feedback:write") },
     async (request, reply) => {
-      if (request.auth.type !== "user") {
+      const auth = request.auth;
+      if (auth.type !== "user") {
         return reply.code(403).send({ error: "Only users can delete feedback" });
       }
 
       const { projectId, feedbackId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
+
+      // Deleting a feedback item is one of the deliberately human-only
+      // destructive operations (handoff §2): an agent never reaches here, even
+      // when its creator owns the project and it holds `feedback:write`.
+      const contained = await resolveFeedbackInProject(app, { projectId, feedbackId }, auth, reply);
+      if (!contained) return;
+      if (
+        !applyProjectWrite(contained, auth, reply, {
+          permission: "feedback:write",
+          humanOnly: true,
+        })
+      ) {
+        return;
+      }
+      const project = contained.project;
 
       const deleted = await app.db
         .update(feedback)
@@ -334,32 +360,24 @@ export async function feedbackRoutes(app: FastifyInstance) {
     "/feedback/:feedbackId/comments",
     { preHandler: requirePermission("feedback:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, feedbackId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { body } = request.body ?? { body: "" };
       if (!body || !body.trim()) {
         return reply.code(400).send({ error: "body is required" });
       }
 
-      // Existence check and author-name lookup are independent.
-      const [[row], author] = await Promise.all([
-        app.db
-          .select({ id: feedback.id })
-          .from(feedback)
-          .where(
-            and(
-              eq(feedback.id, feedbackId),
-              eq(feedback.project_id, projectId),
-              isNull(feedback.deleted_at)
-            )
-          )
-          .limit(1),
-        resolveCommentAuthor(app.db, request.auth),
+      // Containment check and author-name lookup are independent.
+      const [contained, author] = await Promise.all([
+        resolveFeedbackInProject(app, { projectId, feedbackId }, auth, reply),
+        resolveCommentAuthor(app.db, auth),
       ]);
 
-      if (!row) return reply.code(404).send({ error: "Feedback not found" });
+      if (!contained) return;
+      // A read-only member may comment; the comment policy, not project
+      // ownership, decides.
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "create" })) return;
 
       const [created] = await app.db
         .insert(feedbackComments)
@@ -383,36 +401,24 @@ export async function feedbackRoutes(app: FastifyInstance) {
     "/feedback/:feedbackId/comments/:commentId",
     { preHandler: requirePermission("feedback:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, feedbackId, commentId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { body } = request.body ?? { body: "" };
       if (!body || !body.trim()) {
         return reply.code(400).send({ error: "body is required" });
       }
 
-      const [comment] = await app.db
-        .select()
-        .from(feedbackComments)
-        .where(
-          and(
-            eq(feedbackComments.id, commentId),
-            eq(feedbackComments.feedback_id, feedbackId),
-            isNull(feedbackComments.deleted_at)
-          )
-        )
-        .limit(1);
-
-      if (!comment) return reply.code(404).send({ error: "Comment not found" });
-
-      const auth = request.auth;
-      const actorId = auth.type === "user" ? auth.user_id : auth.key_id;
-      if (comment.author_id !== actorId) {
-        return reply
-          .code(403)
-          .send({ error: "Only the original author can edit this comment" });
-      }
+      // comment -> feedback -> project in one query.
+      const contained = await resolveFeedbackCommentInProject(
+        app,
+        { projectId, feedbackId, commentId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      const comment = contained.resource;
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "edit", comment })) return;
 
       const [updated] = await app.db
         .update(feedbackComments)
@@ -430,39 +436,18 @@ export async function feedbackRoutes(app: FastifyInstance) {
     "/feedback/:feedbackId/comments/:commentId",
     { preHandler: requirePermission("feedback:write") },
     async (request, reply) => {
-      const { projectId, feedbackId, commentId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
-
-      const [comment] = await app.db
-        .select()
-        .from(feedbackComments)
-        .where(
-          and(
-            eq(feedbackComments.id, commentId),
-            eq(feedbackComments.feedback_id, feedbackId),
-            isNull(feedbackComments.deleted_at)
-          )
-        )
-        .limit(1);
-
-      if (!comment) return reply.code(404).send({ error: "Comment not found" });
-
       const auth = request.auth;
-      const actorId = auth.type === "user" ? auth.user_id : auth.key_id;
-      if (comment.author_id !== actorId) {
-        if (auth.type !== "user") {
-          return reply
-            .code(403)
-            .send({ error: "Only the original author or a team admin can delete this comment" });
-        }
-        const membership = auth.team_memberships?.find((t) => t.team_id === project.team_id);
-        if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-          return reply
-            .code(403)
-            .send({ error: "Only the original author or a team admin can delete this comment" });
-        }
-      }
+      const { projectId, feedbackId, commentId } = request.params;
+
+      const contained = await resolveFeedbackCommentInProject(
+        app,
+        { projectId, feedbackId, commentId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      const comment = contained.resource;
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "delete", comment })) return;
 
       await app.db
         .update(feedbackComments)

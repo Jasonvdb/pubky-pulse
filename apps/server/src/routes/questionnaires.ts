@@ -41,6 +41,14 @@ import { resolveProject } from "../utils/project.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
 import { normalizeLimit, encodeKeysetCursor, decodeKeysetCursor } from "../utils/pagination.js";
 import { resolveCommentAuthor } from "../utils/comment-author.js";
+import { enforceCommentPolicy } from "../utils/comment-policy.js";
+import {
+  applyProjectWrite,
+  enforceProjectWrite,
+  resolveQuestionnaireInProject,
+  resolveQuestionnaireResponseCommentInProject,
+  resolveQuestionnaireResponseInProject,
+} from "../utils/project-access.js";
 
 function serializeQuestionnaire(
   row: typeof questionnaires.$inferSelect,
@@ -261,9 +269,17 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
+
+      // A questionnaire definition is project configuration, so creating one is
+      // an ordinary project write. Agent-supported; only *deleting* definitions
+      // and responses is human-only (handoff §2).
+      const access = await enforceProjectWrite(app, projectId, auth, reply, {
+        permission: "questionnaires:write",
+      });
+      if (!access) return;
+      const project = access.project;
 
       const body = request.body ?? ({} as CreateQuestionnaireRequest);
 
@@ -382,9 +398,20 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, questionnaireId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
+
+      // questionnaire -> project in one query, then authorize against the
+      // project that actually contains it.
+      const contained = await resolveQuestionnaireInProject(
+        app,
+        { projectId, questionnaireId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "questionnaires:write" })) return;
+      const project = contained.project;
 
       const body = request.body ?? {};
       if ("slug" in body) {
@@ -469,12 +496,29 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
-      if (request.auth.type !== "user") {
+      const auth = request.auth;
+      if (auth.type !== "user") {
         return reply.code(403).send({ error: "Only users can delete questionnaires" });
       }
       const { projectId, questionnaireId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
+
+      // Human-only destructive operation (handoff §2).
+      const contained = await resolveQuestionnaireInProject(
+        app,
+        { projectId, questionnaireId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (
+        !applyProjectWrite(contained, auth, reply, {
+          permission: "questionnaires:write",
+          humanOnly: true,
+        })
+      ) {
+        return;
+      }
+      const project = contained.project;
 
       const deleted = await app.db
         .update(questionnaires)
@@ -658,9 +702,8 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId/responses/:responseId",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, questionnaireId, responseId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { status } = request.body ?? {};
       if (!status) return reply.code(400).send({ error: "status is required" });
@@ -669,6 +712,18 @@ export async function questionnaireRoutes(app: FastifyInstance) {
           error: `Invalid status. Must be one of: ${QUESTIONNAIRE_RESPONSE_STATUSES.join(", ")}`,
         });
       }
+
+      // response -> questionnaire -> project in one query. Changing a response's
+      // status is agent-supported (handoff §2); only deleting one is human-only.
+      const contained = await resolveQuestionnaireResponseInProject(
+        app,
+        { projectId, questionnaireId, responseId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "questionnaires:write" })) return;
+      const project = contained.project;
 
       const [updated] = await app.db
         .update(questionnaireResponses)
@@ -700,12 +755,29 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId/responses/:responseId",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
-      if (request.auth.type !== "user") {
+      const auth = request.auth;
+      if (auth.type !== "user") {
         return reply.code(403).send({ error: "Only users can delete responses" });
       }
       const { projectId, questionnaireId, responseId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
+
+      // Human-only destructive operation (handoff §2).
+      const contained = await resolveQuestionnaireResponseInProject(
+        app,
+        { projectId, questionnaireId, responseId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (
+        !applyProjectWrite(contained, auth, reply, {
+          permission: "questionnaires:write",
+          humanOnly: true,
+        })
+      ) {
+        return;
+      }
+      const project = contained.project;
 
       const deleted = await app.db
         .update(questionnaireResponses)
@@ -741,29 +813,26 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId/responses/:responseId/comments",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, questionnaireId, responseId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { body } = request.body ?? { body: "" };
       if (!body || !body.trim()) return reply.code(400).send({ error: "body is required" });
 
-      const [[row], author] = await Promise.all([
-        app.db
-          .select({ id: questionnaireResponses.id })
-          .from(questionnaireResponses)
-          .where(
-            and(
-              eq(questionnaireResponses.id, responseId),
-              eq(questionnaireResponses.questionnaire_id, questionnaireId),
-              eq(questionnaireResponses.project_id, projectId),
-              isNull(questionnaireResponses.deleted_at),
-            ),
-          )
-          .limit(1),
-        resolveCommentAuthor(app.db, request.auth),
+      // Containment check and author-name lookup are independent.
+      const [contained, author] = await Promise.all([
+        resolveQuestionnaireResponseInProject(
+          app,
+          { projectId, questionnaireId, responseId },
+          auth,
+          reply,
+        ),
+        resolveCommentAuthor(app.db, auth),
       ]);
-      if (!row) return reply.code(404).send({ error: "Response not found" });
+      if (!contained) return;
+      // A read-only member may comment; the comment policy, not project
+      // ownership, decides.
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "create" })) return;
 
       const [created] = await app.db
         .insert(questionnaireResponseComments)
@@ -786,30 +855,23 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId/responses/:responseId/comments/:commentId",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
-      const { projectId, responseId, commentId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
+      const auth = request.auth;
+      const { projectId, questionnaireId, responseId, commentId } = request.params;
       const { body } = request.body ?? { body: "" };
       if (!body || !body.trim()) return reply.code(400).send({ error: "body is required" });
 
-      const [comment] = await app.db
-        .select()
-        .from(questionnaireResponseComments)
-        .where(
-          and(
-            eq(questionnaireResponseComments.id, commentId),
-            eq(questionnaireResponseComments.questionnaire_response_id, responseId),
-            isNull(questionnaireResponseComments.deleted_at),
-          ),
-        )
-        .limit(1);
-      if (!comment) return reply.code(404).send({ error: "Comment not found" });
-
-      const auth = request.auth;
-      const actorId = auth.type === "user" ? auth.user_id : auth.key_id;
-      if (comment.author_id !== actorId) {
-        return reply.code(403).send({ error: "Only the original author can edit this comment" });
-      }
+      // comment -> response -> questionnaire -> project in one query. This route
+      // previously ignored `questionnaireId` entirely and filtered the comment by
+      // response id alone, so a Project-A URL could reach a Project-B comment.
+      const contained = await resolveQuestionnaireResponseCommentInProject(
+        app,
+        { projectId, questionnaireId, responseId, commentId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      const comment = contained.resource;
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "edit", comment })) return;
 
       const [updated] = await app.db
         .update(questionnaireResponseComments)
@@ -826,33 +888,19 @@ export async function questionnaireRoutes(app: FastifyInstance) {
     "/questionnaires/:questionnaireId/responses/:responseId/comments/:commentId",
     { preHandler: requirePermission("questionnaires:write") },
     async (request, reply) => {
-      const { projectId, responseId, commentId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
-      const [comment] = await app.db
-        .select()
-        .from(questionnaireResponseComments)
-        .where(
-          and(
-            eq(questionnaireResponseComments.id, commentId),
-            eq(questionnaireResponseComments.questionnaire_response_id, responseId),
-            isNull(questionnaireResponseComments.deleted_at),
-          ),
-        )
-        .limit(1);
-      if (!comment) return reply.code(404).send({ error: "Comment not found" });
-
       const auth = request.auth;
-      const actorId = auth.type === "user" ? auth.user_id : auth.key_id;
-      if (comment.author_id !== actorId) {
-        if (auth.type !== "user") {
-          return reply.code(403).send({ error: "Only the original author or a team admin can delete this comment" });
-        }
-        const membership = auth.team_memberships?.find((t) => t.team_id === project.team_id);
-        if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-          return reply.code(403).send({ error: "Only the original author or a team admin can delete this comment" });
-        }
-      }
+      const { projectId, questionnaireId, responseId, commentId } = request.params;
+
+      const contained = await resolveQuestionnaireResponseCommentInProject(
+        app,
+        { projectId, questionnaireId, responseId, commentId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      const comment = contained.resource;
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "delete", comment })) return;
+
       await app.db
         .update(questionnaireResponseComments)
         .set({ deleted_at: new Date() })

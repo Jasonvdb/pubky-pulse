@@ -3,10 +3,32 @@ import { users, apiKeys } from "@pubky-pulse/db";
 import type { Db } from "@pubky-pulse/db";
 import type { AuthContext } from "../types.js";
 
-export interface CommentAuthor {
+export interface CommentActor {
   authorType: "user" | "agent";
   authorId: string;
+}
+
+export interface CommentAuthor extends CommentActor {
   authorName: string;
+}
+
+/**
+ * The identity a comment written by this caller is attributed to, resolved
+ * without touching the database — the authorship half of
+ * `resolveCommentAuthor`, and the value `utils/comment-policy.ts` compares a
+ * stored comment against.
+ *
+ * An agent comment is authored by the *exact key*, not by the human who
+ * created it: two keys made by the same person are different authors, which is
+ * what stops one agent from editing or deleting another's comments.
+ *
+ * Returns null for client and import keys. They are the SDK ingestion data
+ * plane, hold no comment permission, and so can never author or moderate.
+ */
+export function resolveCommentActor(auth: AuthContext): CommentActor | null {
+  if (auth.type === "user") return { authorType: "user", authorId: auth.user_id };
+  if (auth.key_type === "agent") return { authorType: "agent", authorId: auth.key_id };
+  return null;
 }
 
 /**

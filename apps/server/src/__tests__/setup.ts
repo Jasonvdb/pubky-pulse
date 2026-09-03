@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import Fastify from "fastify";
@@ -381,6 +382,7 @@ export async function truncateAll() {
   await client`DELETE FROM events`;
   await client`DELETE FROM api_keys`;
   await client`DELETE FROM apps`;
+  await client`DELETE FROM project_owners`;
   await client`DELETE FROM projects`;
   await client`DELETE FROM team_invitations`;
   await client`DELETE FROM team_members`;
@@ -414,6 +416,13 @@ export async function seedTestData() {
     INSERT INTO projects (team_id, name, slug, color)
     VALUES (${team.id}, 'Test Project', 'test-project', '#0ea5e9')
     RETURNING id
+  `;
+
+  // Every project needs at least one owner — ordinary project-scoped writes
+  // are authorized against project_owners, not team membership.
+  await client`
+    INSERT INTO project_owners (project_id, user_id)
+    VALUES (${project.id}, ${user.id})
   `;
 
   const [app] = await client`
@@ -457,6 +466,11 @@ export async function seedTestData() {
     RETURNING id
   `;
 
+  await client`
+    INSERT INTO project_owners (project_id, user_id)
+    VALUES (${backendProject.id}, ${user.id})
+  `;
+
   // Backend app (no bundle_id, in its own project)
   const [backendApp] = await client`
     INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
@@ -485,6 +499,11 @@ export async function seedTestData() {
     INSERT INTO projects (team_id, name, slug, color)
     VALUES (${team.id}, 'Test Android Project', 'test-android-project', '#a855f7')
     RETURNING id
+  `;
+
+  await client`
+    INSERT INTO project_owners (project_id, user_id)
+    VALUES (${androidProject.id}, ${user.id})
   `;
 
   // Android app
@@ -696,6 +715,64 @@ export async function addTeamMember(
     VALUES (${teamId}, ${userId}, ${role})
   `;
   await client.end();
+}
+
+/**
+ * Grants a user ownership of a project. Idempotent, matching the PUT
+ * /v1/projects/:projectId/owners/:userId contract, so an ACL suite can call it
+ * without first checking whether the row already exists.
+ */
+export async function addProjectOwner(projectId: string, userId: string): Promise<void> {
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    await client`
+      INSERT INTO project_owners (project_id, user_id)
+      VALUES (${projectId}, ${userId})
+      ON CONFLICT DO NOTHING
+    `;
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Creates a project and its first owner in one transaction, mirroring the
+ * invariant the create-project route must hold: a project is never visible
+ * without an owner. Returns the project id. The slug defaults to a unique value
+ * because slugs are unique per team.
+ */
+export async function createProjectWithOwner(
+  teamId: string,
+  ownerUserId: string,
+  opts: { name?: string; slug?: string; color?: string } = {},
+): Promise<string> {
+  const suffix = randomUUID().slice(0, 8);
+  const { name = `Test Project ${suffix}`, slug = `test-project-${suffix}`, color = "#0ea5e9" } = opts;
+  // `max: 1` pins every statement below to the same connection, so the explicit
+  // transaction control applies to them. postgres.js's `begin()` callback type
+  // is not tag-callable, hence BEGIN/COMMIT rather than `client.begin`.
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    await client`BEGIN`;
+    try {
+      const [project] = await client`
+        INSERT INTO projects (team_id, name, slug, color)
+        VALUES (${teamId}, ${name}, ${slug}, ${color})
+        RETURNING id
+      `;
+      await client`
+        INSERT INTO project_owners (project_id, user_id)
+        VALUES (${project.id}, ${ownerUserId})
+      `;
+      await client`COMMIT`;
+      return project.id as string;
+    } catch (err) {
+      await client`ROLLBACK`.catch(() => {});
+      throw err;
+    }
+  } finally {
+    await client.end();
+  }
 }
 
 /**

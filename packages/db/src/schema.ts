@@ -132,6 +132,28 @@ export const projects = pgTable(
   ]
 );
 
+// Project owners — a project has one or more equal owners. Ordinary
+// project-scoped writes require membership in this set; team membership alone
+// only grants read access.
+export const projectOwners = pgTable(
+  "project_owners",
+  {
+    project_id: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    added_at: timestamp("added_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("project_owners_project_user_idx").on(table.project_id, table.user_id),
+    index("project_owners_user_id_idx").on(table.user_id),
+  ]
+);
+
 // Apps
 export const apps = pgTable(
   "apps",

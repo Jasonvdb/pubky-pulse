@@ -568,9 +568,18 @@ export default function ApiKeysPage() {
                     )}
                   </TableCell>
                   <TableCell className="py-1.5">
-                    <code className="text-xs text-muted-foreground">
-                      {key.secret.slice(0, 20)}...
-                    </code>
+                    {key.secret ? (
+                      <code className="text-xs text-muted-foreground">
+                        {key.secret.slice(0, 20)}...
+                      </code>
+                    ) : (
+                      // A secret the caller is not entitled to read is redacted
+                      // to null by the API. Render it as missing metadata, never
+                      // as an empty or copyable credential.
+                      <span className="text-xs text-muted-foreground">
+                        {"\u2014"} not available
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="py-1.5">
                     <div className="flex flex-wrap gap-1">

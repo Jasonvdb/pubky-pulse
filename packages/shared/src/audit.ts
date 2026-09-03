@@ -3,6 +3,7 @@ export type AuditAction = "create" | "update" | "delete";
 export type AuditResourceType =
   | "app"
   | "project"
+  | "project_owner"
   | "api_key"
   | "team"
   | "team_member"
@@ -18,7 +19,7 @@ export type AuditResourceType =
 
 export const AUDIT_ACTIONS: AuditAction[] = ["create", "update", "delete"];
 export const AUDIT_RESOURCE_TYPES: AuditResourceType[] = [
-  "app", "project", "api_key", "team", "team_member",
+  "app", "project", "project_owner", "api_key", "team", "team_member",
   "invitation", "metric_definition", "funnel_definition", "user", "job_run", "issue", "feedback", "questionnaire", "questionnaire_response",
 ];
 

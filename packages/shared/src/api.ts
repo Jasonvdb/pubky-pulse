@@ -70,7 +70,11 @@ export interface CreateApiKeyRequest {
 }
 
 // Serialized API key (dates as ISO strings, excludes deleted_at)
-export type ApiKeyResponse = Omit<ApiKey, "created_at" | "updated_at" | "last_used_at" | "expires_at" | "deleted_at"> & {
+// `secret` is nullable here but not on the `ApiKey` domain type: the column is
+// NOT NULL in the database and always populated, and only serialization redacts
+// it for callers who are not entitled to read it.
+export type ApiKeyResponse = Omit<ApiKey, "created_at" | "updated_at" | "last_used_at" | "expires_at" | "deleted_at" | "secret"> & {
+  secret: string | null;
   created_at: string;
   updated_at: string;
   last_used_at: string | null;
@@ -192,6 +196,18 @@ export type AppResponse = Omit<
   latest_app_version_updated_at: string | null;
 };
 
+// Project ownership. A project has one or more equal owners; every team member
+// can read every project, but ordinary project-scoped writes require ownership.
+export interface ProjectOwnerResponse {
+  user_id: string;
+  name: string;
+  email: string;
+}
+
+// The caller's effective access to a project, resolved server-side. Clients must
+// use this rather than inferring ownership from team role.
+export type ProjectAccessLevel = "owner" | "viewer";
+
 // Projects (serialized)
 export type ProjectResponse = Omit<Project, "created_at" | "deleted_at"> & {
   created_at: string;
@@ -201,6 +217,8 @@ export type ProjectResponse = Omit<Project, "created_at" | "deleted_at"> & {
   effective_attachment_user_quota_bytes: number;
   effective_attachment_project_quota_bytes: number;
   effective_issue_alert_frequency: IssueAlertFrequency;
+  owners: ProjectOwnerResponse[];
+  access_level: ProjectAccessLevel;
 };
 export type ProjectDetailResponse = ProjectResponse & { apps: AppResponse[] };
 

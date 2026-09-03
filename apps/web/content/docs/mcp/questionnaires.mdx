@@ -7,7 +7,11 @@ import Concept from '../../_snippets/questionnaires.mdx';
 
 <Concept />
 
-Agents can create + edit + triage questionnaires, but soft-deleting one is user-only (mirroring the dashboard behaviour).
+## Access
+
+Reading questionnaires and responses spans every project in the configured team. Creating, editing and triaging them requires the human who created this key to currently own the project, re-read on every request; a refusal is `403 Requires project ownership`. Commenting on a response is the exception and needs only `questionnaires:write`. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow).
+
+Deleting a questionnaire **or a response** is human-only: agent calls receive `403` even when the creator owns the project.
 
 ## Tools
 
@@ -17,7 +21,7 @@ Agents can create + edit + triage questionnaires, but soft-deleting one is user-
 | `get-questionnaire` | Fetch a single definition with response_count + last_response_at. Optional `data_mode` (`production`, `development`, `all`) filters those rollups; default is all modes mixed |
 | `create-questionnaire` | Create a new questionnaire with slug + schema |
 | `update-questionnaire` | Update name, description, schema, is_active, app_id pin |
-| `delete-questionnaire` | ⚠️ User-only — agent calls receive 403 |
+| `delete-questionnaire` | ⚠️ Human-only — agent calls receive 403 |
 | `list-questionnaire-responses` | List responses with filters + pagination. Drafts (`status: "draft"`, `submitted_at: null`) are included by default — pass `submitted_only: true` to hide them, or `status: "draft"` to scope to drafts only |
 | `get-questionnaire-response` | Fetch a single response with comments + schema_snapshot (snapshot is null on drafts) |
 | `update-questionnaire-response-status` | Triage state transition. Statuses: `draft`, `new`, `in_review`, `addressed`, `dismissed` |

@@ -17,6 +17,28 @@ The API server auto-loads that root `.env` via dotenv on startup. The web dashbo
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain authentication. Set to `.yourdomain.com` (note the leading dot) so the auth cookie is shared between `yourdomain.com` and `api.yourdomain.com`. Required when the API and dashboard are on different subdomains. |
 | `NEXT_PUBLIC_API_URL` | Base URL of the API server **as reached from the browser** (e.g. `https://api.yourdomain.com`). The only variable the web dashboard reads. Set it in `apps/web/.env`, not the root `.env` — Next.js inlines it at build time, so it must be in place before `pnpm build` and a change only lands after a rebuild. Unset, the dashboard calls `http://localhost:4000`. |
 | `PULSE_ATTACHMENTS_SIGNING_SECRET` | **Required in production.** Random string used to sign attachment download URLs. Generate with `openssl rand -hex 32`. Must differ from `JWT_SECRET`. Outside production, falls back to `JWT_SECRET` so local dev just works. |
+| `PULSE_ALLOWED_EMAIL_DOMAINS` | Comma-separated list of email domains allowed to sign in, e.g. `yourdomain.com,partner.example`. Matching is **exact** and case-insensitive: with only `yourdomain.com` listed, `user@mail.yourdomain.com` is rejected — list the subdomain separately to allow it. Empty entries (a trailing comma), malformed domains and post-normalization duplicates are rejected. |
+| `PULSE_DEFAULT_TEAM_NAME` | Display name of the one team every allowed user joins. Non-empty, up to 255 characters. Must match the stored team's name if the team already exists. |
+| `PULSE_DEFAULT_TEAM_SLUG` | That team's stable identifier. Lowercase letters, numbers and hyphens only. |
+| `PULSE_TEAM_OWNER_EMAIL` | The sole team owner and recovery identity. Exactly one address, normalized to lowercase, whose domain must appear in `PULSE_ALLOWED_EMAIL_DOMAINS`. |
+
+### Identity and the singleton team
+
+The four `PULSE_*` variables above have **no defaults**. An invalid or missing value fails startup with an error naming the variable — the server never falls back to a development identity, in any environment including tests.
+
+At startup the server:
+
+1. finds or creates the team with the configured slug and name — and fails if a team with that slug exists under a different name, or is soft-deleted, rather than renaming or reviving it;
+2. fails if any **additional active team** exists, because this deployment supports exactly one. It never deletes or merges the extra team;
+3. finds or creates the configured owner's user row and sets their membership to `owner`, demoting any other `owner` to `member`.
+
+Point a deployment at a **fresh database**. An existing database from an earlier release has no `project_owners` table and still carries the old three-value `team_role` enum.
+
+Changing `PULSE_TEAM_OWNER_EMAIL` later and restarting hands team ownership to the new address and demotes the previous owner to `member`. Removing a domain from `PULSE_ALLOWED_EMAIL_DOMAINS` locks out everyone on it — including their existing sessions and agent keys — from their next request onwards, because identity is revalidated per request.
+
+None of these values reach the browser. They are server-side only and must never be copied into a `NEXT_PUBLIC_*` variable.
+
+See [Authentication & Access Control](/docs/concepts/authentication) for what the resulting access model looks like.
 
 ## Optional variables
 
@@ -26,9 +48,9 @@ The API server auto-loads that root `.env` via dotenv on startup. The web dashbo
 | `HOST` | `0.0.0.0` | Bind address for the API server. |
 | `MAX_DATABASE_SIZE_GB` | `0` (disabled) | When set to a positive number, enables automatic pruning. An hourly check drops the oldest monthly event partitions when the database exceeds this size. |
 | `RESEND_API_KEY` | (empty) | API key from [Resend](https://resend.com) for sending verification emails. If not set, verification codes are printed to the server console (useful for single-user or development setups). |
-| `EMAIL_FROM` | `noreply@pulse.pubky.org` | The "from" address used when sending verification and invitation emails via Resend. Replace the default with an address on your own domain. |
+| `EMAIL_FROM` | `noreply@pulse.pubky.org` | The "from" address used when sending verification and notification emails via Resend. Replace the default with an address on your own domain. |
 | `NODE_ENV` | `development` | Set to `production` for production deployments. Affects cookie security (`secure` flag) and Next.js behavior. |
-| `WEB_APP_URL` | `http://localhost:3000` | Base URL of the web dashboard. Used for links in invitation emails and redirects. Set to your dashboard URL in production (e.g., `https://yourdomain.com`). |
+| `WEB_APP_URL` | `http://localhost:3000` | Base URL of the web dashboard. Used for the links in notification emails. Set to your dashboard URL in production (e.g., `https://yourdomain.com`). |
 | `API_PUBLIC_URL` | `https://api.pulse.pubky.org` | Public base URL of the API server. Included in attachment upload/download URLs returned to SDKs and the dashboard. The default is only a placeholder — set it to your own API subdomain. |
 | `SYSTEM_JOBS_ALERT_EMAIL` | (empty) | If set, system job runs send a completion/failure email to this address. Leave empty to disable system-job alerts. |
 | `PULSE_ATTACHMENTS_PATH` | `./data/attachments` (dev) / `/opt/pubky-pulse-attachments` (prod) | Directory on disk where event attachment bytes are stored. Must be writable by the API server process. Exclude from `pg_dump` backups — attachments live on disk, not in Postgres. |
@@ -50,6 +72,12 @@ MAX_DATABASE_SIZE_GB=8
 RESEND_API_KEY=re_abc123...
 EMAIL_FROM=noreply@yourdomain.com
 SYSTEM_JOBS_ALERT_EMAIL=ops@yourdomain.com
+
+# Identity — all four required, no defaults
+PULSE_ALLOWED_EMAIL_DOMAINS=yourdomain.com
+PULSE_DEFAULT_TEAM_NAME=Your Team
+PULSE_DEFAULT_TEAM_SLUG=your-team
+PULSE_TEAM_OWNER_EMAIL=you@yourdomain.com
 
 # Event attachments
 PULSE_ATTACHMENTS_PATH=/opt/pubky-pulse-attachments

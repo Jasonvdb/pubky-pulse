@@ -78,7 +78,7 @@ Response shape is identical to the slug-based endpoint.
 
 Create a new funnel definition.
 
-**Auth required:** Yes (`funnels:write` permission or JWT, admin role required)
+**Auth required:** Yes (`funnels:write` permission or JWT) **and ownership of the project.** A viewer receives `403`.
 
 ```json
 // Request
@@ -139,7 +139,7 @@ Returns `409` if a funnel with the same slug already exists in the project.
 
 Update a funnel definition.
 
-**Auth required:** Yes (`funnels:write` permission or JWT, admin role required)
+**Auth required:** Yes (`funnels:write` permission or JWT) **and ownership of the project.** A viewer receives `403`.
 
 ```json
 // Request (all fields optional)
@@ -171,7 +171,7 @@ Update a funnel definition.
 
 Soft-delete a funnel definition.
 
-**Auth required:** Yes (`funnels:write` permission or JWT, admin role required for users)
+**Auth required:** Yes (`funnels:write` permission or JWT) **and ownership of the project.** A viewer receives `403`. Deleting a funnel definition is one of the destructive operations agent keys *are* allowed to perform.
 
 ```json
 // Response (200)

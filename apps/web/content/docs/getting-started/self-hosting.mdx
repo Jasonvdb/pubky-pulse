@@ -63,6 +63,10 @@ HOST=0.0.0.0
 CORS_ORIGINS=https://yourdomain.com
 COOKIE_DOMAIN=.yourdomain.com
 WEB_APP_URL=https://yourdomain.com
+PULSE_ALLOWED_EMAIL_DOMAINS=yourdomain.com
+PULSE_DEFAULT_TEAM_NAME=Your Team
+PULSE_DEFAULT_TEAM_SLUG=your-team
+PULSE_TEAM_OWNER_EMAIL=you@yourdomain.com
 API_PUBLIC_URL=https://api.yourdomain.com
 EMAIL_FROM=noreply@yourdomain.com
 PULSE_ATTACHMENTS_PATH=/opt/pubky-pulse-attachments
@@ -82,13 +86,17 @@ openssl rand -hex 32       # PULSE_ATTACHMENTS_SIGNING_SECRET
 | `JWT_SECRET` | Yes | Random string for signing authentication tokens |
 | `CORS_ORIGINS` | Yes | Your dashboard URL (e.g., `https://yourdomain.com`) |
 | `COOKIE_DOMAIN` | Yes | For cross-subdomain auth (e.g., `.yourdomain.com`) |
+| `PULSE_ALLOWED_EMAIL_DOMAINS` | Yes | Comma-separated email domains allowed to sign in. Exact match — list a subdomain separately to allow it. |
+| `PULSE_DEFAULT_TEAM_NAME` | Yes | Display name of the one team every allowed user joins |
+| `PULSE_DEFAULT_TEAM_SLUG` | Yes | That team's stable identifier (lowercase letters, numbers, hyphens) |
+| `PULSE_TEAM_OWNER_EMAIL` | Yes | The sole team owner and recovery identity. Its domain must be in the allowlist. |
 | `PULSE_ATTACHMENTS_SIGNING_SECRET` | Yes (prod) | HMAC secret for signed attachment download URLs. Server refuses to start in production without it. Must not equal `JWT_SECRET`. |
 | `PULSE_ATTACHMENTS_PATH` | No | Directory for attachment bytes. Defaults to `/opt/pubky-pulse-attachments`. Exclude from `pg_dump` backups. |
 | `PULSE_ATTACHMENTS_INTERNAL_URI` | No | nginx `internal` URI prefix to enable X-Accel-Redirect downloads (see `deploy/attachments-nginx-snippet.conf`). |
 | `RESEND_API_KEY` | No | [Resend](https://resend.com) API key for email delivery. If unset, verification codes print to the server console. |
-| `WEB_APP_URL` | No | Base URL of the dashboard, used in invitation emails and redirects |
+| `WEB_APP_URL` | No | Base URL of the dashboard, used for links in notification emails |
 | `API_PUBLIC_URL` | No | Public base URL of the API server, used in attachment upload/download URLs |
-| `EMAIL_FROM` | No | "From" address for verification and invitation emails |
+| `EMAIL_FROM` | No | "From" address for verification and notification emails |
 | `MAX_DATABASE_SIZE_GB` | No | Auto-prune old events when the database exceeds this size |
 | `SYSTEM_JOBS_ALERT_EMAIL` | No | Address that receives system job completion and failure alerts |
 
@@ -98,7 +106,9 @@ openssl rand -hex 32       # PULSE_ATTACHMENTS_SIGNING_SECRET
 pnpm db:migrate
 ```
 
-This creates all tables, indexes, and monthly event partitions. Your first user account is created automatically when you sign in through the dashboard.
+This creates all tables, indexes, and monthly event partitions. Use a **fresh** database: on startup the server creates or adopts the team named by `PULSE_DEFAULT_TEAM_SLUG` and refuses to start if a second active team exists.
+
+Startup also creates the configured team owner's user row. Other accounts are created automatically on first sign-in, provided the address is on an allowed domain — anyone else gets a `403` and no code is ever emailed.
 
 ### 5. Start Services
 

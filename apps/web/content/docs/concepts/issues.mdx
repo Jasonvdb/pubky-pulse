@@ -180,4 +180,4 @@ Configure the frequency via the project settings in the dashboard or the API (`P
 | `issues:read` | List issues, view details, list comments |
 | `issues:write` | Update status, merge, add/edit/delete comments |
 
-Both permissions are included in the default agent key permissions.
+Both permissions are included in the default agent key permissions. Permissions are necessary but not sufficient: status changes and merges also require ownership of the project, while commenting deliberately does not — see [Authentication & Access Control](/docs/concepts/authentication#comments).

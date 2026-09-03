@@ -9,7 +9,7 @@ Manage [background jobs](/docs/concepts/background-jobs) — asynchronous work l
 
 List job runs for a team with optional filters. Results are ordered by creation time descending (newest first). Only returns team-scoped jobs (system jobs are not included).
 
-**Auth required:** Yes (`jobs:read` permission or JWT with admin role)
+**Auth required:** Yes (`jobs:read` permission or JWT). Every team member can read job runs.
 
 ### Query parameters
 
@@ -54,7 +54,7 @@ List job runs for a team with optional filters. Results are ordered by creation 
 
 Trigger a background job. Only project-scoped job types can be triggered via the API (system jobs run on their cron schedule).
 
-**Auth required:** Yes (`jobs:write` permission or JWT with admin role)
+**Auth required:** Yes (`jobs:write` permission or JWT) **and ownership of the target project.** A viewer receives `403`. Every triggerable job type is project-scoped, so a `project_id` is always resolved and checked.
 
 ### Request body
 
@@ -127,7 +127,7 @@ Poll this endpoint to track progress of a running job.
 
 Cancel a running job. Uses cooperative cancellation — the handler checks a cancellation flag and returns early.
 
-**Auth required:** Yes (`jobs:write` permission or JWT)
+**Auth required:** Yes (`jobs:write` permission or JWT) **and ownership of the project the run belongs to.** A viewer receives `403`.
 
 ### Response
 

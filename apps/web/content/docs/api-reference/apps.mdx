@@ -7,6 +7,12 @@ Create, list, get, update, and delete apps within projects.
 
 Apps represent a specific platform build (e.g., iOS, Android, Web) within a project. Each app has its own client API key for SDK event ingestion.
 
+## Reads and writes
+
+Every team member can **read** every app in the team. Creating, updating or deleting an app is an ordinary project write and requires ownership of the app's **parent project**; a viewer receives `403 Requires project ownership`. Deleting an app is additionally human-only — agent keys receive `403` whatever their permissions.
+
+`client_secret` is the app's ingestion credential and is returned only to owners of the parent project. Everyone else — the team owner included — sees `client_secret: null`. A `null` means "you may not see this", not "this app has no key". See [Authentication & Access Control](/docs/concepts/authentication).
+
 ## GET /v1/apps
 
 List all apps the caller has access to.
@@ -61,7 +67,7 @@ Get a single app by ID.
 
 Create a new app within a project. A client API key is automatically generated and returned in the `client_secret` field.
 
-**Auth required:** Yes (`apps:write` permission or JWT, admin role required)
+**Auth required:** Yes (`apps:write` permission or JWT) **and ownership of the parent project.**
 
 ```json
 // Request
@@ -103,7 +109,7 @@ Create a new app within a project. A client API key is automatically generated a
 
 Update an app. Only the `name` field can be changed.
 
-**Auth required:** Yes (`apps:write` permission or JWT, admin role required)
+**Auth required:** Yes (`apps:write` permission or JWT) **and ownership of the app's project.**
 
 ```json
 // Request
@@ -128,7 +134,7 @@ Update an app. Only the `name` field can be changed.
 
 Soft-delete an app and its associated API keys.
 
-**Auth required:** Yes (JWT only, admin role required. Agent keys receive 403.)
+**Auth required:** Yes (JWT only — agent keys receive `403`) **and ownership of the app's project.**
 
 ```json
 // Response (200)

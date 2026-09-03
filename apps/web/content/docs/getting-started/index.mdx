@@ -20,9 +20,9 @@ Pubky Pulse is self-hosted, so the first thing you need is an instance to talk t
   ```bash
   pnpm install
   createdb pubky_pulse
-  cp .env.example .env
+  cp .env.example .env   # then set the four required PULSE_* identity variables
   pnpm db:migrate
-  pnpm dev:seed     # sample team, project, app, and API keys
+  pnpm dev:seed     # sample team, project (with an owner), app, and API keys
   pnpm dev:server   # API on http://localhost:4000
   pnpm dev:web      # dashboard on http://localhost:3000
   ```
@@ -34,9 +34,11 @@ Pubky Pulse is self-hosted, so the first thing you need is an instance to talk t
 
 Open the dashboard in a browser — `http://localhost:3000` for a local development stack, or whatever hostname you deployed the dashboard to. Enter your email and you'll receive a 6-digit verification code; enter it to sign in. No password needed, and your account is created automatically on first verification.
 
+Sign-in is restricted to the email domains the instance was configured with (`PULSE_ALLOWED_EMAIL_DOMAINS`). An address outside them is refused with a `403` and no code is sent at all. Everyone who signs in joins the same single team and can read every project in it; changing a project needs to be one of its owners.
+
 If no `RESEND_API_KEY` is configured, the verification code is printed to the API server console instead of being emailed.
 
-Signing in also creates a default agent key (`pulse_agent_*`) for your team — that is the credential the MCP config uses. You can create more keys later from the **API Keys** page.
+Signing in also creates a default agent key (`pulse_agent_*`) that belongs to **you** — that is the credential the MCP config uses. It carries your project access and is visible only to you; colleagues get their own. You can create more keys later from the **API Keys** page.
 
 ## 3. Add the MCP server to your editor
 

@@ -5,6 +5,12 @@ description: Issue tracking API — list, view, update, merge issues and manage 
 
 Manage [issues](/docs/concepts/issues) — errors automatically detected and grouped from ingested events.
 
+## Reads, triage and comments
+
+Every team member can **read** every project's issues. **Triage** — status changes and merges — is an ordinary project write and requires ownership of the project; a viewer receives `403 Requires project ownership`.
+
+**Comments are the exception.** Any team member may comment on any issue they can read, even in a project they do not own. Editing is author-only, and deleting is author-or-moderator: a human project owner may delete anyone's comment but may never edit one. An agent key counts as its own author — it may edit or delete only comments that exact key wrote, never its creator's human comment or another key's, even when its creator owns the project. See [Authentication & Access Control](/docs/concepts/authentication#comments).
+
 ## GET /v1/projects/:projectId/issues
 
 List issues for a project. Results are ordered by most recently seen.
@@ -124,7 +130,7 @@ The `attachments` array contains up to 100 non-deleted attachments associated wi
 
 Update issue status. Validates status transitions.
 
-**Auth required:** Yes (`issues:write`)
+**Auth required:** Yes (`issues:write`) **and ownership of the project.** A viewer receives `403`.
 
 ### Request body
 
@@ -152,7 +158,7 @@ Returns 400 if the transition is not allowed, or if `status=resolved` is sent wi
 
 Merge a source issue into the target issue. Moves all fingerprints, occurrences (deduplicated by session), and comments to the target. Deletes the source.
 
-**Auth required:** Yes (`issues:write`)
+**Auth required:** Yes (`issues:write`) **and ownership of the project.** A viewer receives `403`. Merging is one of the destructive operations agent keys *are* allowed to perform.
 
 ### Request body
 
@@ -172,7 +178,7 @@ List comments on an issue in chronological order. Soft-deleted comments are excl
 
 Add a comment to an issue. Author is resolved from auth context (user JWT or agent API key).
 
-**Auth required:** Yes (`issues:write`)
+**Auth required:** Yes (`issues:write`). Project ownership is **not** required — any team member, and any agent key whose creator is one, may comment.
 
 ### Request body
 
@@ -184,7 +190,7 @@ Returns 201 with the created comment.
 
 ## PATCH /v1/projects/:projectId/issues/:issueId/comments/:commentId
 
-Edit a comment. Only the original author can edit.
+Edit a comment. Only the original author can edit — a project owner cannot edit someone else's comment, and an agent key cannot edit its creator's.
 
 **Auth required:** Yes (`issues:write`)
 
@@ -198,7 +204,7 @@ Returns 403 if the authenticated user/agent is not the original author.
 
 ## DELETE /v1/projects/:projectId/issues/:issueId/comments/:commentId
 
-Soft-delete a comment. The original author or a team admin/owner can delete.
+Soft-delete a comment. The original author can always delete their own. A **human** project owner may additionally delete anyone's comment as moderation; an agent key never can, even when its creator owns the project.
 
 **Auth required:** Yes (`issues:write`)
 

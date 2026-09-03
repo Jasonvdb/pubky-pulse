@@ -58,6 +58,13 @@ WEB_APP_URL=https://yourdomain.com
 API_PUBLIC_URL=https://api.yourdomain.com
 COOKIE_DOMAIN=.yourdomain.com
 MAX_DATABASE_SIZE_GB=8
+
+# Identity — REQUIRED, no defaults. The server refuses to start without all four.
+PULSE_ALLOWED_EMAIL_DOMAINS=yourdomain.com
+PULSE_DEFAULT_TEAM_NAME=Your Team
+PULSE_DEFAULT_TEAM_SLUG=your-team
+PULSE_TEAM_OWNER_EMAIL=you@yourdomain.com
+
 RESEND_API_KEY=<your-resend-key>
 EMAIL_FROM=noreply@yourdomain.com
 
@@ -74,6 +81,10 @@ echo 'NEXT_PUBLIC_API_URL=https://api.yourdomain.com' > apps/web/.env
 ```
 
 That is the API base URL as reached from the *browser*. It is inlined at build time, so re-run `pnpm build` if you change it later.
+
+The four `PULSE_*` identity variables decide who can use the instance at all. Only addresses on `PULSE_ALLOWED_EMAIL_DOMAINS` can sign in; matching is exact, so list a subdomain separately if you want it. Every allowed person joins the one team named by `PULSE_DEFAULT_TEAM_NAME`/`PULSE_DEFAULT_TEAM_SLUG`, and `PULSE_TEAM_OWNER_EMAIL` — whose domain must be in the allowlist — is its sole owner. See [Authentication & Access Control](/docs/concepts/authentication).
+
+Point them at a **fresh database**. On startup the server creates or adopts the team with the configured slug and fails if a second active team already exists, so an existing database from an earlier install has to be dealt with first.
 
 Generate the secrets:
 
@@ -100,7 +111,7 @@ DATABASE_URL='postgresql://pubky_pulse:<password>@localhost:5432/pubky_pulse' pn
 
 This creates all database tables and sets up monthly event partitions. The `events`, `metric_events`, and `funnel_events` tables use `PARTITION BY RANGE` on the `timestamp` column. Partitions for the current month plus the next 2 months are created automatically.
 
-Your first user account will be auto-created when you log in through the dashboard.
+Startup creates the configured team, and creates the configured team owner's user row if it does not exist yet. Other accounts are auto-created on first sign-in, provided the address is on an allowed domain.
 
 ## 5. Verify the server starts
 
@@ -128,8 +139,10 @@ Continue to [Deployment](/docs/self-hosting/deployment) to configure nginx, pm2,
 For development or testing only, you can populate the database with sample data:
 
 ```bash
-pnpm dev:seed         # Creates admin user, team, project, app, and API keys
+pnpm dev:seed         # Creates a user, team, project (with an owner), app, and API keys
 pnpm dev:seed-events  # Generates 200 random test events across 24 hours
 ```
 
 Do not run the seed commands in production. The seed API keys are committed to the repository and publicly known.
+
+The seed inserts its own team (`Default Team` / `default`, owned by `admin@pulse.pubky.org`). Because the server allows exactly one active team, a seeded database needs the four `PULSE_*` variables pointed at that team and domain, or startup fails on the extra team.

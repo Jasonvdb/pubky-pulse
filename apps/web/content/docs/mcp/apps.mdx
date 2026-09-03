@@ -7,19 +7,25 @@ import Concept from '../../_snippets/apps.mdx';
 
 <Concept />
 
+## Access
+
+Reads span every project in the configured team. A **write** additionally requires the human who created this agent key to currently own the target project — re-read on every request, so an ownership change takes effect on the next call with no key re-issued. A refusal is `403 Requires project ownership`. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow).
+
+Creating and updating an app needs ownership of its **parent project**. There is no `delete-app` tool — deleting an app is human-only.
+
 ## list-apps
 
-List all apps accessible to this agent.
+List every app in the team. Reads are team-wide, not limited to the projects this key's creator owns.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `team_id` | UUID | No | Filter by team ID |
 
-Returns `{ apps: [...] }` with each app's `id`, `name`, `platform`, `bundle_id`, `client_secret`, `project_id`, and timestamps. Each app also carries `latest_app_version` and `latest_app_version_updated_at` — compare these against an event's `app_version` to tell whether the data is from the current release. See [Latest Version Detection](/docs/concepts/latest-version-detection).
+Returns `{ apps: [...] }` with each app's `id`, `name`, `platform`, `bundle_id`, `client_secret`, `project_id`, and timestamps. `client_secret` is `null` for an app whose project this key's creator does not own. Each app also carries `latest_app_version` and `latest_app_version_updated_at` — compare these against an event's `app_version` to tell whether the data is from the current release. See [Latest Version Detection](/docs/concepts/latest-version-detection).
 
 ## get-app
 
-Get an app by ID, including its `client_secret` for SDK configuration.
+Get an app by ID, including its `client_secret` for SDK configuration — `null` unless this key's creator owns the app's project.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

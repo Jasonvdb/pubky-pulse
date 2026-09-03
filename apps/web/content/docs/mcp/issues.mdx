@@ -9,6 +9,12 @@ import Concept from '../../_snippets/issues.mdx';
 
 Use these tools to investigate issues, update their status, merge duplicates, and add investigation notes.
 
+## Access
+
+Reading issues spans every project in the configured team. **Triage** — `resolve-issue`, `silence-issue`, `snooze-issue`, `reopen-issue`, `claim-issue`, `merge-issues` — additionally requires the human who created this key to currently own the project, re-read on every request. A refusal is `403 Requires project ownership`.
+
+**Commenting is the exception.** `add-issue-comment` works on any issue this key can read, owned project or not, as long as the key holds `issues:write`. Comment authorship belongs to this exact key: editing and deleting a comment (REST and dashboard only — MCP exposes creation) are limited to comments this key wrote, never its creator's human comments and never another key's. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow).
+
 ## Investigation workflow
 
 To fully investigate an issue from discovery to resolution:
@@ -104,6 +110,8 @@ Claim an issue by setting its status to `in_progress`. Use this when you start i
 
 Merge a source issue into a target issue. All occurrences, fingerprints, and comments are moved to the target. The source is deleted. Future events matching any merged fingerprint route to the surviving issue.
 
+Requires `issues:write` **and** project ownership. Merging is one of the destructive operations agent keys *are* allowed to perform.
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `project_id` | UUID | Yes | The project ID |
@@ -122,6 +130,8 @@ List comments on an issue in chronological order. Comments provide investigation
 ## add-issue-comment
 
 Add a comment to an issue. Use this to document investigations, root causes, fixes, or context for future reference. Markdown is supported.
+
+Requires `issues:write` only — project ownership is **not** required, so an agent can still contribute findings to a project its creator does not own.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

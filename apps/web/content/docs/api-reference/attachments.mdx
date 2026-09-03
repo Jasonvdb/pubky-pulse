@@ -178,7 +178,7 @@ Returns 401 for missing/invalid/expired tokens. Returns 404 if the attachment no
 
 Soft-delete an attachment. The row is kept for 7 days (`ATTACHMENT_SOFT_DELETE_GRACE_DAYS`) before the `attachment_cleanup` job hard-deletes the bytes and database row.
 
-**Auth required:** Yes (`events:write` permission; member role or higher)
+**Auth required:** Yes (JWT only — agent, client and import keys receive `403`) **and ownership of the attachment's project.**
 
 ```json
 // Response (200)
@@ -187,7 +187,7 @@ Soft-delete an attachment. The row is kept for 7 days (`ATTACHMENT_SOFT_DELETE_G
 }
 ```
 
-Returns 404 if the attachment is missing or already soft-deleted. Returns 403 if the caller lacks the member role on the owning team.
+Deleting an attachment is human-only: an agent key is refused even when its creator owns the project. Returns 404 if the attachment is missing, already soft-deleted, or belongs to a project outside the caller's team; 403 if the caller can see it but does not own its project.
 
 ## GET /v1/projects/:projectId/attachment-usage
 

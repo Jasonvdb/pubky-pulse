@@ -1,47 +1,28 @@
 ---
-title: Teams
-description: Team management endpoints — create, rename, delete teams, invite members, and manage roles.
+title: Team
+description: Read-only endpoints for the single configured team — its record, its roster, and the team audit log.
 ---
 
-Team management, invitations, role management, and audit logs. All team routes require JWT authentication (user-only, not API key accessible) unless otherwise noted.
+A deployment has exactly one team. Its name, slug and sole owner come from server configuration (`PULSE_DEFAULT_TEAM_NAME`, `PULSE_DEFAULT_TEAM_SLUG`, `PULSE_TEAM_OWNER_EMAIL`) and are established by the startup bootstrap, so **the team is read-only over the API**.
 
-## POST /v1/teams
+There is no endpoint to create, rename, delete or leave a team, to invite or remove members, or to change a member's role. Those routes no longer exist and return `404`. Roles are `owner` and `member`; there is no `admin`.
 
-Create a new team. The creating user becomes the owner.
+What remains is what the product still reads: the team record for `/v1/auth/me`, the roster for the team page and the project-owner picker, and the audit log. Every route pins `:teamId` to the caller's own membership, so a `teamId` that is not the configured singleton team returns `403`.
 
-**Auth required:** Yes (JWT only)
-
-```json
-// Request
-{
-  "name": "Acme Inc",
-  "slug": "acme-inc"
-}
-
-// Response (201)
-{
-  "id": "uuid",
-  "name": "Acme Inc",
-  "slug": "acme-inc",
-  "created_at": "2024-01-01T00:00:00.000Z",
-  "updated_at": "2024-01-01T00:00:00.000Z"
-}
-```
-
-The `slug` must match `^[a-z0-9-]+$`. Returns `409` if a team with the same slug already exists.
+For who may write what, see [Authentication & Access Control](/docs/concepts/authentication). To change a project's owners, see the [Projects API reference](/docs/api-reference/projects#project-owners).
 
 ## GET /v1/teams/:teamId
 
-Get team details including members and pending invitations.
+Get the team record with its roster.
 
-**Auth required:** Yes (JWT only, member role minimum)
+**Auth required:** Yes (JWT or agent key; must be a member of this team)
 
 ```json
 // Response (200)
 {
   "id": "uuid",
-  "name": "Acme Inc",
-  "slug": "acme-inc",
+  "name": "Example Team",
+  "slug": "example-team",
   "created_at": "2024-01-01T00:00:00.000Z",
   "updated_at": "2024-01-01T00:00:00.000Z",
   "members": [
@@ -51,69 +32,25 @@ Get team details including members and pending invitations.
       "name": "Owner",
       "role": "owner",
       "joined_at": "2024-01-01T00:00:00.000Z"
-    }
-  ],
-  "pending_invitations": [
+    },
     {
-      "id": "uuid",
-      "team_id": "uuid",
-      "email": "invited@example.com",
+      "user_id": "uuid",
+      "email": "member@example.com",
+      "name": "Member",
       "role": "member",
-      "invited_by": {
-        "user_id": "uuid",
-        "name": "Owner",
-        "email": "owner@example.com"
-      },
-      "expires_at": "2024-01-08T00:00:00.000Z",
-      "accepted_at": null,
-      "created_at": "2024-01-01T00:00:00.000Z"
+      "joined_at": "2024-01-02T00:00:00.000Z"
     }
   ]
 }
 ```
 
-## PATCH /v1/teams/:teamId
-
-Rename a team.
-
-**Auth required:** Yes (JWT only, admin role required)
-
-```json
-// Request
-{
-  "name": "Acme Corp"
-}
-
-// Response (200)
-{
-  "id": "uuid",
-  "name": "Acme Corp",
-  "slug": "acme-inc",
-  "created_at": "2024-01-01T00:00:00.000Z",
-  "updated_at": "2024-01-15T12:00:00.000Z"
-}
-```
-
-## DELETE /v1/teams/:teamId
-
-Soft-delete a team and cascade to all children (projects, apps, API keys, metric definitions, funnel definitions). Team members and invitations are hard-deleted.
-
-**Auth required:** Yes (JWT only, owner role required)
-
-Cannot delete your only team. Returns `400` if the user has no other team membership.
-
-```json
-// Response (200)
-{
-  "deleted": true
-}
-```
+Returns `403` for a team the caller does not belong to, `404` if the team row is missing.
 
 ## GET /v1/teams/:teamId/members
 
-List all members of a team.
+List the roster on its own. Readable by every team member — the roster is what populates the add-owner picker on a project.
 
-**Auth required:** Yes (JWT only, member role minimum)
+**Auth required:** Yes (JWT or agent key; must be a member of this team)
 
 ```json
 // Response (200)
@@ -121,20 +58,24 @@ List all members of a team.
   "members": [
     {
       "user_id": "uuid",
-      "email": "user@example.com",
-      "name": "User",
-      "role": "owner",
+      "email": "member@example.com",
+      "name": "Member",
+      "role": "member",
       "joined_at": "2024-01-01T00:00:00.000Z"
     }
   ]
 }
 ```
 
+Only name, email, role and join date are exposed. No credential, preference or activity field is included.
+
 ## GET /v1/teams/:teamId/members/:userId/agent-keys
 
-List the agent API keys created by a specific member in this team. Used by the dashboard "Team" page.
+List **your own** agent keys for this team, with their secrets. Used by the dashboard's MCP setup flow.
 
-**Auth required:** Yes (JWT only — admin role for others, member role for your own keys)
+**Auth required:** Yes (JWT only, and `:userId` must be the authenticated user)
+
+Any other `:userId` returns `403`, including for the team owner. An agent key carries its creator's full project access, so handing one to a colleague would hand over that person's authority. Team-wide key *metadata* lives on [`GET /v1/auth/keys`](/docs/api-reference/authentication#get-v1authkeys), where secrets outside the caller's entitlement serialize as `null`.
 
 ```json
 // Response (200)
@@ -143,7 +84,7 @@ List the agent API keys created by a specific member in this team. Used by the d
     {
       "id": "uuid",
       "name": "Agent Key",
-      "secret": "pulse_agent_abc123...",
+      "secret": "pulse_agent_...",
       "permissions": ["events:read", "apps:read", "..."],
       "created_at": "2024-01-01T00:00:00.000Z"
     }
@@ -151,173 +92,19 @@ List the agent API keys created by a specific member in this team. Used by the d
 }
 ```
 
-## PATCH /v1/teams/:teamId/members/:userId
-
-Change a member's role.
-
-**Auth required:** Yes (JWT only, admin role required)
-
-Role hierarchy: `owner` > `admin` > `member`. Only owners can promote to owner. Admins can only change the role of members with a lower role. Cannot change your own role. Cannot demote the last owner.
-
-```json
-// Request
-{
-  "role": "admin"
-}
-
-// Response (200)
-{
-  "user_id": "uuid",
-  "role": "admin"
-}
-```
-
-## DELETE /v1/teams/:teamId/members/:userId
-
-Remove a member from the team. If `userId` matches the authenticated user, this acts as "leave team."
-
-**Auth required:** Yes (JWT only, admin role required for removing others)
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `revoke_agent_keys` | string | Query param. Set to `"true"` to soft-delete the removed member's agent API keys for this team. |
-
-Owners can remove anyone. Admins can only remove members with a lower role. Self-removal is allowed for any role (except the sole owner).
-
-```json
-// Response (200)
-{
-  "removed": true,
-  "revoked_agent_keys": 2
-}
-```
-
-## POST /v1/teams/:teamId/invitations
-
-Send or resend an email invitation to join the team.
-
-**Auth required:** Yes (JWT only, admin role required)
-
-Only owners can invite as `owner`. Re-inviting an existing pending invite regenerates the token and resets the 7-day expiry.
-
-```json
-// Request
-{
-  "email": "newmember@example.com",
-  "role": "member"  // optional, defaults to "member"
-}
-
-// Response (201)
-{
-  "id": "uuid",
-  "team_id": "uuid",
-  "email": "newmember@example.com",
-  "role": "member",
-  "invited_by": {
-    "user_id": "uuid",
-    "name": "Owner",
-    "email": "owner@example.com"
-  },
-  "expires_at": "2024-01-08T00:00:00.000Z",
-  "accepted_at": null,
-  "created_at": "2024-01-01T00:00:00.000Z"
-}
-```
-
-Returns `409` if the email is already a team member.
-
-## GET /v1/teams/:teamId/invitations
-
-List pending invitations for a team.
-
-**Auth required:** Yes (JWT only, member role minimum)
-
-```json
-// Response (200)
-{
-  "invitations": [
-    {
-      "id": "uuid",
-      "team_id": "uuid",
-      "email": "newmember@example.com",
-      "role": "member",
-      "invited_by": {
-        "user_id": "uuid",
-        "name": "Owner",
-        "email": "owner@example.com"
-      },
-      "expires_at": "2024-01-08T00:00:00.000Z",
-      "accepted_at": null,
-      "created_at": "2024-01-01T00:00:00.000Z"
-    }
-  ]
-}
-```
-
-## DELETE /v1/teams/:teamId/invitations/:invitationId
-
-Revoke (hard-delete) a pending invitation.
-
-**Auth required:** Yes (JWT only, admin role required)
-
-```json
-// Response (200)
-{
-  "deleted": true
-}
-```
-
-## GET /v1/invites/:token
-
-Get public information about an invitation. No authentication required.
-
-Returns `410` if the invitation has already been accepted or has expired.
-
-```json
-// Response (200)
-{
-  "team_name": "Acme Inc",
-  "team_slug": "acme-inc",
-  "role": "member",
-  "email": "invited@example.com",
-  "invited_by_name": "Owner",
-  "expires_at": "2024-01-08T00:00:00.000Z"
-}
-```
-
-## POST /v1/invites/accept
-
-Accept an invitation and join the team. The authenticated user's email must match the invitation email.
-
-**Auth required:** Yes (JWT only)
-
-```json
-// Request
-{
-  "token": "invitation-token-uuid"
-}
-
-// Response (200)
-{
-  "team_id": "uuid",
-  "team_name": "Acme Inc",
-  "role": "member"
-}
-```
-
-Returns `403` if the authenticated email does not match the invitation. Returns `410` if expired or already accepted.
-
 ## GET /v1/teams/:teamId/audit-logs
 
-Query the audit log for a team. Returns a paginated list of actions performed on team resources.
+Query the audit log for the team. Returns a paginated list of actions performed on team resources.
 
-**Auth required:** Yes (`audit_logs:read` permission for agent keys, or JWT with admin role)
+**Auth required:** Yes (team owner only). An agent key may read it only when its creator is the team owner *and* the key holds `audit_logs:read`. Everyone else receives `403`.
+
+The team-wide trail spans every project and names who did what, so it is an oversight and recovery surface rather than a colleague-visible one.
 
 ### Query parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `resource_type` | string | Filter by resource type: `app`, `project`, `api_key`, `team`, `team_member`, `invitation`, `metric_definition`, `funnel_definition`, `user`, `issue`, `job_run`. |
+| `resource_type` | string | Filter by resource type: `app`, `project`, `project_owner`, `api_key`, `team`, `team_member`, `metric_definition`, `funnel_definition`, `user`, `job_run`, `issue`, `feedback`, `questionnaire`, `questionnaire_response`. |
 | `resource_id` | string | Filter by resource ID. |
 | `actor_id` | string | Filter by actor (user or API key) ID. |
 | `action` | string | Filter by action: `create`, `update`, `delete`. |
@@ -337,12 +124,11 @@ Query the audit log for a team. Returns a paginated list of actions performed on
       "actor_type": "user",
       "actor_id": "uuid",
       "action": "create",
-      "resource_type": "app",
+      "resource_type": "project_owner",
       "resource_id": "uuid",
       "changes": null,
       "metadata": {
-        "name": "iOS App",
-        "platform": "apple"
+        "project_id": "uuid"
       },
       "timestamp": "2024-01-15T10:30:00.000Z"
     }
@@ -361,3 +147,5 @@ Query the audit log for a team. Returns a paginated list of actions performed on
 | `resource_id` | string | ID of the affected resource. |
 | `changes` | object or null | For `update` actions, contains `{ field: { before, after } }` diffs. |
 | `metadata` | object or null | Additional context about the action. |
+
+Adding or removing a project owner is recorded as a `project_owner` `create`/`delete` entry whose `resource_id` is the affected user and whose `metadata.project_id` names the project. No secret material is ever written to the trail.

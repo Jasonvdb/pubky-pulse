@@ -6,6 +6,8 @@ import {
   truncateAll,
   seedTestData,
   getTokenAndTeamId,
+  createUserAndGetToken,
+  addTeamMember,
   createAgentKey,
 } from "./setup.js";
 
@@ -108,6 +110,23 @@ describe("Job Routes", () => {
 
       expect(res.statusCode).toBe(200);
     });
+
+    it("lets an ordinary member read the team's run history", async () => {
+      // The run list is an aggregate read over projects the member can already
+      // read, so it is not owner-only. It is also not a mutation path — the
+      // trigger test below proves that half separately.
+      const member = await createUserAndGetToken(app, "jobs-reader@pulse.pubky.org");
+      await addTeamMember(teamId, member.userId, "member");
+
+      const res = await app.inject({
+        method: "GET",
+        url: `/v1/teams/${teamId}/jobs`,
+        headers: { authorization: `Bearer ${member.token}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().job_runs).toBeInstanceOf(Array);
+    });
   });
 
   describe("POST /v1/teams/:teamId/jobs/trigger", () => {
@@ -128,6 +147,22 @@ describe("Job Routes", () => {
       expect(body.job_run.team_id).toBe(teamId);
       expect(body.job_run.project_id).toBe(projectId);
       expect(["pending", "running", "completed"]).toContain(body.job_run.status);
+    });
+
+    it("still refuses a trigger from a member who does not own the project", async () => {
+      // Opening the run *list* to every member must not open triggering with
+      // it: a write into someone else's project stays a 403.
+      const member = await createUserAndGetToken(app, "jobs-viewer@pulse.pubky.org");
+      await addTeamMember(teamId, member.userId, "member");
+
+      const res = await app.inject({
+        method: "POST",
+        url: `/v1/teams/${teamId}/jobs/trigger`,
+        headers: { authorization: `Bearer ${member.token}` },
+        payload: { job_type: "stats_aggregate_daily", project_id: projectId },
+      });
+
+      expect(res.statusCode).toBe(403);
     });
 
     it("rejects system job types", async () => {

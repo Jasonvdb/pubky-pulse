@@ -1,25 +1,17 @@
 import type { AppPlatform } from "./events.js";
 
-export type TeamRole = "owner" | "admin" | "member";
+/**
+ * The deployment runs one configured team. Its configured owner holds the
+ * team-level recovery authority; everybody else is an ordinary member.
+ *
+ * There is deliberately no role hierarchy any more: with two values a
+ * "minimum role" comparison only ever means "is this the team owner", and the
+ * old ranking invited routes to be gated on a rank rather than on the thing
+ * they actually need — project ownership, which lives in `project_owners`.
+ */
+export type TeamRole = "owner" | "member";
 
-export const VALID_TEAM_ROLES: TeamRole[] = ["owner", "admin", "member"];
-
-/** Numeric hierarchy for role comparisons — higher = more privileged. */
-export const TEAM_ROLE_HIERARCHY: Record<TeamRole, number> = {
-  owner: 3,
-  admin: 2,
-  member: 1,
-} as const;
-
-/** Returns true if `actorRole` outranks `targetRole`. */
-export function canManageRole(actorRole: TeamRole, targetRole: TeamRole): boolean {
-  return TEAM_ROLE_HIERARCHY[actorRole] > TEAM_ROLE_HIERARCHY[targetRole];
-}
-
-/** Returns true if `role` meets the minimum required level. */
-export function meetsMinimumRole(role: TeamRole, minimumRole: TeamRole): boolean {
-  return TEAM_ROLE_HIERARCHY[role] >= TEAM_ROLE_HIERARCHY[minimumRole];
-}
+export const VALID_TEAM_ROLES: TeamRole[] = ["owner", "member"];
 
 export type ApiKeyType = "client" | "agent" | "import";
 

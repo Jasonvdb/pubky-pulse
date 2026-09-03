@@ -24,24 +24,24 @@ function durationOf(startedAt: string | null, completedAt: string | null): strin
 }
 
 export function RecentJobsPanel({ projectId }: { projectId?: string } = {}) {
-  const { currentTeam, currentRole } = useTeam();
+  const { currentTeam } = useTeam();
   const teamId = currentTeam?.id;
 
   const filters: Partial<JobRunsQueryParams> = { limit: "5" };
   if (projectId) filters.project_id = projectId;
-  const isAdmin = currentRole === "owner" || currentRole === "admin";
-  const { jobRuns, isLoading } = useJobRuns(isAdmin ? teamId : undefined, filters);
+  // Run history is an aggregate read over projects every member can already
+  // read, so it is no longer role-gated. Triggering and cancelling still
+  // require ownership of the run's project, enforced by the server.
+  const { jobRuns, isLoading } = useJobRuns(teamId, filters);
 
   const { data: projectsData } = useSWR<{ projects: ProjectResponse[] }>(
-    isAdmin && teamId ? `/v1/projects?team_id=${teamId}` : null
+    teamId ? `/v1/projects?team_id=${teamId}` : null
   );
   const projectById = useMemo(() => {
     const map = new Map<string, ProjectResponse>();
     for (const p of projectsData?.projects ?? []) map.set(p.id, p);
     return map;
   }, [projectsData]);
-
-  if (!isAdmin) return null;
 
   return (
     <DashboardSection eyebrow="Work" title="Recent Jobs" viewAllHref="/dashboard/jobs">

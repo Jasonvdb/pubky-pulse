@@ -49,19 +49,12 @@ export const TEST_USER = {
 export class TestEmailService implements EmailService {
   lastCode: string = "";
   lastEmail: string = "";
-  lastInvitationEmail: string = "";
-  lastInvitationParams: { team_name: string; invited_by_name: string; role: string; accept_url: string } | null = null;
   lastJobAlertEmail: string = "";
   lastJobAlertParams: { job_type: string; status: string; duration: string; error?: string } | null = null;
 
   async sendVerificationCode(email: string, code: string): Promise<void> {
     this.lastCode = code;
     this.lastEmail = email;
-  }
-
-  async sendTeamInvitation(email: string, params: { team_name: string; invited_by_name: string; role: string; accept_url: string }): Promise<void> {
-    this.lastInvitationEmail = email;
-    this.lastInvitationParams = params;
   }
 
   async sendJobAlert(email: string, params: { job_type: string; status: string; duration: string; error?: string }): Promise<void> {
@@ -336,7 +329,6 @@ export async function truncateAll() {
   await client`DELETE FROM apps`;
   await client`DELETE FROM project_owners`;
   await client`DELETE FROM projects`;
-  await client`DELETE FROM team_invitations`;
   await client`DELETE FROM team_members`;
   await client`DELETE FROM teams`;
   await client`DELETE FROM email_verification_codes`;
@@ -653,8 +645,8 @@ export async function createAgentKey(
 }
 
 /**
- * Directly upserts a team member via DB (bypasses invitation flow).
- * Useful for tests that need members without going through email invitations.
+ * Directly upserts a team member via DB.
+ * Useful for tests that need a member at a specific role.
  *
  * It upserts rather than inserts because signing in now attaches the user to
  * the configured singleton team automatically, so callers that log a user in

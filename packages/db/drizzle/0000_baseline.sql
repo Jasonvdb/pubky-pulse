@@ -10,7 +10,7 @@ CREATE TYPE "public"."job_status" AS ENUM('pending', 'running', 'completed', 'fa
 CREATE TYPE "public"."log_level" AS ENUM('info', 'debug', 'warn', 'error');--> statement-breakpoint
 CREATE TYPE "public"."metric_phase" AS ENUM('start', 'complete', 'fail', 'cancel', 'record');--> statement-breakpoint
 CREATE TYPE "public"."questionnaire_response_status" AS ENUM('draft', 'new', 'in_review', 'addressed', 'dismissed');--> statement-breakpoint
-CREATE TYPE "public"."team_role" AS ENUM('owner', 'admin', 'member');--> statement-breakpoint
+CREATE TYPE "public"."team_role" AS ENUM('owner', 'member');--> statement-breakpoint
 CREATE TABLE "api_keys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"secret" text NOT NULL,
@@ -545,18 +545,6 @@ CREATE TABLE "questionnaires" (
 	"deleted_at" timestamp with time zone
 );
 --> statement-breakpoint
-CREATE TABLE "team_invitations" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"team_id" uuid NOT NULL,
-	"email" varchar(255) NOT NULL,
-	"role" "team_role" DEFAULT 'member' NOT NULL,
-	"token" uuid DEFAULT gen_random_uuid() NOT NULL,
-	"invited_by_user_id" uuid NOT NULL,
-	"expires_at" timestamp with time zone NOT NULL,
-	"accepted_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "team_members" (
 	"team_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -646,8 +634,6 @@ ALTER TABLE "questionnaire_responses_hourly" ADD CONSTRAINT "questionnaire_respo
 ALTER TABLE "questionnaire_responses_hourly" ADD CONSTRAINT "questionnaire_responses_hourly_app_id_apps_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."apps"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "questionnaires" ADD CONSTRAINT "questionnaires_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "questionnaires" ADD CONSTRAINT "questionnaires_app_id_apps_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."apps"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "team_invitations" ADD CONSTRAINT "team_invitations_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "team_invitations" ADD CONSTRAINT "team_invitations_invited_by_user_id_users_id_fk" FOREIGN KEY ("invited_by_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "team_members" ADD CONSTRAINT "team_members_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "team_members" ADD CONSTRAINT "team_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "api_keys_secret_idx" ON "api_keys" USING btree ("secret");--> statement-breakpoint
@@ -766,8 +752,5 @@ CREATE INDEX "questionnaire_responses_hourly_team_hour_idx" ON "questionnaire_re
 CREATE INDEX "questionnaire_responses_hourly_project_q_hour_idx" ON "questionnaire_responses_hourly" USING btree ("project_id","questionnaire_id","hour");--> statement-breakpoint
 CREATE UNIQUE INDEX "questionnaires_project_slug_active_idx" ON "questionnaires" USING btree ("project_id","slug") WHERE "questionnaires"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "questionnaires_project_idx" ON "questionnaires" USING btree ("project_id","deleted_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "team_invitations_team_email_idx" ON "team_invitations" USING btree ("team_id","email");--> statement-breakpoint
-CREATE UNIQUE INDEX "team_invitations_token_idx" ON "team_invitations" USING btree ("token");--> statement-breakpoint
-CREATE INDEX "team_invitations_email_idx" ON "team_invitations" USING btree ("email");--> statement-breakpoint
 CREATE UNIQUE INDEX "team_members_team_user_idx" ON "team_members" USING btree ("team_id","user_id");--> statement-breakpoint
 CREATE INDEX "team_members_user_id_idx" ON "team_members" USING btree ("user_id");

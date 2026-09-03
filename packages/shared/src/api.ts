@@ -34,7 +34,7 @@ export interface AuthTeamMembership {
   id: string;
   name: string;
   slug: string;
-  role: "owner" | "admin" | "member";
+  role: TeamRole;
   default_agent_key?: string;
 }
 
@@ -323,66 +323,16 @@ export interface FunnelQueryResponse {
 }
 
 // Teams
-export interface CreateTeamRequest {
-  name: string;
-  slug: string;
-}
-
-export interface UpdateTeamRequest {
-  name?: string;
-}
-
-export interface AddTeamMemberRequest {
-  email: string;
-  role?: TeamRole;
-}
-
-export interface UpdateTeamMemberRoleRequest {
-  role: TeamRole;
-}
-
+//
+// The singleton team is read-only over the API: it is created and owned by
+// server configuration, so there are no create/update/delete, role-change,
+// member-removal or invitation contracts here.
 export interface TeamMemberResponse {
   user_id: string;
   email: string;
   name: string;
   role: TeamRole;
   joined_at: string;
-}
-
-// Team Invitations
-export interface CreateTeamInvitationRequest {
-  email: string;
-  role?: TeamRole;
-}
-
-export interface TeamInvitationResponse {
-  id: string;
-  team_id: string;
-  email: string;
-  role: TeamRole;
-  invited_by: { user_id: string; name: string; email: string };
-  expires_at: string;
-  accepted_at: string | null;
-  created_at: string;
-}
-
-export interface TeamInvitationPublicResponse {
-  team_name: string;
-  team_slug: string;
-  role: TeamRole;
-  email: string;
-  invited_by_name: string;
-  expires_at: string;
-}
-
-export interface AcceptInvitationRequest {
-  token: string;
-}
-
-export interface AcceptInvitationResponse {
-  team_id: string;
-  team_name: string;
-  role: TeamRole;
 }
 
 export interface TeamDetailResponse {
@@ -392,7 +342,6 @@ export interface TeamDetailResponse {
   created_at: string;
   updated_at: string;
   members: TeamMemberResponse[];
-  pending_invitations: TeamInvitationResponse[];
 }
 
 // App Users

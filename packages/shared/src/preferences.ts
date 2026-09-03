@@ -29,10 +29,6 @@ export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
  *
  * The web preferences page (apps/web/src/app/dashboard/profile/notifications/
  * page.tsx) renders directly from this map, so it stays in sync automatically.
- *
- * `team.invitation` is listed for documentation but never enters the
- * dispatcher — it is sent transactionally via EmailService directly because
- * the recipient may not yet be a user.
  */
 export const NOTIFICATION_TYPES = [
   "issue.new",
@@ -40,7 +36,6 @@ export const NOTIFICATION_TYPES = [
   "feedback.new",
   "questionnaire.response_new",
   "job.completed",
-  "team.invitation",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -88,12 +83,6 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   // attachment_cleanup, app_version_sync) are server-owner concerns; they keep
   // going to SYSTEM_JOBS_ALERT_EMAIL via direct email and never enter the
   // dispatcher / inbox.
-  "team.invitation": {
-    label: "Team invitations",
-    description: "Sent transactionally regardless of preferences.",
-    channels: [],
-    defaults: {},
-  },
 };
 
 /** Sparkline windows the dashboard offers on `/dashboard/profile`. */

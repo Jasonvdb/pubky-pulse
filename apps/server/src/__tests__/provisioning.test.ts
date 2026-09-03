@@ -6,6 +6,7 @@ import {
   seedTestData,
   getTokenAndTeamId,
   createForeignTeam,
+  addTeamMember,
   testEmailService,
   TEST_USER,
 } from "./setup.js";
@@ -115,14 +116,12 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("requires team_id when user has multiple teams", async () => {
-    // Create user and add a second team
-    const { token } = await getTokenAndTeamId(app);
-    await app.inject({
-      method: "POST",
-      url: "/v1/teams",
-      headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Second Team", slug: "second-team" },
-    });
+    // Team creation is gone from the API, so the second membership is seeded
+    // directly. It is still reachable through agent-login because that flow
+    // resolves every membership the user holds, not only the configured one.
+    await getTokenAndTeamId(app);
+    const foreign = await createForeignTeam();
+    await addTeamMember(foreign.teamId, testData.userId, "member");
 
     const code = await sendCode(TEST_USER.email);
 
@@ -138,14 +137,10 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("returns agent key for specific team when team_id provided", async () => {
-    const { token } = await getTokenAndTeamId(app);
-    const teamRes = await app.inject({
-      method: "POST",
-      url: "/v1/teams",
-      headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Second Team", slug: "second-team" },
-    });
-    const secondTeamId = teamRes.json().id;
+    await getTokenAndTeamId(app);
+    const foreign = await createForeignTeam();
+    await addTeamMember(foreign.teamId, testData.userId, "member");
+    const secondTeamId = foreign.teamId;
 
     const code = await sendCode(TEST_USER.email);
 

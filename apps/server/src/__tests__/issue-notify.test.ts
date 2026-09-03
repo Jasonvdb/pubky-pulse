@@ -72,7 +72,7 @@ describe("issue_notify producer", () => {
     const u2 = await createUserAndGetToken(app, "member-a@pulse.pubky.org");
     const u3 = await createUserAndGetToken(app, "member-b@pulse.pubky.org");
     await addTeamMember(teamId, u2.userId, "member");
-    await addTeamMember(teamId, u3.userId, "admin");
+    await addTeamMember(teamId, u3.userId, "member");
 
     const handler = issueNotifyHandler(app.notificationDispatcher);
     await handler(makeJobContext(), {});

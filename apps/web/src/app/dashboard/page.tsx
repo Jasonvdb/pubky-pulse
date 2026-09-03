@@ -46,10 +46,9 @@ export default function DashboardPage() {
   const { user } = useUser();
   const prefs = useUserPreferences();
   const updatePrefs = useUpdateUserPreferences();
-  const { currentTeam, currentRole } = useTeam();
+  const { currentTeam } = useTeam();
   const { dataMode } = useDataMode();
   const teamId = currentTeam?.id;
-  const isAdmin = currentRole === "owner" || currentRole === "admin";
   const sparklineDays = resolveSparklineWindowDays(prefs);
   const windowHours = resolveMagnitudeWindowHours(prefs);
   const windowLabel = formatMagnitudeWindowLabel(windowHours);
@@ -345,8 +344,9 @@ export default function DashboardPage() {
         <RecentEventsPanel projectId={sparkProjectId} />
         <RecentUsersPanel mode="active" projectId={sparkProjectId} />
         <RecentUsersPanel mode="new" projectId={sparkProjectId} />
-        {isAdmin && <RecentJobsPanel projectId={sparkProjectId} />}
-        {isAdmin && <RecentAuditPanel />}
+        <RecentJobsPanel projectId={sparkProjectId} />
+        {/* Renders nothing unless the viewer is the team owner. */}
+        <RecentAuditPanel />
       </div>
 
       <QuickLinks />

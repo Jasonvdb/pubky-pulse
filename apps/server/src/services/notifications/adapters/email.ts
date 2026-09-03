@@ -6,9 +6,9 @@ import type { ChannelAdapter, ChannelDeliveryContext, ChannelDeliveryResult } fr
  * dispatcher stays content-agnostic. Falls back to a generic email when the
  * notification type doesn't have a richer template.
  *
- * Verification codes and team invitations do NOT route through this adapter —
- * they're transactional and may target email addresses that aren't yet users.
- * They keep going through EmailService directly.
+ * Verification codes do NOT route through this adapter — they're transactional
+ * and may target an email address that is not yet a user. They keep going
+ * through EmailService directly.
  */
 export function createEmailAdapter(emailService: EmailService): ChannelAdapter {
   return {
@@ -48,8 +48,6 @@ export function createEmailAdapter(emailService: EmailService): ChannelAdapter {
             await emailService.sendJobAlert(ctx.userEmail, params);
             return { status: "sent", metadata: { template: "job.completed" } };
           }
-          case "team.invitation":
-            return { status: "skipped", reason: "team.invitation is transactional, not dispatched" };
           default:
             return { status: "skipped", reason: `no email template for ${ctx.type}` };
         }

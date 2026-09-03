@@ -3,8 +3,8 @@ import { eq, and, isNull, inArray } from "drizzle-orm";
 import { apiKeys, teams, teamMembers, users } from "@pubky-pulse/db";
 
 import type { Db } from "@pubky-pulse/db";
-import { API_KEY_PREFIX, isEmailDomainAllowed, meetsMinimumRole } from "@pubky-pulse/shared";
-import type { AuthTeamMembership, TeamRole, Permission, ApiKeyType } from "@pubky-pulse/shared";
+import { API_KEY_PREFIX, isEmailDomainAllowed } from "@pubky-pulse/shared";
+import type { AuthTeamMembership, Permission, ApiKeyType } from "@pubky-pulse/shared";
 import type { AuthContext, UserJwtPayload, ApiKeyContext, UserContext } from "../types.js";
 import { config } from "../config.js";
 import { findSingletonTeam } from "../services/bootstrap-team.js";
@@ -277,28 +277,4 @@ export function requirePermission(...perms: Permission[]) {
       });
     }
   };
-}
-
-/** Returns the user's role for a given team, or null if not a member. */
-export function getTeamRole(auth: AuthContext, teamId: string): TeamRole | null {
-  if (auth.type === "api_key") return null;
-  const membership = auth.team_memberships.find((m) => m.team_id === teamId);
-  return membership?.role ?? null;
-}
-
-/**
- * Checks that a user-authenticated request has at least `minimumRole` on the
- * given team. Returns an error string if the check fails, or null if it passes.
- * API key contexts are skipped (they use permission-based auth instead).
- */
-export function assertTeamRole(
-  auth: AuthContext,
-  teamId: string,
-  minimumRole: TeamRole
-): string | null {
-  if (auth.type === "api_key") return null; // API keys checked via requirePermission
-  const role = getTeamRole(auth, teamId);
-  if (!role) return "Not a member of this team";
-  if (!meetsMinimumRole(role, minimumRole)) return `Requires ${minimumRole} role or higher`;
-  return null;
 }

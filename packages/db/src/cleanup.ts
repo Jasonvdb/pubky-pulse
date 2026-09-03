@@ -15,7 +15,6 @@ export interface CleanupResult {
   appUsers: number;
   auditLogs: number;
   teamMembers: number;
-  teamInvitations: number;
   questionnaireResponses: number;
   feedback: number;
   feedbackComments: number;
@@ -47,7 +46,6 @@ export async function cleanupSoftDeletedResources(client: postgres.Sql): Promise
     appUsers: 0,
     auditLogs: 0,
     teamMembers: 0,
-    teamInvitations: 0,
     questionnaireResponses: 0,
     feedback: 0,
     feedbackComments: 0,
@@ -187,11 +185,6 @@ export async function cleanupSoftDeletedResources(client: postgres.Sql): Promise
 
   // Step 5: Delete remaining resources for expired teams
   if (expiredTeamIds.length > 0) {
-    const invitationsDeleted = await client`
-      DELETE FROM team_invitations WHERE team_id = ANY(${expiredTeamIds})
-    `;
-    result.teamInvitations = Number(invitationsDeleted.count ?? 0);
-
     const membersDeleted = await client`
       DELETE FROM team_members WHERE team_id = ANY(${expiredTeamIds})
     `;

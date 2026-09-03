@@ -3,7 +3,7 @@ import { and, eq, gte, lte, desc, lt, or } from "drizzle-orm";
 import { jobRuns } from "@pubky-pulse/db";
 import { JOB_TYPES, JOB_TYPE_META, parseTimeParam } from "@pubky-pulse/shared";
 import type { JobRunsQueryParams, JobType } from "@pubky-pulse/shared";
-import { requirePermission, assertTeamRole, hasTeamAccess } from "../middleware/auth.js";
+import { requirePermission, hasTeamAccess } from "../middleware/auth.js";
 import { applyProjectWrite, enforceProjectWrite, resolveJobRunAccess } from "../utils/project-access.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { serializeJobRun } from "../utils/serialize.js";
@@ -19,13 +19,12 @@ export async function jobsRoutes(app: FastifyInstance) {
       const { teamId } = request.params;
       const { job_type, status, project_id, since, until, cursor, limit: limitStr } = request.query;
 
+      // Any member of the singleton team may read the team's run history: it
+      // is an aggregate *read* over projects they can already read, and it is
+      // not a path to mutate anything — trigger and cancel below still require
+      // ownership of the run's project. API keys still need `jobs:read`.
       if (!hasTeamAccess(auth, teamId)) {
         return reply.code(403).send({ error: "Not a member of this team" });
-      }
-
-      if (auth.type === "user") {
-        const roleError = assertTeamRole(auth, teamId, "admin");
-        if (roleError) return reply.code(403).send({ error: roleError });
       }
 
       const limit = normalizeLimit(limitStr);

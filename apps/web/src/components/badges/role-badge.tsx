@@ -1,9 +1,8 @@
 import type { TeamRole } from "@pubky-pulse/shared";
 import { Badge } from "@/components/ui/badge";
 
-const ROLE_META: Record<TeamRole, { emoji: string; label: string; variant: "default" | "secondary" | "outline" }> = {
+const ROLE_META: Record<TeamRole, { emoji: string; label: string; variant: "default" | "outline" }> = {
   owner: { emoji: "👑", label: "owner", variant: "default" },
-  admin: { emoji: "🛡️", label: "admin", variant: "secondary" },
   member: { emoji: "👤", label: "member", variant: "outline" },
 };
 

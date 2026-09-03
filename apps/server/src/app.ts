@@ -18,7 +18,6 @@ import { projectOwnersRoutes } from "./routes/project-owners.js";
 import { identityRoutes } from "./routes/identity.js";
 import { appUsersRoutes } from "./routes/app-users.js";
 import { teamsRoutes } from "./routes/teams.js";
-import { invitationRoutes } from "./routes/invitations.js";
 import { metricsRoutes, metricByIdRoutes, teamMetricsRoutes } from "./routes/metrics.js";
 import { funnelsRoutes, funnelByIdRoutes, teamFunnelsRoutes } from "./routes/funnels.js";
 import { auditLogsRoutes } from "./routes/audit-logs.js";
@@ -76,7 +75,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(identityRoutes, { prefix: "/v1" });
   await app.register(appUsersRoutes, { prefix: "/v1" });
   await app.register(teamsRoutes, { prefix: "/v1" });
-  await app.register(invitationRoutes, { prefix: "/v1" });
   await app.register(metricsRoutes, { prefix: "/v1/projects/:projectId" });
   await app.register(metricByIdRoutes, { prefix: "/v1" });
   await app.register(teamMetricsRoutes, { prefix: "/v1" });

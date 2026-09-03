@@ -9,9 +9,12 @@ import {
   createUserAndGetToken,
   createAgentKey,
   addTeamMember,
+  createForeignTeam,
   TEST_CLIENT_KEY,
   TEST_AGENT_KEY,
+  TEST_DB_URL,
 } from "./setup.js";
+import postgres from "postgres";
 
 let app: FastifyInstance;
 let testData: Awaited<ReturnType<typeof seedTestData>>;
@@ -78,18 +81,21 @@ describe("Auth & Permissions", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("200 for admin-role user", async () => {
-    const { token: adminToken, userId: adminUserId } =
-      await createUserAndGetToken(app, "admin@pulse.pubky.org");
-    await addTeamMember(teamId, adminUserId, "admin");
-
-    const res = await getAuditLogs({ authorization: `Bearer ${adminToken}` });
-    expect(res.statusCode).toBe(200);
-  });
-
   it("200 for owner-role user", async () => {
     const res = await getAuditLogs({ authorization: `Bearer ${token}` });
     expect(res.statusCode).toBe(200);
+  });
+
+  it("403 for an agent key whose creator is not the team owner", async () => {
+    // The key inherits its creator's authority and never more, so a member's
+    // agent key cannot read the team-wide trail even holding audit_logs:read.
+    const { token: memberToken, userId: memberUserId } =
+      await createUserAndGetToken(app, "agent-owner@pulse.pubky.org");
+    await addTeamMember(teamId, memberUserId, "member");
+    const key = await createAgentKey(app, memberToken, teamId, ["audit_logs:read"]);
+
+    const res = await getAuditLogs({ authorization: `Bearer ${key}` });
+    expect(res.statusCode).toBe(403);
   });
 
   it("403 for agent key without audit_logs:read", async () => {
@@ -400,36 +406,30 @@ describe("Team Scoping", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("logs are correctly scoped when user is in multiple teams", async () => {
-    // Second user creates their own team (auto-created via login)
-    const { token: otherToken, teamId: otherTeamId } =
-      await createUserAndGetToken(app, "multi@pulse.pubky.org");
+  it("never returns another team's entries to the owner of this one", async () => {
+    // Signing in can no longer produce a team of one's own, so the far side of
+    // the boundary is seeded directly and given an audit entry of its own.
+    const foreign = await createForeignTeam();
+    const client = postgres(TEST_DB_URL, { max: 1 });
+    await client`
+      INSERT INTO audit_logs (team_id, actor_type, actor_id, action, resource_type, resource_id)
+      VALUES (${foreign.teamId}, 'user', ${foreign.userId}, 'create', 'project', ${foreign.projectId})
+    `;
+    await client.end();
 
-    // Add the second user to our team as admin
-    const meRes = await app.inject({
-      method: "GET",
-      url: "/v1/auth/me",
-      headers: { authorization: `Bearer ${otherToken}` },
-    });
-    const otherUserId = meRes.json().user.id;
-    await addTeamMember(teamId, otherUserId, "admin");
-
-    // Create a project in the second user's team
-    await app.inject({
-      method: "POST",
-      url: "/v1/projects",
-      headers: { authorization: `Bearer ${otherToken}` },
-      payload: { name: "Other Team Project", slug: "other-team", team_id: otherTeamId },
-    });
+    await createProject("Ours", "ours");
     await waitForAuditWrites();
 
-    // Query audit logs for our team — should not contain the other team's project
     const res = await getAuditLogs(
-      { authorization: `Bearer ${otherToken}` },
+      { authorization: `Bearer ${token}` },
       { resource_type: "project", action: "create" },
     );
+
+    expect(res.statusCode).toBe(200);
     const entries = res.json().audit_logs;
+    expect(entries.length).toBeGreaterThan(0);
     expect(entries.every((e: any) => e.team_id === teamId)).toBe(true);
+    expect(entries.some((e: any) => e.resource_id === foreign.projectId)).toBe(false);
   });
 });
 

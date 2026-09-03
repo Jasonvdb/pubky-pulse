@@ -8,6 +8,7 @@ import {
   getToken,
   getTokenAndTeamId,
   createUserAndGetToken,
+  createForeignTeam,
   addTeamMember,
   TEST_CLIENT_KEY,
   TEST_DB_URL,
@@ -477,15 +478,24 @@ describe("DELETE /v1/projects/:id", () => {
   });
 
   it("returns 404 for project belonging to another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
+    // A second sign-in now lands in the same configured team, so the foreign
+    // project is seeded directly. Out-of-team must read as absent (404), never
+    // as visible-but-refused (403).
+    const foreign = await createForeignTeam();
+    const token = await getToken(app);
 
     const res = await app.inject({
       method: "DELETE",
-      url: `/v1/projects/${testData.projectId}`,
-      headers: { authorization: `Bearer ${otherToken}` },
+      url: `/v1/projects/${foreign.projectId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
 
     expect(res.statusCode).toBe(404);
+
+    const client = postgres(TEST_DB_URL, { max: 1 });
+    const [row] = await client`SELECT deleted_at FROM projects WHERE id = ${foreign.projectId}`;
+    await client.end();
+    expect(row.deleted_at).toBeNull();
   });
 
   it("member cannot delete project", async () => {

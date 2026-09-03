@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { createDatabaseConnection } from "@pubky-pulse/db";
 import { config } from "./config.js";
 import { buildServer } from "./app.js";
+import { bootstrapSingletonTeam } from "./services/bootstrap-team.js";
 import { createEmailService } from "./services/email.js";
 import { JobRunner } from "./services/job-runner.js";
 import { registerAllJobs } from "./jobs/index.js";
@@ -137,6 +138,17 @@ await buildServer({
   },
   jwtSecret: config.jwtSecret,
 });
+
+// The configured team, its sole owner, and the sole-owner invariant must all
+// hold before a single request is served — a half-configured access model is
+// worse than a server that refuses to start. The error is printed on its own
+// because it names configuration, never credentials.
+try {
+  await bootstrapSingletonTeam(db);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+}
 
 // Start
 try {

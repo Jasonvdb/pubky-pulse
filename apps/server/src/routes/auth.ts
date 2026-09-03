@@ -13,13 +13,14 @@ import type {
   Permission,
   UserPreferences,
 } from "@pubky-pulse/shared";
-import { mergeUserPreferences, NOTIFICATION_TYPES, NOTIFICATION_CHANNELS, SPARKLINE_WINDOW_DAYS, MAGNITUDE_WINDOW_HOURS } from "@pubky-pulse/shared";
+import { mergeUserPreferences, isEmailDomainAllowed, normalizeEmail, NOTIFICATION_TYPES, NOTIFICATION_CHANNELS, SPARKLINE_WINDOW_DAYS, MAGNITUDE_WINDOW_HOURS } from "@pubky-pulse/shared";
 import type { NotificationChannel } from "@pubky-pulse/shared";
 import { requireAuth, hasTeamAccess, getAuthTeamIds, getUserTeamMemberships, assertTeamRole } from "../middleware/auth.js";
 import type { UserJwtPayload } from "../types.js";
 import { serializeApiKey } from "../utils/serialize.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { config } from "../config.js";
+import { deriveInitialDisplayName, findSingletonTeam } from "../services/bootstrap-team.js";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -112,11 +113,32 @@ function sanitizeUserPreferences(input: unknown): Partial<UserPreferences> {
   return out;
 }
 
-function generateSlugFromName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+/**
+ * Normalize a submitted address and check it against the configured domain
+ * allowlist.
+ *
+ * Every entry point into the login flow runs this independently, before it
+ * touches rate-limit state, inserts a code, sends mail, or consumes a code — so
+ * a code that was inserted while a domain was still allowed (or inserted by
+ * hand) cannot be redeemed afterwards.
+ */
+type EmailPolicyResult =
+  | { ok: true; email: string }
+  | { ok: false; status: 400 | 403; error: string };
+
+function checkEmailPolicy(raw: unknown): EmailPolicyResult {
+  if (!raw || typeof raw !== "string") {
+    return { ok: false, status: 400, error: "Valid email is required" };
+  }
+  const email = normalizeEmail(raw);
+  if (!email) {
+    return { ok: false, status: 400, error: "Valid email is required" };
+  }
+  if (!isEmailDomainAllowed(email, config.allowedEmailDomains)) {
+    // The address itself is never echoed back into the response or the logs.
+    return { ok: false, status: 403, error: "This email domain is not permitted to sign in" };
+  }
+  return { ok: true, email };
 }
 
 /** Consume a verification code: validates, marks used, returns true. Returns false if invalid/expired. */
@@ -148,61 +170,60 @@ async function consumeVerificationCode(db: Parameters<typeof getUserTeamMembersh
 
 type MembershipTeam = Awaited<ReturnType<typeof getUserTeamMemberships>>[0];
 
-/** Find existing user or create new user + default team. Returns user, whether new, and team memberships. */
+/**
+ * Find or create the user for an already-normalized, already-allowed address,
+ * then idempotently attach them to the configured singleton team.
+ *
+ * There are no per-user teams any more: every allowed person joins the one
+ * configured team, as `owner` when their address is the configured team owner
+ * and as `member` otherwise. An existing membership is left alone — the
+ * bootstrap owns role reconciliation — so this only ever repairs a *missing*
+ * membership, which is what makes an allowed user whose row predates the
+ * lockdown usable again on their next sign-in.
+ *
+ * No credential is generated here. Personal default agent keys stay lazily
+ * created by `POST /default-agent-key` once the person actually authenticates.
+ */
 async function findOrCreateUser(db: Parameters<typeof getUserTeamMemberships>[0], email: string): Promise<{
   user: { id: string; email: string; name: string; preferences: UserPreferences | null; created_at: Date; updated_at: Date };
   isNewUser: boolean;
   membershipTeams: MembershipTeam[];
 }> {
+  const team = await findSingletonTeam(db);
+  if (!team) {
+    throw new Error(
+      `Configured team "${config.defaultTeamSlug}" does not exist. Run the singleton-team bootstrap before serving traffic.`
+    );
+  }
+
   const [existingUser] = await db
     .select()
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
-  if (existingUser) {
-    return {
-      user: existingUser,
-      isNewUser: false,
-      membershipTeams: await getUserTeamMemberships(db, existingUser.id),
-    };
-  }
+  const user =
+    existingUser ??
+    (
+      await db
+        .insert(users)
+        .values({ email, name: deriveInitialDisplayName(email) })
+        .returning()
+    )[0];
 
-  const localPart = email.split("@")[0];
-  const name = localPart.charAt(0).toUpperCase() + localPart.slice(1);
-
-  const [newUser] = await db
-    .insert(users)
-    .values({ email, name })
-    .returning();
-
-  const slug = generateSlugFromName(name) || "team";
-  const [team] = await db
-    .insert(teams)
-    .values({ name: `${name}'s Team`, slug: `${slug}-${newUser.id.slice(0, 8)}` })
-    .returning();
-
-  await db.insert(teamMembers).values({
-    team_id: team.id,
-    user_id: newUser.id,
-    role: "owner",
-  });
-
-  // Auto-create a default agent key so MCP setup docs can pre-fill it
-  const defaultKeySecret = generateApiKeySecret("agent");
-  await db.insert(apiKeys).values({
-    secret: defaultKeySecret,
-    key_type: "agent",
-    team_id: team.id,
-    name: "Default Agent Key",
-    created_by: newUser.id,
-    permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
-  });
+  await db
+    .insert(teamMembers)
+    .values({
+      team_id: team.id,
+      user_id: user.id,
+      role: email === config.teamOwnerEmail ? "owner" : "member",
+    })
+    .onConflictDoNothing();
 
   return {
-    user: newUser,
-    isNewUser: true,
-    membershipTeams: [{ id: team.id, name: team.name, slug: team.slug, role: "owner" as const, default_agent_key: defaultKeySecret }],
+    user,
+    isNewUser: !existingUser,
+    membershipTeams: await getUserTeamMemberships(db, user.id),
   };
 }
 
@@ -214,11 +235,14 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Send verification code
   app.post<{ Body: SendCodeRequest }>("/send-code", async (request, reply) => {
-    const { email } = request.body;
-
-    if (!email || typeof email !== "string" || !email.includes("@")) {
-      return reply.code(400).send({ error: "Valid email is required" });
+    // The domain check comes first, before the rate-limit read, the code
+    // insert, and the send: a disallowed address must leave no verification
+    // row, consume no rate-limit slot, and trigger no email.
+    const policy = checkEmailPolicy(request.body?.email);
+    if (!policy.ok) {
+      return reply.code(policy.status).send({ error: policy.error });
     }
+    const email = policy.email;
 
     // Rate limit: max 5 codes per email per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -270,11 +294,20 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Verify code and authenticate (web dashboard flow — returns JWT)
   app.post<{ Body: VerifyCodeRequest }>("/verify-code", async (request, reply) => {
-    const { email, code } = request.body;
+    const { email: rawEmail, code } = request.body;
 
-    if (!email || !code) {
+    if (!rawEmail || !code) {
       return reply.code(400).send({ error: "email and code required" });
     }
+
+    // Independent of the /send-code check on purpose: a code that predates a
+    // policy change, or one inserted directly into the database, must not be
+    // redeemable.
+    const policy = checkEmailPolicy(rawEmail);
+    if (!policy.ok) {
+      return reply.code(policy.status).send({ error: policy.error });
+    }
+    const email = policy.email;
 
     const valid = await consumeVerificationCode(app.db, email, code);
     if (!valid) {
@@ -292,12 +325,22 @@ export async function authRoutes(app: FastifyInstance) {
 
     reply.setCookie("token", token, COOKIE_OPTIONS);
 
-    if (isNewUser && membershipTeams.length > 0) {
-      const teamId = membershipTeams[0].id;
-      const userAuth = { type: "user" as const, user_id: user.id, email: user.email, team_memberships: [{ team_id: teamId, role: "owner" as const }] };
-      logAuditEvent(app.db, userAuth, { team_id: teamId, action: "create", resource_type: "user", resource_id: user.id });
-      logAuditEvent(app.db, userAuth, { team_id: teamId, action: "create", resource_type: "team", resource_id: teamId });
-      logAuditEvent(app.db, userAuth, { team_id: teamId, action: "create", resource_type: "team_member", resource_id: user.id, metadata: { role: "owner" } });
+    // No team is created on sign-in any more, so only the user and their
+    // membership are audited — and the membership is what a reviewer needs to
+    // see, since it is the moment a person gained access to the team.
+    const singletonMembership = membershipTeams.find((t) => t.slug === config.defaultTeamSlug);
+    if (isNewUser && singletonMembership) {
+      const teamId = singletonMembership.id;
+      const actor = {
+        type: "user" as const,
+        user_id: user.id,
+        email: user.email,
+        team_id: teamId,
+        is_team_owner: singletonMembership.role === "owner",
+        team_memberships: [{ team_id: teamId, role: singletonMembership.role }],
+      };
+      logAuditEvent(app.db, actor, { team_id: teamId, action: "create", resource_type: "user", resource_id: user.id });
+      logAuditEvent(app.db, actor, { team_id: teamId, action: "create", resource_type: "team_member", resource_id: user.id, metadata: { role: singletonMembership.role } });
     }
 
     const statusCode = isNewUser ? 201 : 200;
@@ -440,33 +483,46 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "No access to this team" });
       }
 
-      // Check for existing agent key
-      const [existing] = await app.db
-        .select({ secret: apiKeys.secret })
-        .from(apiKeys)
-        .where(and(
-          eq(apiKeys.team_id, team_id),
-          eq(apiKeys.key_type, "agent"),
-          isNull(apiKeys.deleted_at),
-        ))
-        .orderBy(apiKeys.created_at)
-        .limit(1);
+      // Scoped to `created_by = this user`. Without that predicate this
+      // returned the team's oldest agent key, i.e. handed one colleague's
+      // agent secret to every other member of the team.
+      //
+      // Find-or-create runs inside a transaction guarded by an advisory lock on
+      // (team, user) so two concurrent calls — the dashboard opening MCP setup
+      // in two tabs, say — cannot both miss and both insert a key.
+      const lockKey = `default-agent-key:${team_id}:${auth.user_id}`;
 
-      if (existing) {
-        return { secret: existing.secret, created: false };
-      }
+      const result = await app.db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`);
 
-      const secret = generateApiKeySecret("agent");
-      await app.db.insert(apiKeys).values({
-        secret,
-        key_type: "agent",
-        team_id,
-        name: "Default Agent Key",
-        created_by: auth.user_id,
-        permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
+        const [existing] = await tx
+          .select({ secret: apiKeys.secret })
+          .from(apiKeys)
+          .where(and(
+            eq(apiKeys.team_id, team_id),
+            eq(apiKeys.key_type, "agent"),
+            eq(apiKeys.created_by, auth.user_id),
+            isNull(apiKeys.deleted_at),
+          ))
+          .orderBy(apiKeys.created_at)
+          .limit(1);
+
+        if (existing) return { secret: existing.secret, created: false };
+
+        const secret = generateApiKeySecret("agent");
+        await tx.insert(apiKeys).values({
+          secret,
+          key_type: "agent",
+          team_id,
+          name: "Default Agent Key",
+          created_by: auth.user_id,
+          permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
+        });
+
+        return { secret, created: true };
       });
 
-      return reply.code(201).send({ secret, created: true });
+      return reply.code(result.created ? 201 : 200).send(result);
     }
   );
 
@@ -781,11 +837,20 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Agent login — verify code + provision agent API key in one step (no JWT)
   app.post<{ Body: AgentLoginRequest }>("/agent-login", async (request, reply) => {
-    const { email, code, team_id } = request.body;
+    const { email: rawEmail, code, team_id } = request.body;
 
-    if (!email || !code) {
+    if (!rawEmail || !code) {
       return reply.code(400).send({ error: "email and code required" });
     }
+
+    // This route consumes codes and creates users exactly like /verify-code, so
+    // it enforces exactly the same domain policy. Skipping it here would leave
+    // the entire lockdown bypassable through the agent bootstrap flow.
+    const policy = checkEmailPolicy(rawEmail);
+    if (!policy.ok) {
+      return reply.code(policy.status).send({ error: policy.error });
+    }
+    const email = policy.email;
 
     const valid = await consumeVerificationCode(app.db, email, code);
     if (!valid) {
@@ -821,6 +886,8 @@ export async function authRoutes(app: FastifyInstance) {
       type: "user" as const,
       user_id: agentUser.id,
       email: agentUser.email,
+      team_id: targetTeam.id,
+      is_team_owner: targetTeam.role === "owner",
       team_memberships: [{ team_id: targetTeam.id, role: targetTeam.role }],
     };
 

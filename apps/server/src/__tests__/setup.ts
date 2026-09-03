@@ -15,6 +15,7 @@ import * as schema from "@pubky-pulse/db";
 import { createDatabaseConnection, ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "@pubky-pulse/db";
 import type { Permission, TeamRole } from "@pubky-pulse/shared";
 import { buildServer } from "../app.js";
+import { bootstrapSingletonTeam } from "../services/bootstrap-team.js";
 import type { EmailService } from "../services/email.js";
 import { JobRunner } from "../services/job-runner.js";
 import type { JobContext, JobHandler } from "../services/job-runner.js";
@@ -287,6 +288,16 @@ export async function buildApp() {
     cors: { origin: true, credentials: true },
     jwtSecret: "test-secret",
   });
+
+  // Production runs the singleton-team bootstrap before app.listen; the test
+  // app runs it here so suites exercise the same identity path.
+  //
+  // It truncates first because suites share one database and run sequentially
+  // (`fileParallelism: false`): the previous file's rows are still present at
+  // this point, and a leftover extra active team is a startup invariant
+  // violation by design. Each suite's own beforeEach re-seeds from clean.
+  await truncateAll();
+  await bootstrapSingletonTeam(db);
 
   await app.ready();
   return app;
@@ -642,8 +653,12 @@ export async function createAgentKey(
 }
 
 /**
- * Directly inserts a team member via DB (bypasses invitation flow).
+ * Directly upserts a team member via DB (bypasses invitation flow).
  * Useful for tests that need members without going through email invitations.
+ *
+ * It upserts rather than inserts because signing in now attaches the user to
+ * the configured singleton team automatically, so callers that log a user in
+ * and then place them at a specific role are adjusting an existing row.
  */
 export async function addTeamMember(
   teamId: string,
@@ -654,8 +669,108 @@ export async function addTeamMember(
   await client`
     INSERT INTO team_members (team_id, user_id, role)
     VALUES (${teamId}, ${userId}, ${role})
+    ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role
   `;
   await client.end();
+}
+
+/**
+ * Creates a second, non-configured team with its own owner, project, app,
+ * agent key, event and feedback item, entirely in the database.
+ *
+ * Signing in can no longer produce a team of one's own — every allowed user
+ * joins the configured singleton team — so suites that assert a boundary
+ * between teams (API keys, agent keys, team-scoped queries) build the far side
+ * of that boundary here instead. The rows are deliberately unreachable through
+ * the human login flow, which is exactly the situation under test.
+ *
+ * The event and feedback rows exist so a boundary test can name real foreign
+ * data: a 404 for an id that never existed proves nothing about isolation.
+ */
+export async function createForeignTeam(opts: {
+  email?: string;
+  teamName?: string;
+  teamSlug?: string;
+} = {}): Promise<{
+  teamId: string;
+  userId: string;
+  projectId: string;
+  appId: string;
+  apiKeyId: string;
+  apiKeySecret: string;
+  eventId: string;
+  feedbackId: string;
+}> {
+  const suffix = randomUUID().slice(0, 8);
+  const {
+    email = `foreign-${suffix}@pulse.pubky.org`,
+    teamName = `Foreign Team ${suffix}`,
+    teamSlug = `foreign-team-${suffix}`,
+  } = opts;
+
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    const [user] = await client`
+      INSERT INTO users (email, name) VALUES (${email}, ${"Foreign User"}) RETURNING id
+    `;
+    const [team] = await client`
+      INSERT INTO teams (name, slug) VALUES (${teamName}, ${teamSlug}) RETURNING id
+    `;
+    await client`
+      INSERT INTO team_members (team_id, user_id, role) VALUES (${team.id}, ${user.id}, 'owner')
+    `;
+    const [project] = await client`
+      INSERT INTO projects (team_id, name, slug, color)
+      VALUES (${team.id}, ${`Foreign Project ${suffix}`}, ${`foreign-project-${suffix}`}, '#f97316')
+      RETURNING id
+    `;
+    await client`
+      INSERT INTO project_owners (project_id, user_id) VALUES (${project.id}, ${user.id})
+    `;
+    const [foreignApp] = await client`
+      INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
+      VALUES (${team.id}, ${project.id}, ${`Foreign App ${suffix}`}, 'apple', ${`dev.foreign.${suffix}`})
+      RETURNING id
+    `;
+    const apiKeySecret = `pulse_agent_${suffix.padEnd(8, "0").repeat(4)}`;
+    const [foreignKey] = await client`
+      INSERT INTO api_keys (secret, key_type, app_id, team_id, name, created_by, permissions)
+      VALUES (
+        ${apiKeySecret},
+        'agent',
+        ${null},
+        ${team.id},
+        'Foreign Agent Key',
+        ${user.id},
+        ${JSON.stringify(["events:read", "apps:read", "projects:read"])}::jsonb
+      )
+      RETURNING id
+    `;
+    // Real data inside the foreign app: `events` is partitioned by timestamp,
+    // so this uses now() to land in the partition the harness already created.
+    const [foreignEvent] = await client`
+      INSERT INTO events (app_id, session_id, level, message, timestamp)
+      VALUES (${foreignApp.id}, ${randomUUID()}, 'info', ${`Foreign event ${suffix}`}, now())
+      RETURNING id
+    `;
+    const [foreignFeedback] = await client`
+      INSERT INTO feedback (app_id, project_id, message)
+      VALUES (${foreignApp.id}, ${project.id}, ${`Foreign feedback ${suffix}`})
+      RETURNING id
+    `;
+    return {
+      teamId: team.id as string,
+      userId: user.id as string,
+      projectId: project.id as string,
+      appId: foreignApp.id as string,
+      apiKeyId: foreignKey.id as string,
+      apiKeySecret,
+      eventId: foreignEvent.id as string,
+      feedbackId: foreignFeedback.id as string,
+    };
+  } finally {
+    await client.end();
+  }
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   getTokenAndTeamId,
   createAgentKey,
   createUserAndGetToken,
+  createForeignTeam,
   TEST_CLIENT_KEY,
   TEST_AGENT_KEY,
   TEST_BUNDLE_ID,
@@ -567,33 +568,18 @@ describe("API key permission enforcement — events routes", () => {
 // ─── API key team boundary enforcement ───────────────────────────────
 
 describe("API key team boundary enforcement", () => {
-  let otherTeamToken: string;
   let otherTeamId: string;
   let otherProjectId: string;
   let otherAppId: string;
 
   beforeEach(async () => {
-    // Create a second user (gets their own team)
-    const other = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
-    otherTeamToken = other.token;
+    // Every allowed human now joins the one configured team, so the far side of
+    // this boundary is seeded directly in the database rather than produced by
+    // a second sign-in.
+    const other = await createForeignTeam();
     otherTeamId = other.teamId;
-
-    // Create a project and app in the other team
-    const projRes = await app.inject({
-      method: "POST",
-      url: "/v1/projects",
-      headers: { authorization: `Bearer ${otherTeamToken}` },
-      payload: { team_id: otherTeamId, name: "Other Project", slug: "other-project" },
-    });
-    otherProjectId = projRes.json().id;
-
-    const appRes = await app.inject({
-      method: "POST",
-      url: "/v1/apps",
-      headers: { authorization: `Bearer ${otherTeamToken}` },
-      payload: { name: "Other App", platform: "apple", bundle_id: "dev.other.app", project_id: otherProjectId },
-    });
-    otherAppId = appRes.json().id;
+    otherProjectId = other.projectId;
+    otherAppId = other.appId;
   });
 
   it("agent key cannot list other team's apps", async () => {
@@ -856,23 +842,23 @@ describe("JWT user permission bypass", () => {
     expect(writeRes.statusCode).toBe(403);
   });
 
-  it("JWT user cannot access other team's resources", async () => {
-    // Create second user (gets their own team)
-    const { token: outsiderToken } = await createUserAndGetToken(app, "outsider@pulse.pubky.org", "Outsider");
+  it("JWT user cannot access another team's resources", async () => {
+    const { token } = await getTokenAndTeamId(app);
+    const foreign = await createForeignTeam();
 
-    // Cannot get test team's project
+    // Cannot get the other team's project
     const projRes = await app.inject({
       method: "GET",
-      url: `/v1/projects/${testData.projectId}`,
-      headers: { authorization: `Bearer ${outsiderToken}` },
+      url: `/v1/projects/${foreign.projectId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
     expect(projRes.statusCode).toBe(404);
 
-    // Cannot delete test team's app
+    // Cannot delete the other team's app
     const delRes = await app.inject({
       method: "DELETE",
-      url: `/v1/apps/${testData.appId}`,
-      headers: { authorization: `Bearer ${outsiderToken}` },
+      url: `/v1/apps/${foreign.appId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
     expect(delRes.statusCode).toBe(404);
   });
@@ -1071,16 +1057,13 @@ describe("PATCH /v1/auth/keys/:id", () => {
   });
 
   it("returns 404 for key belonging to another team", async () => {
-    const { token, teamId } = await getTokenAndTeamId(app);
-    const { keyId } = await createKeyAndGetId(token, teamId);
-
-    // Create another user (different team)
-    const { token: outsiderToken } = await createUserAndGetToken(app, "outsider@pulse.pubky.org", "Outsider");
+    const { token } = await getTokenAndTeamId(app);
+    const foreign = await createForeignTeam();
 
     const res = await app.inject({
       method: "PATCH",
-      url: `/v1/auth/keys/${keyId}`,
-      headers: { authorization: `Bearer ${outsiderToken}` },
+      url: `/v1/auth/keys/${foreign.apiKeyId}`,
+      headers: { authorization: `Bearer ${token}` },
       payload: { name: "Hijack" },
     });
 

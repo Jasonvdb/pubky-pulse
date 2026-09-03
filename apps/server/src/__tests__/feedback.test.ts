@@ -8,6 +8,7 @@ import {
   getTokenAndTeamId,
   createAgentKey,
   createUserAndGetToken,
+  createForeignTeam,
   addTeamMember,
   TEST_CLIENT_KEY,
   TEST_BUNDLE_ID,
@@ -511,15 +512,23 @@ describe("GET /v1/feedback (team-wide)", () => {
     expect(res.json().feedback).toHaveLength(0);
   });
 
-  it("a user outside the team cannot see feedback in that team", async () => {
-    await ingestFeedback({ message: "private" });
-    const outsider = await createUserAndGetToken(app, "outsider@example.com", "Out");
+  it("omits feedback belonging to another team", async () => {
+    // Every allowed human is now a member of the one configured team, so the
+    // boundary is asserted from the inside out: the member's team-wide list
+    // returns their own team's feedback and nothing from the foreign team.
+    await ingestFeedback({ message: "ours" });
+    const foreign = await createForeignTeam();
+
     const res = await app.inject({
       method: "GET",
       url: `/v1/feedback`,
-      headers: { Authorization: `Bearer ${outsider.token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().feedback).toHaveLength(0);
+    const items = res.json().feedback;
+    expect(items).toHaveLength(1);
+    expect(items[0].message).toBe("ours");
+    expect(items.some((f: any) => f.id === foreign.feedbackId)).toBe(false);
+    expect(items.some((f: any) => f.project_id === foreign.projectId)).toBe(false);
   });
 });

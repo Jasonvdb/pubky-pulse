@@ -6,7 +6,8 @@ import { callApi, buildQuery } from "../helpers.js";
 export function registerAuditLogsTools(server: McpServer, app: FastifyInstance, agentKey: string): void {
   server.registerTool("list-audit-logs", {
     description:
-      "List audit log entries for a team. Records who performed what action on which resource. Requires audit_logs:read permission or admin role.",
+      "List audit log entries for a team. Records who performed what action on which resource. " +
+      "The team-wide trail is an oversight surface: it requires audit_logs:read permission AND that the human who created this key is the team owner.",
     inputSchema: {
       team_id: z.string().uuid().describe("The team ID"),
       resource_type: z.string().optional().describe("Filter by resource type (app, project, api_key, team, etc.)"),

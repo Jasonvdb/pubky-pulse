@@ -46,7 +46,8 @@ export function registerMetricsTools(server: McpServer, app: FastifyInstance, ag
 
   server.registerTool("create-metric", {
     description:
-      "Create a metric definition. The definition must exist before SDKs emit events for this slug. Slugs: lowercase, numbers, hyphens only. Requires metrics:write permission.",
+      "Create a metric definition. The definition must exist before SDKs emit events for this slug. Slugs: lowercase, numbers, hyphens only. " +
+      "Requires metrics:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       name: z.string().describe("Human-readable metric name"),
@@ -65,7 +66,7 @@ export function registerMetricsTools(server: McpServer, app: FastifyInstance, ag
   });
 
   server.registerTool("update-metric", {
-    description: "Update a metric definition. Requires metrics:write permission.",
+    description: "Update a metric definition. Requires metrics:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       slug: z.string().describe("Metric slug"),
@@ -84,7 +85,9 @@ export function registerMetricsTools(server: McpServer, app: FastifyInstance, ag
   });
 
   server.registerTool("delete-metric", {
-    description: "Soft-delete a metric definition. Requires metrics:write permission.",
+    description:
+      "Soft-delete a metric definition. Agent keys ARE allowed to delete metric definitions. " +
+      "Requires metrics:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       slug: z.string().describe("Metric slug to delete"),

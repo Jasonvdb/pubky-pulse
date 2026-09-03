@@ -36,7 +36,10 @@ export function registerFeedbackTools(server: McpServer, app: FastifyInstance, a
   });
 
   server.registerTool("update-feedback-status", {
-    description: "Update the status of a feedback submission. Statuses: new → in_review → addressed → dismissed (any transition is allowed).",
+    description:
+      "Update the status of a feedback submission. Statuses: new → in_review → addressed → dismissed (any transition is allowed). " +
+      "Agent keys ARE allowed to re-triage feedback: requires feedback:write permission AND that the human who created this key currently owns the project. " +
+      "Deleting a feedback item is human-only and has no MCP tool — use `dismissed` for 'not actionable'.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       feedback_id: z.string().uuid().describe("The feedback ID"),
@@ -51,7 +54,9 @@ export function registerFeedbackTools(server: McpServer, app: FastifyInstance, a
   });
 
   server.registerTool("add-feedback-comment", {
-    description: "Add a comment to a feedback submission. Use this to log investigations, link to issues, or document why you marked it addressed/dismissed.",
+    description:
+      "Add a comment to a feedback submission. Use this to log investigations, link to issues, or document why you marked it addressed/dismissed. " +
+      "Commenting is the one exception to project ownership: feedback:write on a readable project is enough, even when this key's creator does not own it. The comment is authored by this exact key.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       feedback_id: z.string().uuid().describe("The feedback ID"),

@@ -201,8 +201,8 @@ export async function resolveProjectAccess(
 /**
  * Decide an ordinary project write against already-resolved access.
  *
- * Returns `null` when the write is allowed, mirroring `assertTeamRole`'s
- * "error or null" convention. Every refusal here is a `403`: the caller has
+ * Returns `null` when the write is allowed and an `AccessDenial` describing the
+ * refusal when it is not. Every refusal here is a `403`: the caller has
  * already proven a valid identity and can see the project, they simply lack
  * the authority for this operation. Absent or invalid credentials never reach
  * this function — those are `401`s from the auth middleware.

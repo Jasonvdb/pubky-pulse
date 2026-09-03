@@ -8,11 +8,50 @@ You are connected via MCP using an **agent key** (\`pulse_agent_...\`). Agent ke
 
 Pubky Pulse organises resources in a **Team → Project → Apps** hierarchy:
 
-- **Team** — the top-level account. All resources (projects, apps, keys) are team-scoped. Use \`whoami\` to see your team and permissions.
+- **Team** — the deployment's single configured team. Every allowed user belongs to it, and all resources (projects, apps, keys) are team-scoped. Use \`whoami\` to see your team and permissions.
 - **Project** — groups related apps under one product (e.g., "MyApp" project). Metrics and funnels are defined at the project level so they span all apps in the project. Each project has configurable data retention policies for events (default: 120 days), metrics (default: 365 days), and funnels (default: 365 days).
 - **App** — represents a single deployable artifact. Each app has a \`platform\` (\`apple\`, \`android\`, \`web\`, \`backend\`) and, for non-backend platforms, a \`bundle_id\`. Creating an app auto-generates a \`client_secret\` for SDK use.
 
 Projects group apps cross-platform: a web front-end, a mobile app, and their backend API can share the same project, enabling unified funnel and metric analysis across all of them.
+
+## Access Model
+
+Your agent key was created by a person. **Reads are wide, writes are narrow**, and the difference is that person's project ownership:
+
+- **Reads** span every project in the configured team, for each read permission your key holds. There is nothing to unlock per project — if \`list-projects\` shows it, you can read it.
+- **Writes** additionally require your key's **creator** to currently own the target project. Ownership lives in a per-project owner list, not in a team role.
+
+Authorization for a write is an **intersection, never a union** — every one of these must hold:
+
+\`\`\`text
+allowed = key is active
+       AND key has the route's explicit permission
+       AND creator is an active team member on an allowed email domain
+       AND creator currently owns the target project
+       AND the operation is agent-supported
+\`\`\`
+
+Holding \`projects:write\` does not by itself let you write to a project; owning a project does not by itself substitute for the permission. A refusal is a \`403\` with the reason in the message (\`Missing permission: ...\` vs \`Requires project ownership\`), so read the error rather than retrying blindly.
+
+**Ownership is re-read on every request.** When a human adds your creator to a project — or removes them — the very next tool call reflects it. The key is never recreated, re-issued, or reconnected for an ownership change to take effect.
+
+**\`create-project\` makes your key's creator the project's first owner**, atomically with the project row. The key itself never owns anything: a key is not a person.
+
+**Human-only operations** — these return \`403\` for any agent key, even one whose creator owns the project and whose permissions are complete:
+
+- changing a project's owner list (add/remove owners);
+- deleting a project, an app, a feedback item, a questionnaire, a questionnaire response, or an attachment;
+- deleting a comment written by anyone other than this exact key.
+
+**Agent-supported writes** — allowed with ownership plus the right permission:
+
+- creating and updating projects, apps, metric and funnel definitions, and questionnaires;
+- deleting metric and funnel definitions;
+- merging issues and changing issue / feedback / questionnaire-response status;
+- triggering and cancelling project-scoped jobs;
+- creating comments, and editing or deleting comments **this exact key** authored (MCP exposes comment creation only — editing and deleting a comment go through the REST API or the dashboard).
+
+**Comments are the one exception to the ownership rule.** Any team member — and any agent key whose creator is one — may comment on any project they can read, so long as the key holds the route's write permission (\`issues:write\`, \`feedback:write\`, \`questionnaires:write\`). The exception replaces *only* the ownership check: authentication, containment and permission still apply. Comment authorship is bound to the exact key, so one agent key cannot edit or delete another key's comment, or its creator's own human comment, even under the same creator.
 
 ## Discovering IDs
 
@@ -127,10 +166,10 @@ To fully investigate an issue, follow this workflow:
 ### Feedback
 Free-text user feedback. Two ingest paths: mobile apps via the Swift and Android SDKs (\`PulseFeedbackView\` / \`Pulse.sendFeedback\`), and server handlers via the Node SDK (\`Pulse.sendFeedback\`) — use the Node path when a team collects feedback through their own frontend (form, chat widget, support page) and wants it forwarded into Pubky Pulse. Each feedback row captures \`message\`, optional \`submitter_name\` and \`submitter_email\`, plus the session, user, app version, device, environment, and country — automatically on mobile, caller-supplied on Node.
 
-- **Status lifecycle** — free transitions between \`new\`, \`in_review\`, \`addressed\`, \`dismissed\`. No forced order; \`dismissed\` is the "not actionable" state.
-- **Comments** — investigation notes from users (\`👤\`) and agents (\`🕶️\`), mirror the issue-comment model.
+- **Status lifecycle** — free transitions between \`new\`, \`in_review\`, \`addressed\`, \`dismissed\`. No forced order; \`dismissed\` is the "not actionable" state. Changing status needs \`feedback:write\` **and** your creator's ownership of the project.
+- **Comments** — investigation notes from users (\`👤\`) and agents (\`🕶️\`), mirror the issue-comment model. Commenting is the ownership exception: any reader with \`feedback:write\` may comment.
 - **Session link** — \`session_id\` on the feedback row maps to the full event stream; pass it to \`investigate-event\` with any event from that session to reconstruct the breadcrumb timeline around the complaint.
-- **Delete** — user-only. MCP cannot delete feedback by design: use \`update-feedback-status → dismissed\` for "not actionable" instead.
+- **Delete** — human-only, and there is no MCP tool for it by design: use \`update-feedback-status → dismissed\` for "not actionable" instead.
 
 Typical workflow: \`list-feedback\` filtered to \`status: "new"\` → \`get-feedback\` to read the message and linked session → \`investigate-event\` on an event from that session to understand what the user was doing → \`add-feedback-comment\` with root cause or a cross-link to a related issue → \`update-feedback-status\` to \`in_review\` or \`addressed\`.
 
@@ -144,8 +183,8 @@ Structured multi-question surveys, complementary to free-text feedback. Each que
 - **One response per user per slug** — partial unique index drives the race-safe upsert; duplicate completed submission returns 409 \`already_responded\`. Drafts can resume any number of times until completion.
 - **Schema versioning** — none in V1. Edits to a questionnaire's \`schema\` apply going forward; submitted responses keep their captured \`schema_snapshot\`. Drafts render against the live schema until completion — at submit time, answers whose question id is no longer in the schema are pruned.
 - **Status lifecycle** — \`draft\` (unsubmitted) → on completion → \`new\` → \`in_review\` → \`addressed\` / \`dismissed\` (free transitions after submission).
-- **Comments** — same model as feedback comments. Author-only edit, author-or-admin delete.
-- **Delete** — \`delete-questionnaire\` is user-only (agent keys get 403). Existing responses are preserved.
+- **Comments** — same model as feedback comments. Editing is author-only, always. Deleting is the author, or a human project owner moderating someone else's comment — an agent key never moderates, whoever created it.
+- **Delete** — \`delete-questionnaire\` and deleting a response are human-only (agent keys get \`403\`). Existing responses are preserved.
 
 Typical workflow: \`create-questionnaire\` with a slug + schema → wait for SDK responses → \`get-questionnaire-analytics\` for the rolled-up distribution per question (drafts included by default to show drop-off) → \`list-questionnaire-responses\` to drill into individual answers → \`add-questionnaire-response-comment\` to flag interesting feedback for teammates.
 
@@ -183,7 +222,7 @@ Aggregation runs every hour at \`:05\` UTC (re-aggregates the trailing 3 hours) 
 Asynchronous server-side tasks with progress tracking and optional email notifications. Used for long-running operations like bulk syncs. Only one instance of each job type (per project) can run at a time — duplicates return an error.
 
 ### Notifications
-Pubky Pulse has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app and email (Resend). New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Verification codes and team invitations stay transactional (sent directly via EmailService) because their recipients may not yet be users. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`).
+Pubky Pulse has a unified, multi-channel notification system: each user-facing event (new feedback, new/regressed issues, manual job completion) writes a row to the user's inbox \`notifications\` table and fans out to whichever channels the user has enabled — in-app and email (Resend). New channels (Telegram, Slack, etc.) plug in as new \`ChannelAdapter\`s without producer changes. Per-user preferences live under \`users.preferences.notifications.types\` and are merged into \`PATCH /v1/auth/me\`. Sign-in verification codes stay transactional (sent directly via EmailService) because their recipient may not yet be a user; there is no invite flow to email, since access is granted by configured email domain. **Notifications are user-scoped, not team-scoped, so they do not have MCP tools** — humans read them in the web dashboard (\`/dashboard/notifications\`).
 
 **Issue notification types** — there are two:
 - \`issue.new\` fires from \`issue_scan\` at the end of every hourly run, with one alert per team summarizing all production issues that were just created or regressed. Defaults: in_app on, email off. Bypasses any cadence throttle, so the alert lands within ~5 min of detection.
@@ -198,21 +237,21 @@ Every mutation (create, update, delete) on resources is recorded in audit logs w
 - \`whoami\` — Check identity, team, and permissions
 
 ### Projects
-- \`list-projects\` — List all projects (optional \`team_id\` filter)
-- \`get-project\` — Get project by ID with nested apps and retention policies
-- \`create-project\` — Create project (needs \`projects:write\`): \`team_id\`, \`name\`, \`slug\`, optional \`retention_days_events\`, \`retention_days_metrics\`, \`retention_days_funnels\`
+- \`list-projects\` — List every project in the team you can read (optional \`team_id\` filter). Each row carries \`owners\` and your creator's \`access_level\` (\`owner\` | \`viewer\`) — check it before attempting a write
+- \`get-project\` — Get project by ID with nested apps, retention policies, \`owners\` and \`access_level\`
+- \`create-project\` — Create project (needs \`projects:write\`; your key's creator becomes its first owner): \`team_id\`, \`name\`, \`slug\`, optional \`retention_days_events\`, \`retention_days_metrics\`, \`retention_days_funnels\`
   - **Naming (strict)**: project names MUST be the bare product name only — e.g. "Lofi". Never include a platform suffix ("Lofi iOS", "Lofi Backend") on the project itself; suffixes belong on apps within the project.
-- \`update-project\` — Update project name, display color, or retention policies (needs \`projects:write\`). Set retention to \`null\` to reset to defaults. \`color\` is \`#RRGGBB\` hex — auto-assigned on create, overridable here.
+- \`update-project\` — Update project name, display color, or retention policies (needs \`projects:write\` **and** your creator's ownership of this project). Set retention to \`null\` to reset to defaults. \`color\` is \`#RRGGBB\` hex — auto-assigned on create, overridable here.
 
 ### Apps
 - \`list-apps\` — List all apps (optional \`team_id\` filter)
 - \`get-app\` — Get app by ID (includes \`client_secret\`)
-- \`create-app\` — Create app (needs \`apps:write\`): \`name\`, \`platform\`, \`project_id\`, optional \`bundle_id\`
+- \`create-app\` — Create app (needs \`apps:write\` **and** ownership of \`project_id\`): \`name\`, \`platform\`, \`project_id\`, optional \`bundle_id\`
   - Platforms: \`apple\`, \`android\`, \`web\`, \`backend\`
   - \`bundle_id\` required for non-backend, immutable after creation
   - Returns \`client_secret\` for SDK configuration
   - **Naming (strict)**: app names MUST always be \`<project name> <platform>\` — e.g. "Lofi iOS", "Lofi Android", "Lofi Web", "Lofi Backend". Never omit the platform suffix, even if the project name seems to imply a platform.
-- \`update-app\` — Update app name (needs \`apps:write\`)
+- \`update-app\` — Update app name (needs \`apps:write\` **and** ownership of the app's project). Deleting an app is human-only and has no MCP tool
 - \`list-app-users\` — List users for an app (search, anonymous filter, \`data_mode\` dev/prod filter, pagination). A user's dev/prod flag is derived from their client (non-backend) events, last-write-wins; \`data_mode\` defaults to \`production\`.
 - \`list-user-locales\` — Locale demand for deciding where to localize next. Returns \`by_locale\` (users grouped by their **wanted** language — device \`Locale.preferredLanguages.first\`, e.g. \`fr-FR\`, \`pt-BR\` — each with a \`shipped\` flag) and \`by_country\` (works for every user today, no SDK upgrade needed). Narrow with \`project_id\` and/or \`app_id\` to populate the \`shipped\`/gap flags (\`shipped: false\` = demand for a language the app doesn't ship yet); \`team_id\` ⊥ \`project_id\` ⊥ \`app_id\`. \`shipped\` is \`null\` (no flag) across multiple apps. The language signal fills in as users upgrade to the SDK that reports preferred language; until then lean on the country breakdown.
 
@@ -263,7 +302,7 @@ Every app response includes \`latest_app_version\` and \`latest_app_version_upda
 - \`get-questionnaire\` — Get definition + schema + response_count
 - \`create-questionnaire\` — Create with slug (immutable) + schema
 - \`update-questionnaire\` — Patch name, description, schema, app_id, is_active
-- \`delete-questionnaire\` — ⚠️ User-only (agent keys 403); responses preserved
+- \`delete-questionnaire\` — ⚠️ Human-only (agent keys 403); responses preserved
 - \`list-questionnaire-responses\` — List responses with filters + pagination
 - \`get-questionnaire-response\` — Read individual response with comments + schema_snapshot
 - \`update-questionnaire-response-status\` — Triage state
@@ -273,7 +312,7 @@ Every app response includes \`latest_app_version\` and \`latest_app_version_upda
 ### Attachments
 - \`list-attachments\` — filter by event, issue, or project
 - \`get-attachment\` — metadata + 60-second signed download URL
-- \`delete-attachment\` — soft-delete once no longer useful (frees quota)
+- \`delete-attachment\` — ⚠️ Human-only (agent keys 403). Humans soft-delete once the file is no longer useful, freeing quota
 - \`get-project-attachment-usage\` — check quota headroom before recommending re-runs
 
 ### Time-Series Rollups
@@ -282,15 +321,15 @@ Every app response includes \`latest_app_version\` and \`latest_app_version_upda
 ### Jobs
 - \`list-jobs\` — List job runs for a team (filter by type, status, project, date)
 - \`get-job\` — Get job details with progress
-- \`trigger-job\` — Trigger a job (needs \`jobs:write\`): \`team_id\`, \`job_type\`, optional \`project_id\`, \`params\`, \`notify\`
-- \`cancel-job\` — Cancel a running job (cooperative cancellation)
+- \`trigger-job\` — Trigger a job (needs \`jobs:write\` **and** ownership of the target project): \`team_id\`, \`job_type\`, \`project_id\` (every triggerable job is project-scoped), optional \`params\`, \`notify\`
+- \`cancel-job\` — Cancel a running job (cooperative cancellation; same permission and ownership as triggering it)
 
 ### Audit Logs
-- \`list-audit-logs\` — Query audit trail (needs \`audit_logs:read\`): filter by resource_type, actor, action, date
+- \`list-audit-logs\` — Query the team-wide audit trail (needs \`audit_logs:read\` **and** a creator who is the team owner — it spans every project, so it is an oversight surface): filter by resource_type, actor, action, date
 
 ## Permissions
 
-Your agent key has specific permissions. Common permission sets:
+Your agent key has specific permissions. They are **necessary but not sufficient** for a write: a write also needs your key's creator to own the target project (see **Access Model** above). Common permission sets:
 
 | Permission | Grants |
 |---|---|
@@ -310,7 +349,11 @@ Your agent key has specific permissions. Common permission sets:
 | \`audit_logs:read\` | list-audit-logs |
 | \`users:write\` | Set user properties |
 
-If a tool returns a permissions error, the agent key is missing the required permission.
+Three different \`403\`s are worth telling apart:
+
+- \`Missing permission: <permission>\` — the key was never granted that permission. A human has to update the key.
+- \`Requires project ownership\` — the permission is there, but your key's creator does not own that project. A human project owner adds them to the owner list; the next call then succeeds, with no change to the key.
+- \`This operation requires a user session\` — the operation is human-only (see **Access Model**). No permission or ownership change will unlock it; ask a human to do it.
 
 ## Typical Workflows
 
@@ -357,6 +400,7 @@ Pubky Pulse instruments web, backend and mobile apps. Three SDKs ship today and 
 
 - \`bundle_id\` is **immutable after creation** — to change it, an owner must delete and recreate the app from the dashboard; there is no \`delete-app\` MCP tool. Backend apps have no bundle_id.
 - Agent keys are for reading/managing. Client keys are for SDK event ingestion.
+- Reads reach every project in the team; writes reach only the projects your key's creator owns, re-checked on every request. See **Access Model**.
 - Metric and funnel definitions must exist on the server before the SDK emits events for that slug.
 - Cursor-based pagination: use the \`cursor\` from the response to fetch the next page. \`has_more\` indicates more results.
 - All write tools that modify resources are recorded in the audit log.

@@ -6,7 +6,8 @@ import { callApi, buildQuery } from "../helpers.js";
 
 export function registerAppsTools(server: McpServer, app: FastifyInstance, agentKey: string): void {
   server.registerTool("list-apps", {
-    description: "List all apps accessible to this agent. Optionally filter by team_id.",
+    description:
+      "List every app in the team this agent key can read — reads are team-wide, not limited to the projects its creator owns. Optionally filter by team_id.",
     inputSchema: {
       team_id: z.string().uuid().optional().describe("Filter by team ID"),
     },
@@ -28,7 +29,8 @@ export function registerAppsTools(server: McpServer, app: FastifyInstance, agent
 
   server.registerTool("create-app", {
     description:
-      "Create a new app under a project. Returns a client_secret for SDK use. Platforms: apple, android, web, backend. bundle_id is required for non-backend platforms and is immutable after creation. Requires apps:write permission.",
+      "Create a new app under a project. Returns a client_secret for SDK use. Platforms: apple, android, web, backend. bundle_id is required for non-backend platforms and is immutable after creation. " +
+      "Requires apps:write permission AND that the human who created this key currently owns the parent project.",
     inputSchema: {
       name: z.string().describe("App name"),
       platform: z.enum(APP_PLATFORMS).describe("Target platform"),
@@ -44,7 +46,9 @@ export function registerAppsTools(server: McpServer, app: FastifyInstance, agent
   });
 
   server.registerTool("update-app", {
-    description: "Update an app's name. Requires apps:write permission.",
+    description:
+      "Update an app's name. Requires apps:write permission AND that the human who created this key currently owns the app's project. " +
+      "Deleting an app is human-only and has no MCP tool.",
     inputSchema: {
       app_id: z.string().uuid().describe("The app ID"),
       name: z.string().describe("New app name"),

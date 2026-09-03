@@ -36,7 +36,9 @@ export function registerJobsTools(server: McpServer, app: FastifyInstance, agent
 
   server.registerTool("trigger-job", {
     description:
-      "Trigger a background job. Only one instance per job type (per project) can be running at a time. Requires jobs:write permission.",
+      "Trigger a background job. Only one instance per job type (per project) can be running at a time. " +
+      "Every triggerable job is project-scoped, so `project_id` is required and system jobs cannot be triggered through the API at all. " +
+      "Requires jobs:write permission AND that the human who created this key currently owns that project.",
     inputSchema: {
       team_id: z.string().uuid().describe("The team ID"),
       job_type: z.string().describe("Job type (e.g., stats_aggregate_daily)"),
@@ -53,7 +55,9 @@ export function registerJobsTools(server: McpServer, app: FastifyInstance, agent
   });
 
   server.registerTool("cancel-job", {
-    description: "Cancel a running job. Only works on running jobs. Cancellation is cooperative.",
+    description:
+      "Cancel a running job. Only works on running jobs. Cancellation is cooperative. " +
+      "Requires jobs:write permission AND the same project ownership that triggering the job requires.",
     inputSchema: {
       run_id: z.string().uuid().describe("The job run ID to cancel"),
     },

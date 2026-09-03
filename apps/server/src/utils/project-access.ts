@@ -5,9 +5,11 @@ import {
   eventAttachments,
   feedback,
   feedbackComments,
+  funnelDefinitions,
   issueComments,
   issues,
   jobRuns,
+  metricDefinitions,
   projectOwners,
   projects,
   questionnaireResponseComments,
@@ -304,10 +306,18 @@ function notFound(reply: FastifyReply, message: string): null {
   return null;
 }
 
-/** app -> project */
+/**
+ * app -> project
+ *
+ * `projectId` is optional because the app routes address an app directly
+ * (`/apps/:id`) with no project in the URL: there, containment means resolving
+ * the app's *own* project and authorizing against that, so a caller cannot
+ * reach an app in a project they do not own. Callers that do name a project in
+ * the URL pass it and additionally pin the app to it.
+ */
 export async function resolveAppInProject(
   fastify: FastifyInstance,
-  params: { projectId: string; appId: string },
+  params: { projectId?: string; appId: string },
   auth: AuthContext,
   reply: FastifyReply,
 ): Promise<ProjectChildAccess<typeof apps.$inferSelect> | null> {
@@ -325,7 +335,7 @@ export async function resolveAppInProject(
     .where(
       and(
         eq(apps.id, params.appId),
-        eq(apps.project_id, params.projectId),
+        params.projectId ? eq(apps.project_id, params.projectId) : undefined,
         isNull(apps.deleted_at),
         projectVisibleTo(auth),
       ),
@@ -333,6 +343,76 @@ export async function resolveAppInProject(
     .limit(1);
 
   if (!row) return notFound(reply, "App not found");
+  return contained(auth, actorUserId, row);
+}
+
+/**
+ * metric definition -> project
+ *
+ * Addressed by (project, slug) rather than by id, so the URL already pins the
+ * definition to its project. The resolver exists for the *ownership* half: the
+ * previous inline join proved team membership only, which is a read predicate.
+ */
+export async function resolveMetricDefinitionInProject(
+  fastify: FastifyInstance,
+  params: { projectId: string; slug: string },
+  auth: AuthContext,
+  reply: FastifyReply,
+): Promise<ProjectChildAccess<typeof metricDefinitions.$inferSelect> | null> {
+  const actorUserId = resolveActorUserId(auth);
+  const [row] = await fastify.db
+    .select({
+      resource: metricDefinitions,
+      project_id: projects.id,
+      team_id: projects.team_id,
+      owner_user_id: projectOwners.user_id,
+    })
+    .from(metricDefinitions)
+    .innerJoin(projects, eq(projects.id, metricDefinitions.project_id))
+    .leftJoin(projectOwners, ownerJoinCondition(actorUserId))
+    .where(
+      and(
+        eq(metricDefinitions.project_id, params.projectId),
+        eq(metricDefinitions.slug, params.slug),
+        isNull(metricDefinitions.deleted_at),
+        projectVisibleTo(auth),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return notFound(reply, "Metric not found");
+  return contained(auth, actorUserId, row);
+}
+
+/** funnel definition -> project */
+export async function resolveFunnelDefinitionInProject(
+  fastify: FastifyInstance,
+  params: { projectId: string; slug: string },
+  auth: AuthContext,
+  reply: FastifyReply,
+): Promise<ProjectChildAccess<typeof funnelDefinitions.$inferSelect> | null> {
+  const actorUserId = resolveActorUserId(auth);
+  const [row] = await fastify.db
+    .select({
+      resource: funnelDefinitions,
+      project_id: projects.id,
+      team_id: projects.team_id,
+      owner_user_id: projectOwners.user_id,
+    })
+    .from(funnelDefinitions)
+    .innerJoin(projects, eq(projects.id, funnelDefinitions.project_id))
+    .leftJoin(projectOwners, ownerJoinCondition(actorUserId))
+    .where(
+      and(
+        eq(funnelDefinitions.project_id, params.projectId),
+        eq(funnelDefinitions.slug, params.slug),
+        isNull(funnelDefinitions.deleted_at),
+        projectVisibleTo(auth),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return notFound(reply, "Funnel not found");
   return contained(auth, actorUserId, row);
 }
 

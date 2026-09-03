@@ -9,7 +9,7 @@ import {
 import type { SetUserPropertiesRequest, SetUserPropertiesResponse } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { mergeUserProperties } from "../utils/user-properties.js";
-import { resolveProjectIdFromApp } from "../utils/project.js";
+import { resolveAccessibleProjectIdFromApp } from "../utils/project.js";
 
 export async function userPropertiesRoutes(app: FastifyInstance) {
   app.post<{ Body: SetUserPropertiesRequest }>(
@@ -50,12 +50,33 @@ export async function userPropertiesRoutes(app: FastifyInstance) {
         }
       }
 
-      const app_id = auth.type === "api_key" ? auth.app_id : null;
+      // This route is SDK ingestion, not management: the target app comes from
+      // the credential itself and never from the request, and a client or
+      // import key deliberately carries no human project owner (handoff §2), so
+      // it must keep working without one.
+      //
+      // Only those two key types belong on this data plane. An agent key acts
+      // with its creator's authority, and there is no project owner check that
+      // could be applied here — the app is not named in the request — so an
+      // agent is refused outright rather than silently granted a project write.
+      // A user session is refused for the same reason. This matches the
+      // documented contract ("client keys only").
+      if (auth.type !== "api_key" || (auth.key_type !== "client" && auth.key_type !== "import")) {
+        return reply
+          .code(403)
+          .send({ error: "This endpoint requires a client or import key" });
+      }
+
+      const app_id = auth.app_id;
       if (!app_id) {
         return reply.code(400).send({ error: "Client key must be scoped to an app" });
       }
 
-      const project_id = await resolveProjectIdFromApp(app, app_id);
+      // Predicated resolver: the app must be active and its project active and
+      // inside a team this credential can reach. The unpredicated lookup this
+      // replaces resolved any app in any team, so an app id that ever reached
+      // it from elsewhere would hand back that project's id.
+      const project_id = await resolveAccessibleProjectIdFromApp(app, app_id, auth);
       if (!project_id) {
         return reply.code(400).send({ error: "App not found" });
       }

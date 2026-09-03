@@ -1,11 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, asc } from "drizzle-orm";
-import { apps, projects, apiKeys } from "@pubky-pulse/db";
+import { apps, apiKeys } from "@pubky-pulse/db";
 import type { CreateAppRequest, UpdateAppRequest } from "@pubky-pulse/shared";
 import { APP_PLATFORMS, DEFAULT_API_KEY_PERMISSIONS, generateApiKeySecret } from "@pubky-pulse/shared";
-import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
+import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { serializeApp, getClientSecret, getClientSecretMap } from "../utils/serialize.js";
 import { logAuditEvent } from "../utils/audit.js";
+import {
+  applyProjectWrite,
+  enforceProjectWrite,
+  resolveAppInProject,
+} from "../utils/project-access.js";
 
 export async function appsRoutes(app: FastifyInstance) {
   // List apps for the authenticated user's teams
@@ -100,21 +105,17 @@ export async function appsRoutes(app: FastifyInstance) {
           .send({ error: "bundle_id is required for non-backend platforms" });
       }
 
-      // Look up project and verify team membership
-      const [project] = await app.db
-        .select({ id: projects.id, team_id: projects.team_id })
-        .from(projects)
-        .where(and(eq(projects.id, project_id), isNull(projects.deleted_at)))
-        .limit(1);
-
-      if (!project || !hasTeamAccess(auth, project.team_id)) {
-        return reply.code(404).send({ error: "Project not found" });
-      }
-
-      const createRoleError = assertTeamRole(auth, project.team_id, "admin");
-      if (createRoleError) {
-        return reply.code(403).send({ error: createRoleError });
-      }
+      // An app is project configuration, so creating one is an ordinary
+      // project write: the project's owner list decides, not team role. This
+      // sends 404 for a project the caller cannot see — a cross-team project id
+      // stays indistinguishable from a missing one — and 403 when they can see
+      // it but do not own it. For an agent key it additionally requires
+      // `apps:write` and its creator's current ownership.
+      const access = await enforceProjectWrite(app, project_id, auth, reply, {
+        permission: "apps:write",
+      });
+      if (!access) return;
+      const project = access.project;
 
       const clientSecret = generateApiKeySecret("client");
 
@@ -170,26 +171,14 @@ export async function appsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "At least one field to update is required" });
       }
 
-      const [existing] = await app.db
-        .select({ id: apps.id, team_id: apps.team_id, name: apps.name })
-        .from(apps)
-        .where(
-          and(
-            eq(apps.id, id),
-            inArray(apps.team_id, getAuthTeamIds(auth)),
-            isNull(apps.deleted_at)
-          )
-        )
-        .limit(1);
-
-      if (!existing) {
-        return reply.code(404).send({ error: "App not found" });
-      }
-
-      const updateRoleError = assertTeamRole(auth, existing.team_id, "admin");
-      if (updateRoleError) {
-        return reply.code(403).send({ error: updateRoleError });
-      }
+      // The app is resolved together with the project that contains it, so
+      // authorization is applied to that project rather than to the caller's
+      // team: an app id from a project the caller does not own cannot be
+      // updated by substituting it here.
+      const contained = await resolveAppInProject(app, { appId: id }, auth, reply);
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "apps:write" })) return;
+      const existing = contained.resource;
 
       const [updated] = await app.db
         .update(apps)
@@ -222,26 +211,20 @@ export async function appsRoutes(app: FastifyInstance) {
 
       const { id } = request.params;
 
-      const [existing] = await app.db
-        .select({ id: apps.id, team_id: apps.team_id })
-        .from(apps)
-        .where(
-          and(
-            eq(apps.id, id),
-            inArray(apps.team_id, getAuthTeamIds(auth)),
-            isNull(apps.deleted_at)
-          )
-        )
-        .limit(1);
-
-      if (!existing) {
-        return reply.code(404).send({ error: "App not found" });
+      // Deleting an app is one of the deliberately human-only destructive
+      // operations (handoff §2): an agent key never reaches here, even when its
+      // creator owns the project and it carries `apps:write`.
+      const contained = await resolveAppInProject(app, { appId: id }, auth, reply);
+      if (!contained) return;
+      if (
+        !applyProjectWrite(contained, auth, reply, {
+          permission: "apps:write",
+          humanOnly: true,
+        })
+      ) {
+        return;
       }
-
-      const deleteRoleError = assertTeamRole(auth, existing.team_id, "admin");
-      if (deleteRoleError) {
-        return reply.code(403).send({ error: deleteRoleError });
-      }
+      const existing = contained.resource;
 
       const now = new Date();
 

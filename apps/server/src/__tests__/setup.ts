@@ -126,9 +126,11 @@ export const testJobHandler: JobHandler = async (ctx, params) => {
 /**
  * @param opts.trustProxy mirrors the `TRUST_PROXY` deployment switch, so a suite
  *   can drive `X-Forwarded-For` the way the proxied production server sees it.
- *   Off by default, exactly as the server is off by default.
+ *   Takes the same shapes the switch resolves to: `false` (the default, exactly
+ *   as the server is off by default), `true`, or a comma-separated list of
+ *   trusted proxy addresses such as `"127.0.0.1,::1"`.
  */
-export async function buildApp(opts: { trustProxy?: boolean } = {}) {
+export async function buildApp(opts: { trustProxy?: boolean | string } = {}) {
   const app = Fastify({ logger: false, trustProxy: opts.trustProxy ?? false });
   const db = createDatabaseConnection(TEST_DB_URL);
 

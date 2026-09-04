@@ -74,13 +74,35 @@ export function parseCorsOrigins(raw: string | undefined): string[] {
 }
 
 /**
- * Whether to believe `X-Forwarded-For`. Off unless explicitly enabled, because
- * a server that trusts the header while directly reachable lets any caller
- * choose its own `request.ip` — and with it, its own rate-limit bucket.
+ * How much of `X-Forwarded-For` to believe. Off unless explicitly enabled,
+ * because a server that trusts the header while directly reachable lets any
+ * caller choose its own `request.ip` — and with it, its own rate-limit bucket.
  * Production terminates at Cloudflare, then nginx, then node on loopback.
+ *
+ * Prefer naming the proxy: any value that is not `true` or `false` is handed to
+ * Fastify as its comma-separated list of trusted addresses or CIDR ranges
+ * (`127.0.0.1,::1` for nginx on loopback, or the shorthand `loopback`). Fastify
+ * then walks the header from the right and stops at the first hop that is not
+ * on the list — the entry the trusted proxy itself appended. Plain `true`
+ * instead takes the leftmost entry, which is whatever the caller sent, so a
+ * caller can prepend an address and pick its own bucket.
+ *
+ * A hop count is rejected rather than passed through: Fastify's `trustProxy` is
+ * `boolean | string | string[] | function`, so a number reaches it as "trust
+ * nothing" rather than "trust N hops".
  */
-export function resolveTrustProxy(raw: string | undefined): boolean {
-  return (raw ?? "").trim().toLowerCase() === "true";
+export function resolveTrustProxy(raw: string | undefined): boolean | string {
+  const value = (raw ?? "").trim();
+  const lowered = value.toLowerCase();
+  if (lowered === "" || lowered === "false") return false;
+  if (lowered === "true") return true;
+  if (/^\d+$/.test(value)) {
+    throw new Error(
+      `TRUST_PROXY does not accept a hop count ("${value}"): Fastify reads a numeric value as "trust nothing". ` +
+        "Name the trusted proxy instead, e.g. TRUST_PROXY=127.0.0.1,::1 for nginx on loopback.",
+    );
+  }
+  return value;
 }
 
 const identity = resolveIdentityConfig(process.env);

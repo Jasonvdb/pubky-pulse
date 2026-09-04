@@ -15,7 +15,9 @@ import type { ChannelAdapter } from "./services/notifications/types.js";
 // `trustProxy` decides what `request.ip` means, and `request.ip` is half of a
 // client key's rate-limit bucket. Enabled only where a proxy really does
 // terminate in front of node (production: Cloudflare, then nginx, then
-// loopback) — see TRUST_PROXY in .env.example.
+// loopback), and preferably as the trusted proxy's address list rather than a
+// bare `true`, so the address is the one the proxy appended instead of the
+// leftmost entry the caller chose — see TRUST_PROXY in .env.example.
 const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
 // Database

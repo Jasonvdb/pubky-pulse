@@ -148,7 +148,7 @@ This applies to every SDK-facing route — `/v1/ingest`, `/v1/ingest/attachment`
 
 Requests with **no** `Origin` header pass untouched: native SDKs, backend SDKs, and `curl` never send one, and refusing them would break those platforms without making a copied web key any less usable. A web app whose `allowed_origins` is empty therefore accepts server-side callers but refuses every browser.
 
-Rate limiting for client keys buckets per key **and** caller IP, so one visitor of a busy site cannot exhaust the quota for everyone else. Behind a proxy, set `TRUST_PROXY=true` so the caller IP is read from `X-Forwarded-For`. `Retry-After` is exposed to browser script on a `429`.
+Rate limiting for client keys buckets per key **and** caller IP, so one visitor of a busy site cannot exhaust the quota for everyone else. Behind a proxy, set `TRUST_PROXY` to that proxy's addresses — `127.0.0.1,::1` for nginx on loopback — so the caller IP is read from the `X-Forwarded-For` entry the proxy appended rather than from the leftmost entry, which the caller writes. `Retry-After` is exposed to browser script on a `429`.
 
 ### Server-derived fields
 

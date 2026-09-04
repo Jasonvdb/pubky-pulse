@@ -30,8 +30,18 @@ import {
  */
 let app: FastifyInstance;
 
+/**
+ * The same server built the way a deployment should set `TRUST_PROXY`: the
+ * loopback addresses nginx proxies from, rather than a bare `true`. Fastify
+ * then walks `X-Forwarded-For` from the right and stops at the first untrusted
+ * hop — the entry nginx appended — instead of taking the leftmost entry, which
+ * the caller writes and could otherwise use to pick its own bucket.
+ */
+let namedProxyApp: FastifyInstance;
+
 beforeAll(async () => {
   app = await buildApp({ trustProxy: true });
+  namedProxyApp = await buildApp({ trustProxy: "127.0.0.1,::1" });
 });
 
 beforeEach(async () => {
@@ -46,6 +56,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await app.close();
+  await namedProxyApp.close();
 });
 
 async function clientKeyId(secret: string): Promise<string> {
@@ -90,13 +101,17 @@ async function drainBucket(keyId: string, ip: string): Promise<void> {
   expect(limited, "expected the bucket to drain within 200 calls").toBe(true);
 }
 
-function claim(ip: string) {
-  return app.inject({
+function claimOn(instance: FastifyInstance, forwardedFor: string) {
+  return instance.inject({
     method: "POST",
     url: "/v1/identity/claim",
-    headers: { authorization: `Bearer ${TEST_CLIENT_KEY}`, "x-forwarded-for": ip },
+    headers: { authorization: `Bearer ${TEST_CLIENT_KEY}`, "x-forwarded-for": forwardedFor },
     payload: { anonymous_id: "anon_request_layer", user_id: "user-request-layer" },
   });
+}
+
+function claim(ip: string) {
+  return claimOn(app, ip);
 }
 
 describe("rate limiting", () => {
@@ -137,6 +152,27 @@ describe("rate limiting", () => {
     });
 
     expect(res.statusCode).toBe(429);
+  });
+});
+
+describe("rate limiting with the trusted proxy named", () => {
+  it("keeps the bucket on the address the proxy appended, not one the caller prepended", async () => {
+    const keyId = await clientKeyId(TEST_CLIENT_KEY);
+    await drainBucket(keyId, "203.0.113.30");
+
+    // The caller prepends an address of its own choosing, hoping to be bucketed
+    // as 198.51.100.99. The rightmost entry is the one nginx wrote, so the
+    // drained bucket is still the one that answers.
+    const spoofed = await claimOn(namedProxyApp, "198.51.100.99, 203.0.113.30");
+    expect(spoofed.statusCode).toBe(429);
+  });
+
+  it("reads the rightmost entry, so a different proxy-seen address gets its own bucket", async () => {
+    const keyId = await clientKeyId(TEST_CLIENT_KEY);
+    await drainBucket(keyId, "203.0.113.30");
+
+    const other = await claimOn(namedProxyApp, "198.51.100.99, 198.51.100.40");
+    expect(other.statusCode).not.toBe(429);
   });
 });
 

@@ -151,16 +151,30 @@ describe("parseCorsOrigins", () => {
 });
 
 describe("resolveTrustProxy", () => {
-  it("is off unless the value is exactly true", () => {
+  it("is off when unset, empty or false", () => {
     expect(resolveTrustProxy(undefined)).toBe(false);
     expect(resolveTrustProxy("")).toBe(false);
+    expect(resolveTrustProxy("   ")).toBe(false);
     expect(resolveTrustProxy("false")).toBe(false);
-    expect(resolveTrustProxy("1")).toBe(false);
-    expect(resolveTrustProxy("yes")).toBe(false);
+    expect(resolveTrustProxy(" FALSE ")).toBe(false);
   });
 
   it("accepts true regardless of casing or surrounding whitespace", () => {
     expect(resolveTrustProxy("true")).toBe(true);
     expect(resolveTrustProxy(" TRUE ")).toBe(true);
+  });
+
+  it("passes a trusted address list through, trimmed and case-preserving", () => {
+    expect(resolveTrustProxy("127.0.0.1,::1")).toBe("127.0.0.1,::1");
+    expect(resolveTrustProxy("  10.0.0.0/8, 127.0.0.1  ")).toBe("10.0.0.0/8, 127.0.0.1");
+    expect(resolveTrustProxy("loopback")).toBe("loopback");
+  });
+
+  it("rejects a hop count, which Fastify would read as trust nothing", () => {
+    // Fastify types trustProxy as boolean | string | string[] | function, so a
+    // number silently means "trust no proxy" rather than "trust N hops".
+    expect(() => resolveTrustProxy("1")).toThrow(/hop count/);
+    expect(() => resolveTrustProxy(" 2 ")).toThrow(/127\.0\.0\.1,::1/);
+    expect(() => resolveTrustProxy("0")).toThrow(/TRUST_PROXY/);
   });
 });

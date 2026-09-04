@@ -1,7 +1,5 @@
 import { formatShortDate } from "@/lib/format-date";
 
-export const ENVIRONMENTS = ["ios", "ipados", "macos", "watchos", "android", "web", "backend"] as const;
-
 export const TIME_RANGES = [
   { label: "Last hour", value: "1h" },
   { label: "Last 24h", value: "24h" },

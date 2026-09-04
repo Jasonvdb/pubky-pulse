@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,7 @@ import {
 import { CopyButton } from "@/components/copy-button";
 import { api } from "@/lib/api";
 import { ProjectDot } from "@/lib/project-color";
+import { PLATFORM_OPTIONS, platformLabel } from "@/lib/platforms";
 import type {
   AppResponse,
   ProjectDetailResponse,
@@ -60,12 +62,26 @@ const DEFAULT_RETENTION_DAYS_EVENTS = 120;
 const DEFAULT_RETENTION_DAYS_METRICS = 365;
 const DEFAULT_RETENTION_DAYS_FUNNELS = 365;
 
-const PLATFORM_OPTIONS = [
-  { value: "apple", label: "🍎 Apple" },
-  { value: "android", label: "🤖 Android" },
-  { value: "web", label: "🌐 Web" },
-  { value: "backend", label: "☁️ Backend" },
-];
+/**
+ * A web app's `bundle_id` is a site identifier (`app.example.com`), not a
+ * reverse-DNS bundle, and only a web app carries browser origins. The form
+ * changes wording rather than growing a second form.
+ */
+function identifierLabel(platform: string): string {
+  return platform === "web" ? "Site identifier" : "Bundle ID";
+}
+
+function identifierPlaceholder(platform: string): string {
+  return platform === "web" ? "app.example.com" : "com.example.myapp";
+}
+
+/** One origin per line in the textarea; blank lines are ignored. */
+function parseOriginLines(value: string): string[] {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -96,6 +112,7 @@ export default function ProjectDetailPage() {
   const [appName, setAppName] = useState("");
   const [appPlatform, setAppPlatform] = useState("apple");
   const [appBundleId, setAppBundleId] = useState("");
+  const [appAllowedOrigins, setAppAllowedOrigins] = useState("");
   const [appError, setAppError] = useState("");
   const [appLoading, setAppLoading] = useState(false);
   const [newClientSecret, setNewClientSecret] = useState<string | null>(null);
@@ -147,11 +164,15 @@ export default function ProjectDetailPage() {
         name: appName,
         platform: appPlatform,
         ...(appPlatform !== "backend" ? { bundle_id: appBundleId } : {}),
+        ...(appPlatform === "web"
+          ? { allowed_origins: parseOriginLines(appAllowedOrigins) }
+          : {}),
         project_id: id,
       });
       setNewClientSecret(res.app.client_secret);
       setAppName("");
       setAppBundleId("");
+      setAppAllowedOrigins("");
       setAppPlatform("apple");
       setAppDialogOpen(false);
       mutate();
@@ -165,6 +186,7 @@ export default function ProjectDetailPage() {
   function resetAppDialog() {
     setAppName("");
     setAppBundleId("");
+    setAppAllowedOrigins("");
     setAppPlatform("apple");
     setAppError("");
   }
@@ -300,14 +322,30 @@ export default function ProjectDetailPage() {
               </div>
               {appPlatform !== "backend" && (
                 <div className="space-y-2">
-                  <Label htmlFor="app-bundle-id">Bundle ID</Label>
+                  <Label htmlFor="app-bundle-id">{identifierLabel(appPlatform)}</Label>
                   <Input
                     id="app-bundle-id"
-                    placeholder="com.example.myapp"
+                    placeholder={identifierPlaceholder(appPlatform)}
                     value={appBundleId}
                     onChange={(e) => setAppBundleId(e.target.value)}
                     required
                   />
+                </div>
+              )}
+              {appPlatform === "web" && (
+                <div className="space-y-2">
+                  <Label htmlFor="app-allowed-origins">Allowed origins</Label>
+                  <Textarea
+                    id="app-allowed-origins"
+                    placeholder={"https://app.example.com\nhttp://localhost:3000"}
+                    value={appAllowedOrigins}
+                    onChange={(e) => setAppAllowedOrigins(e.target.value)}
+                    className="font-mono text-xs min-h-[72px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    One origin per line. The browser SDK can only send from these,
+                    and you can add more later.
+                  </p>
                 </div>
               )}
               {appError && <p className="text-sm text-destructive">{appError}</p>}
@@ -651,6 +689,9 @@ function AppCard({
   const handleWriteFailure = useWriteFailureHandler();
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(app.name);
+  const [editingOrigins, setEditingOrigins] = useState(false);
+  const [origins, setOrigins] = useState(app.allowed_origins.join("\n"));
+  const [savingOrigins, setSavingOrigins] = useState(false);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -663,6 +704,23 @@ function AppCard({
       onChanged();
     } catch (err) {
       setError(await handleWriteFailure(err, "Failed to rename", onChanged));
+    }
+  }
+
+  // The whole list is replaced on save, which is what the PATCH expects: the
+  // textarea is the origin list, not a diff against it.
+  async function handleSaveOrigins(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingOrigins(true);
+    setError("");
+    try {
+      await api.patch(`/v1/apps/${app.id}`, { allowed_origins: parseOriginLines(origins) });
+      setEditingOrigins(false);
+      onChanged();
+    } catch (err) {
+      setError(await handleWriteFailure(err, "Failed to save origins", onChanged));
+    } finally {
+      setSavingOrigins(false);
     }
   }
 
@@ -718,12 +776,64 @@ function AppCard({
         {error && <p className="text-destructive">{error}</p>}
         <div className="flex justify-between">
           <span className="text-muted-foreground">Platform</span>
-          <span>{PLATFORM_OPTIONS.find((p) => p.value === app.platform)?.label ?? app.platform}</span>
+          <span>{platformLabel(app.platform)}</span>
         </div>
         {app.bundle_id && (
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Bundle ID</span>
+            <span className="text-muted-foreground">{identifierLabel(app.platform)}</span>
             <span className="font-mono text-xs">{app.bundle_id}</span>
+          </div>
+        )}
+        {app.platform === "web" && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Allowed origins</span>
+              {canWrite && !editingOrigins && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Edit allowed origins"
+                  onClick={() => { setOrigins(app.allowed_origins.join("\n")); setEditingOrigins(true); }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+            {editingOrigins ? (
+              <form onSubmit={handleSaveOrigins} className="space-y-2">
+                <Textarea
+                  value={origins}
+                  onChange={(e) => setOrigins(e.target.value)}
+                  placeholder={"https://app.example.com\nhttp://localhost:3000"}
+                  className="font-mono text-xs min-h-[72px]"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">One origin per line.</p>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={savingOrigins}>
+                    {savingOrigins ? "Saving..." : "Save origins"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setEditingOrigins(false); setOrigins(app.allowed_origins.join("\n")); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : app.allowed_origins.length > 0 ? (
+              <ul className="space-y-0.5">
+                {app.allowed_origins.map((origin) => (
+                  <li key={origin} className="font-mono text-xs break-all">{origin}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                None yet. The browser SDK is blocked until you add the site&apos;s origin.
+              </p>
+            )}
           </div>
         )}
         <div className="flex items-center justify-between">

@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FilterSheet, type FilterChip } from "@/components/filter-sheet";
-import { TIME_RANGES, ENVIRONMENTS } from "@/lib/time-ranges";
+import { TIME_RANGES } from "@/lib/time-ranges";
+import { ENVIRONMENT_OPTIONS } from "@/lib/platforms";
 
 export interface GroupByOption {
   value: string;
@@ -106,9 +107,9 @@ export function AnalyticsFilterBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
-            {ENVIRONMENTS.map((env) => (
-              <SelectItem key={env} value={env}>
-                {env}
+            {ENVIRONMENT_OPTIONS.map((env) => (
+              <SelectItem key={env.value} value={env.value}>
+                {env.label}
               </SelectItem>
             ))}
           </SelectContent>

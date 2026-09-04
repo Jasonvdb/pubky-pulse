@@ -7,11 +7,14 @@ import {
   getToken,
   getTokenAndTeamId,
   createForeignTeam,
+  seedWebTestApp,
   TEST_CLIENT_KEY,
   TEST_AGENT_KEY,
   TEST_BUNDLE_ID,
   TEST_SESSION_ID,
   TEST_USER,
+  TEST_WEB_CLIENT_KEY,
+  TEST_WEB_BUNDLE_ID,
 } from "./setup.js";
 
 let app: FastifyInstance;
@@ -36,6 +39,22 @@ async function ingestEvents(events: any[]) {
     headers: { authorization: `Bearer ${TEST_CLIENT_KEY}` },
     payload: { bundle_id: TEST_BUNDLE_ID, events },
   });
+}
+
+// The web app is its own fixture because `environment: "web"` is only accepted
+// for a web-platform app.
+async function ingestWebEvents(events: any[]) {
+  const res = await app.inject({
+    method: "POST",
+    url: "/v1/ingest",
+    headers: { authorization: `Bearer ${TEST_WEB_CLIENT_KEY}` },
+    payload: { bundle_id: TEST_WEB_BUNDLE_ID, events },
+  });
+  expect(res.json().rejected).toBe(0);
+}
+
+function messagesOf(res: { json: () => any }): string[] {
+  return res.json().events.map((e: any) => e.message).sort();
 }
 
 function queryEvents(params: Record<string, string> = {}, key = TEST_AGENT_KEY) {
@@ -277,6 +296,86 @@ describe("GET /v1/events", () => {
     const body = res.json();
     expect(body.events).toHaveLength(1);
     expect(body.events[0].message).toBe("iOS event");
+  });
+
+  describe("device and OS filters", () => {
+    beforeEach(async () => {
+      await seedWebTestApp();
+    });
+
+    it("filters by device_model, which carries the browser on web", async () => {
+      await ingestWebEvents([
+        { level: "info", message: "Chrome", session_id: TEST_SESSION_ID, environment: "web", device_model: "Chrome 120", os_version: "macOS 10.15.7" },
+        { level: "info", message: "Safari", session_id: TEST_SESSION_ID, environment: "web", device_model: "Safari 17", os_version: "macOS 10.15.7" },
+      ]);
+
+      const res = await queryEvents({ device_model: "Chrome 120" });
+      expect(messagesOf(res)).toEqual(["Chrome"]);
+    });
+
+    it("filters by os_version, which carries the OS name and version on web", async () => {
+      await ingestWebEvents([
+        { level: "info", message: "Mac", session_id: TEST_SESSION_ID, environment: "web", device_model: "Chrome 120", os_version: "macOS 10.15.7" },
+        { level: "info", message: "Windows", session_id: TEST_SESSION_ID, environment: "web", device_model: "Chrome 120", os_version: "Windows 10" },
+      ]);
+
+      const res = await queryEvents({ os_version: "Windows 10" });
+      expect(messagesOf(res)).toEqual(["Windows"]);
+    });
+
+    it("combines the device and OS filters", async () => {
+      await ingestWebEvents([
+        { level: "info", message: "Chrome on Mac", session_id: TEST_SESSION_ID, environment: "web", device_model: "Chrome 120", os_version: "macOS 10.15.7" },
+        { level: "info", message: "Chrome on Windows", session_id: TEST_SESSION_ID, environment: "web", device_model: "Chrome 120", os_version: "Windows 10" },
+        { level: "info", message: "Safari on Mac", session_id: TEST_SESSION_ID, environment: "web", device_model: "Safari 17", os_version: "macOS 10.15.7" },
+      ]);
+
+      const res = await queryEvents({ device_model: "Chrome 120", os_version: "macOS 10.15.7" });
+      expect(messagesOf(res)).toEqual(["Chrome on Mac"]);
+    });
+  });
+
+  describe("screen_name filter", () => {
+    it("matches the exact path and anything nested under it", async () => {
+      await ingestEvents([
+        { level: "info", message: "Checkout", session_id: TEST_SESSION_ID, screen_name: "/checkout" },
+        { level: "info", message: "Payment", session_id: TEST_SESSION_ID, screen_name: "/checkout/payment" },
+        { level: "info", message: "Home", session_id: TEST_SESSION_ID, screen_name: "/" },
+      ]);
+
+      const res = await queryEvents({ screen_name: "/checkout" });
+      expect(messagesOf(res)).toEqual(["Checkout", "Payment"]);
+    });
+
+    it("stops at the path separator rather than matching any prefix", async () => {
+      await ingestEvents([
+        { level: "info", message: "Checkout", session_id: TEST_SESSION_ID, screen_name: "/checkout" },
+        { level: "info", message: "Abandoned", session_id: TEST_SESSION_ID, screen_name: "/checkout-abandoned" },
+      ]);
+
+      const res = await queryEvents({ screen_name: "/checkout" });
+      expect(messagesOf(res)).toEqual(["Checkout"]);
+    });
+
+    it("treats a native screen name with no nesting as an exact match", async () => {
+      await ingestEvents([
+        { level: "info", message: "Settings", session_id: TEST_SESSION_ID, screen_name: "SettingsView" },
+        { level: "info", message: "Settings detail", session_id: TEST_SESSION_ID, screen_name: "SettingsViewDetail" },
+      ]);
+
+      const res = await queryEvents({ screen_name: "SettingsView" });
+      expect(messagesOf(res)).toEqual(["Settings"]);
+    });
+
+    it("treats wildcard characters in the filter as literals", async () => {
+      await ingestEvents([
+        { level: "info", message: "Literal", session_id: TEST_SESSION_ID, screen_name: "/search/%" },
+        { level: "info", message: "Results", session_id: TEST_SESSION_ID, screen_name: "/search/results" },
+      ]);
+
+      const res = await queryEvents({ screen_name: "/search/%" });
+      expect(messagesOf(res)).toEqual(["Literal"]);
+    });
   });
 
   it("filters by until timestamp", async () => {

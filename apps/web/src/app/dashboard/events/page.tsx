@@ -9,9 +9,9 @@ import type {
   AppResponse,
   LogLevel,
 } from "@pubky-pulse/shared";
-import { TIME_RANGES, ENVIRONMENTS } from "@/lib/time-ranges";
+import { TIME_RANGES, formatTimeRangeChip } from "@/lib/time-ranges";
+import { ENVIRONMENT_OPTIONS, environmentLabel } from "@/lib/platforms";
 import { FilterSheet, type FilterChip, resolveEntityName, truncateId } from "@/components/filter-sheet";
-import { formatTimeRangeChip } from "@/lib/time-ranges";
 
 const LOG_LEVELS: LogLevel[] = ["info", "debug", "warn", "error"];
 const LEVEL_LABEL: Record<LogLevel, string> = {
@@ -69,6 +69,8 @@ export default function EventsPage() {
       session_id: "",
       environment: "",
       screen_name: "",
+      device_model: "",
+      os_version: "",
       time_range: "",
       since: "",
       until: "",
@@ -144,6 +146,10 @@ export default function EventsPage() {
   if (environment) filterParams.environment = environment;
   const screenName = filters.get("screen_name");
   if (screenName) filterParams.screen_name = screenName;
+  const deviceModel = filters.get("device_model");
+  if (deviceModel) filterParams.device_model = deviceModel;
+  const osVersion = filters.get("os_version");
+  if (osVersion) filterParams.os_version = osVersion;
   if (filters.computedSince) filterParams.since = filters.computedSince;
   if (filters.computedUntil) filterParams.until = filters.computedUntil;
   filterParams.data_mode = dataMode;
@@ -200,10 +206,7 @@ export default function EventsPage() {
     [columnOrder],
   );
   const pickerItems = useMemo(
-    () => DEFAULT_EVENT_COLUMN_ORDER.map((id) => {
-      const c = EVENT_COLUMN_REGISTRY[id];
-      return { id: c.id, label: c.label, group: c.group };
-    }),
+    () => Object.values(EVENT_COLUMN_REGISTRY).map((c) => ({ id: c.id, label: c.label, group: c.group })),
     [],
   );
   const columnHelpers: EventColumnHelpers = useMemo(
@@ -235,13 +238,15 @@ export default function EventsPage() {
         onDismiss: () => filters.set("level", ""),
       });
     }
-    if (environment) c.push({ label: "Env", value: environment, onDismiss: () => filters.set("environment", "") });
+    if (environment) c.push({ label: "Env", value: environmentLabel(environment), onDismiss: () => filters.set("environment", "") });
     if (userId) c.push({ label: "User", value: truncateId(userId), onDismiss: () => filters.set("user_id", "") });
     if (sessionId) c.push({ label: "Session", value: truncateId(sessionId), onDismiss: () => filters.set("session_id", "") });
     if (screenName) c.push({ label: "Screen", value: screenName, onDismiss: () => filters.set("screen_name", "") });
+    if (deviceModel) c.push({ label: "Device", value: deviceModel, onDismiss: () => filters.set("device_model", "") });
+    if (osVersion) c.push({ label: "OS", value: osVersion, onDismiss: () => filters.set("os_version", "") });
     if (order === "asc") c.push({ label: "Sort", value: "Oldest first", onDismiss: () => filters.set("order", "") });
     return c;
-  }, [projectId, appId, timeRange, sinceInput, untilInput, level, environment, userId, sessionId, screenName, order, projects, allApps, filters]);
+  }, [projectId, appId, timeRange, sinceInput, untilInput, level, environment, userId, sessionId, screenName, deviceModel, osVersion, order, projects, allApps, filters]);
 
   function handleRowClick(event: StoredEventResponse) {
     setSelectedEvent(event);
@@ -414,9 +419,9 @@ export default function EventsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              {ENVIRONMENTS.map((env) => (
-                <SelectItem key={env} value={env}>
-                  {env}
+              {ENVIRONMENT_OPTIONS.map((env) => (
+                <SelectItem key={env.value} value={env.value}>
+                  {env.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -444,11 +449,31 @@ export default function EventsPage() {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Screen</label>
+          <label className="text-xs text-muted-foreground">Screen / Path</label>
           <Input
             value={screenName}
             onChange={(e) => filters.set("screen_name", e.target.value)}
-            placeholder="Filter by screen"
+            placeholder="Screen name or /path"
+            className="h-8 text-xs"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Device / Browser</label>
+          <Input
+            value={deviceModel}
+            onChange={(e) => filters.set("device_model", e.target.value)}
+            placeholder="e.g. iPhone15,2 or Chrome 120"
+            className="h-8 text-xs"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">OS</label>
+          <Input
+            value={osVersion}
+            onChange={(e) => filters.set("os_version", e.target.value)}
+            placeholder="e.g. 18.0 or macOS 10.15.7"
             className="h-8 text-xs"
           />
         </div>

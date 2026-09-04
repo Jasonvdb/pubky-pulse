@@ -490,6 +490,28 @@ describe("MCP endpoint", () => {
       expect(parsed.events[0].message).toBe("error msg");
     });
 
+    it("query-events filters by device and screen path", async () => {
+      const now = new Date().toISOString();
+      await ingestEvents([
+        { level: "info", message: "chrome checkout", session_id: TEST_SESSION_ID, timestamp: now, device_model: "Chrome 120", screen_name: "/checkout/payment" },
+        { level: "info", message: "safari checkout", session_id: TEST_SESSION_ID, timestamp: now, device_model: "Safari 17", screen_name: "/checkout/payment" },
+        { level: "info", message: "chrome elsewhere", session_id: TEST_SESSION_ID, timestamp: now, device_model: "Chrome 120", screen_name: "/pricing" },
+      ]);
+
+      const { parsed } = parseToolResult(
+        await callTool(TEST_AGENT_KEY, "query-events", {
+          app_id: testData.appId,
+          device_model: "Chrome 120",
+          // Prefix match: the events are on /checkout/payment.
+          screen_name: "/checkout",
+          data_mode: "all",
+        }),
+      );
+      expect(parsed.events.map((e: { message: string }) => e.message)).toEqual([
+        "chrome checkout",
+      ]);
+    });
+
     it("query-events with time range", async () => {
       const now = new Date();
       await ingestEvents([

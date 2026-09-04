@@ -41,6 +41,7 @@ import { useProjects, useWriteFailureHandler } from "@/hooks/use-project";
 import { useTeam } from "@/contexts/team-context";
 import { api, ApiError } from "@/lib/api";
 import { ProjectDot } from "@/lib/project-color";
+import { platformLabel } from "@/lib/platforms";
 import type {
   ApiKeyResponse,
   AppResponse,
@@ -270,7 +271,7 @@ function CreateKeyDialog({
                   <SelectContent>
                     {selectableApps.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
-                        {a.name} ({a.platform})
+                        {a.name} ({platformLabel(a.platform)})
                       </SelectItem>
                     ))}
                   </SelectContent>

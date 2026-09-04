@@ -8,6 +8,16 @@ import { CountryCell } from "@/components/country-flag";
 import { ProjectDot } from "@/lib/project-color";
 import { formatShortDate, formatTime, formatDateTime } from "@/lib/format-date";
 import { formatSdkLabel } from "@/lib/format-sdk";
+import { environmentLabel } from "@/lib/platforms";
+
+/**
+ * A cell whose column truncates: the full value stays reachable as a tooltip.
+ * Web paths and browser strings are the ones that actually overflow.
+ */
+function TruncatedCell({ value }: { value: string | null }) {
+  if (!value) return <>—</>;
+  return <span title={value}>{value}</span>;
+}
 
 export interface EventColumnHelpers {
   appNameMap: Map<string, string>;
@@ -80,9 +90,9 @@ export const EVENT_COLUMN_REGISTRY: Record<string, EventColumnDef> = {
   environment: {
     id: "environment",
     label: "Environment",
-    headerClassName: "w-[100px]",
-    cellClassName: "text-xs py-1.5",
-    render: (event) => event.environment ?? "—",
+    headerClassName: "w-[110px]",
+    cellClassName: "text-xs py-1.5 truncate max-w-[110px]",
+    render: (event) => environmentLabel(event.environment) || "—",
   },
   country: {
     id: "country",
@@ -99,11 +109,29 @@ export const EVENT_COLUMN_REGISTRY: Record<string, EventColumnDef> = {
     render: (event) => event.user_id ?? "—",
   },
   screen: {
+    // Wide enough for a URL path, which is what a web event puts here, and the
+    // title attribute carries the rest when the path still overflows.
     id: "screen",
-    label: "Screen",
+    label: "Screen / Path",
+    headerClassName: "w-[180px]",
+    cellClassName: "text-xs py-1.5 truncate max-w-[180px]",
+    render: (event) => <TruncatedCell value={event.screen_name} />,
+  },
+  // Off by default: only web and cross-device investigations need these, and
+  // the table is already dense. Both hold browser facts on a web event.
+  device: {
+    id: "device",
+    label: "Device / Browser",
     headerClassName: "w-[120px]",
     cellClassName: "text-xs py-1.5 truncate max-w-[120px]",
-    render: (event) => event.screen_name ?? "—",
+    render: (event) => <TruncatedCell value={event.device_model} />,
+  },
+  os: {
+    id: "os",
+    label: "OS",
+    headerClassName: "w-[110px]",
+    cellClassName: "text-xs py-1.5 truncate max-w-[110px]",
+    render: (event) => <TruncatedCell value={event.os_version} />,
   },
   sdk: {
     id: "sdk",

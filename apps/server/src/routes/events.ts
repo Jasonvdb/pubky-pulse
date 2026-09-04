@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { and, eq, gte, lte, desc, asc, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, gte, lte, desc, asc, inArray, isNull, or, sql } from "drizzle-orm";
 import { events, apps, eventAttachments } from "@pubky-pulse/db";
 import { parseTimeParam, LOG_LEVELS } from "@pubky-pulse/shared";
 import type { EventsQueryParams, EventsCountQueryParams, LogLevel } from "@pubky-pulse/shared";
@@ -26,6 +26,22 @@ function parseLevelParam(
   return { levels: parts as LogLevel[], invalid: [] };
 }
 
+/**
+ * Match a `screen_name` exactly, or anything nested beneath it.
+ *
+ * On web the column holds a URL path, so filtering by `/checkout` is expected to
+ * cover `/checkout/payment` too. The boundary is the slash, so `/checkout` does
+ * not sweep in `/checkout-abandoned`, and a native screen name with no slash in
+ * it keeps behaving as an exact match. `starts_with` rather than `LIKE`, so a
+ * `%` or `_` typed into the filter stays a literal character.
+ */
+function screenNameCondition(screenName: string) {
+  return or(
+    eq(events.screen_name, screenName),
+    sql`starts_with(${events.screen_name}, ${`${screenName}/`})`,
+  );
+}
+
 function badLevelReply(reply: any, invalid: string[]) {
   return reply.code(400).send({
     error: `Unknown log level(s): ${invalid.join(", ")}. Allowed: ${LOG_LEVELS.join(", ")}`,
@@ -50,6 +66,8 @@ export async function eventsRoutes(app: FastifyInstance) {
         session_id,
         environment,
         screen_name,
+        device_model,
+        os_version,
         since,
         until,
         cursor,
@@ -129,7 +147,13 @@ export async function eventsRoutes(app: FastifyInstance) {
         conditions.push(eq(events.environment, environment as any));
       }
       if (screen_name) {
-        conditions.push(eq(events.screen_name, screen_name));
+        conditions.push(screenNameCondition(screen_name));
+      }
+      if (device_model) {
+        conditions.push(eq(events.device_model, device_model));
+      }
+      if (os_version) {
+        conditions.push(eq(events.os_version, os_version));
       }
       if (since) {
         conditions.push(gte(events.timestamp, parseTimeParam(since)));
@@ -191,6 +215,8 @@ export async function eventsRoutes(app: FastifyInstance) {
         session_id,
         environment,
         screen_name,
+        device_model,
+        os_version,
         since,
         until,
         data_mode,
@@ -239,7 +265,9 @@ export async function eventsRoutes(app: FastifyInstance) {
       if (user_id) conditions.push(eq(events.user_id, user_id));
       if (session_id) conditions.push(eq(events.session_id, session_id));
       if (environment) conditions.push(eq(events.environment, environment as any));
-      if (screen_name) conditions.push(eq(events.screen_name, screen_name));
+      if (screen_name) conditions.push(screenNameCondition(screen_name));
+      if (device_model) conditions.push(eq(events.device_model, device_model));
+      if (os_version) conditions.push(eq(events.os_version, os_version));
       if (since) conditions.push(gte(events.timestamp, parseTimeParam(since)));
       if (until) conditions.push(lte(events.timestamp, parseTimeParam(until)));
 

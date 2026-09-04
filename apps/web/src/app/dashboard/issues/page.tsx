@@ -3,7 +3,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import useSWR from "swr";
-import type { IssueResponse, IssueStatus, AppResponse } from "@pubky-pulse/shared";
+import type {
+  AppResponse,
+  IssueOccurrenceResponse,
+  IssueResponse,
+  IssueStatus,
+} from "@pubky-pulse/shared";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { useIssuesByStatus, useIssueCounts, useIssue, issueActions } from "@/hooks/use-issues";
@@ -55,12 +60,23 @@ import { Bug, ChevronDown, Clock, Users } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { VersionBadge } from "@/components/version-badge";
 import { ProjectDot } from "@/lib/project-color";
+import { environmentLabel } from "@/lib/platforms";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { KanbanSkeleton } from "@/components/ui/skeletons";
 import { Markdown } from "@/components/ui/markdown";
 
 // Off-ramp columns: capped at the hook's default page size with a Load all button.
 const MANUAL_LOAD_STATUSES = new Set<IssueStatus>(["resolved", "snoozed", "silenced"]);
+
+/**
+ * One cell for the two device columns an occurrence carries. On web they hold
+ * the browser ("Chrome 120") and the OS name and version ("macOS 10.15.7");
+ * on a native app, the device model and its OS version. Empty string when the
+ * occurrence predates both columns, so the caller can pick its own placeholder.
+ */
+function formatBrowserAndOs(occurrence: IssueOccurrenceResponse): string {
+  return [occurrence.device_model, occurrence.os_version].filter(Boolean).join(" / ");
+}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -174,6 +190,17 @@ function IssueDetailModal({
     }
   };
 
+  // Distinct environments across the occurrences loaded so far. "Is this Safari
+  // only?" and "does this happen on the web build too?" are the first questions
+  // asked of a cross-platform issue, and the occurrence list is paginated.
+  const occurrenceEnvironments = [
+    ...new Set(
+      (issue?.occurrences ?? [])
+        .map((occ) => occ.environment)
+        .filter((environment): environment is string => !!environment),
+    ),
+  ];
+
   if (!open) return null;
 
   return (
@@ -206,8 +233,23 @@ function IssueDetailModal({
               {issue.first_seen_app_version && (
                 <div className="flex items-center gap-2"><span className="text-muted-foreground">First Seen In:</span> <VersionBadge version={issue.first_seen_app_version} latestVersion={latestAppVersion} /></div>
               )}
-              {issue.last_seen_app_version && (
+              {issue.last_seen_app_version ? (
                 <div className="flex items-center gap-2"><span className="text-muted-foreground">Last Seen In:</span> <VersionBadge version={issue.last_seen_app_version} latestVersion={latestAppVersion} /></div>
+              ) : (
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Last Seen In:</span> No version reported
+                  <p className="text-xs text-muted-foreground">
+                    Regression detection needs one. The Web SDK sends it when you pass{" "}
+                    <code className="font-mono">appVersion</code> to{" "}
+                    <code className="font-mono">Pulse.configure()</code>.
+                  </p>
+                </div>
+              )}
+              {occurrenceEnvironments.length > 0 && (
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Environments:</span>{" "}
+                  {occurrenceEnvironments.map(environmentLabel).join(", ")}
+                </div>
               )}
               {(issue.first_seen_sdk_version || issue.last_seen_sdk_version) && (
                 <div className="col-span-2 font-mono">
@@ -247,6 +289,14 @@ function IssueDetailModal({
                   <p className="text-xs text-muted-foreground">
                     Newer versions reporting this error will auto-regress. Silence the issue instead if you don&apos;t have a fix version.
                   </p>
+                  {!issue.last_seen_app_version && (
+                    <p className="text-xs text-muted-foreground">
+                      This app doesn&apos;t report a version, so nothing will
+                      auto-regress. Pass <code className="font-mono">appVersion</code> to{" "}
+                      <code className="font-mono">Pulse.configure()</code> in the Web SDK
+                      to turn regression detection on.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <DropdownMenu>
@@ -370,41 +420,51 @@ function IssueDetailModal({
                 <p className="text-sm text-muted-foreground">No occurrences recorded</p>
               ) : (
                 <div className="text-xs border rounded-md divide-y">
-                  <div className="grid grid-cols-5 gap-2 p-2 font-medium text-muted-foreground bg-muted/30">
+                  <div className="grid grid-cols-6 gap-2 p-2 font-medium text-muted-foreground bg-muted/30">
                     <span>Time</span>
                     <span>Session</span>
                     <span>User</span>
                     <span>Version</span>
+                    <span>Browser / OS</span>
                     <span>Env</span>
                   </div>
-                  {issue.occurrences.map((occ) => (
-                    <div key={occ.id} className="grid grid-cols-5 gap-2 p-2">
-                      <span>{formatDateTime(occ.timestamp)}</span>
-                      <a
-                        href={occ.event_id
-                          ? `/dashboard/events?session_id=${occ.session_id}&event_id=${occ.event_id}`
-                          : `/dashboard/events?session_id=${occ.session_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono truncate text-primary hover:underline"
-                      >{occ.session_id.slice(0, 8)}…</a>
-                      <span className="truncate inline-flex items-center gap-1">
-                        <CountryEmoji code={occ.country_code} />
-                        {occ.user_id
-                          ? occ.app_user_id
-                            ? <a
-                                href={`/dashboard/users?app_user_id=${occ.app_user_id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="truncate text-primary hover:underline"
-                              >{occ.user_id}</a>
-                            : <span className="truncate">{occ.user_id}</span>
-                          : <span className="text-muted-foreground">anon</span>}
-                      </span>
-                      <span><VersionBadge version={occ.app_version} latestVersion={latestAppVersion} /></span>
-                      <span>{occ.environment ?? "—"}</span>
-                    </div>
-                  ))}
+                  {issue.occurrences.map((occ) => {
+                    const browserAndOs = formatBrowserAndOs(occ);
+                    const environment = environmentLabel(occ.environment);
+                    return (
+                      <div key={occ.id} className="grid grid-cols-6 gap-2 p-2">
+                        <span>{formatDateTime(occ.timestamp)}</span>
+                        <a
+                          href={occ.event_id
+                            ? `/dashboard/events?session_id=${occ.session_id}&event_id=${occ.event_id}`
+                            : `/dashboard/events?session_id=${occ.session_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono truncate text-primary hover:underline"
+                        >{occ.session_id.slice(0, 8)}…</a>
+                        <span className="truncate inline-flex items-center gap-1">
+                          <CountryEmoji code={occ.country_code} />
+                          {occ.user_id
+                            ? occ.app_user_id
+                              ? <a
+                                  href={`/dashboard/users?app_user_id=${occ.app_user_id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="truncate text-primary hover:underline"
+                                >{occ.user_id}</a>
+                              : <span className="truncate">{occ.user_id}</span>
+                            : <span className="text-muted-foreground">anon</span>}
+                        </span>
+                        <span><VersionBadge version={occ.app_version} latestVersion={latestAppVersion} /></span>
+                        <span className="truncate" title={browserAndOs || undefined}>
+                          {browserAndOs || "—"}
+                        </span>
+                        <span className="truncate" title={environment || undefined}>
+                          {environment || "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

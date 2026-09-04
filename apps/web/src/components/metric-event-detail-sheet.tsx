@@ -17,10 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { MetricPhaseBadge } from "@/components/badges/metric-phase-badge";
 import { VersionRow } from "@/components/version-badge";
 import { DetailRow } from "@/components/detail-row";
+import { DeviceDetailRows } from "@/components/device-detail-rows";
 import { ProjectDot } from "@/lib/project-color";
 import { formatDateTime } from "@/lib/format-date";
 import { formatSdkLabel } from "@/lib/format-sdk";
 import { countryFlag } from "@/lib/country-flag";
+import { environmentLabel } from "@/lib/platforms";
 import { buildQueryString } from "@/lib/query";
 // Deep import bypasses the barrel export which pulls in node:crypto
 import { formatDuration } from "@pubky-pulse/shared/constants";
@@ -210,14 +212,19 @@ export function MetricEventDetailSheet({
                 <DetailRow label="Session ID" value={contextEvent.session_id} />
                 <DetailRow
                   label="Environment"
-                  value={contextEvent.environment}
+                  value={environmentLabel(contextEvent.environment)}
                   onFilter={
                     onFilter && contextEvent.environment
                       ? () => onFilter("environment", contextEvent.environment!)
                       : undefined
                   }
                 />
-                <DetailRow label="OS Version" value={contextEvent.os_version} />
+                <DeviceDetailRows
+                  environment={contextEvent.environment}
+                  deviceModel={contextEvent.device_model}
+                  osVersion={contextEvent.os_version}
+                  buildNumber={contextEvent.build_number}
+                />
                 <VersionRow
                   label="App Version"
                   version={contextEvent.app_version}
@@ -229,8 +236,6 @@ export function MetricEventDetailSheet({
                     formatSdkLabel(contextEvent.sdk_name, contextEvent.sdk_version) || null
                   }
                 />
-                <DetailRow label="Build Number" value={contextEvent.build_number} />
-                <DetailRow label="Device Model" value={contextEvent.device_model} />
                 {(() => {
                   const f = countryFlag(contextEvent.country_code);
                   return (

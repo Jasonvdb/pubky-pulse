@@ -243,7 +243,12 @@ export interface EventsQueryParams {
   user_id?: string;
   session_id?: string;
   environment?: string;
+  /** Exact screen name, or a path prefix: `/checkout` also matches `/checkout/payment`. */
   screen_name?: string;
+  /** Device model on native apps; the browser and its major version on web. */
+  device_model?: string;
+  /** OS version on native apps; the OS name and version on web. */
+  os_version?: string;
   since?: string;
   until?: string;
   cursor?: string;
@@ -267,7 +272,12 @@ export interface EventsCountQueryParams {
   user_id?: string;
   session_id?: string;
   environment?: string;
+  /** Exact screen name, or a path prefix: `/checkout` also matches `/checkout/payment`. */
   screen_name?: string;
+  /** Device model on native apps; the browser and its major version on web. */
+  device_model?: string;
+  /** OS version on native apps; the OS name and version on web. */
+  os_version?: string;
   since?: string;
   until?: string;
   data_mode?: DataMode;

@@ -296,7 +296,7 @@ export const EDITORS: EditorConfig[] = [
     scopes: [
       {
         label: "Global level",
-        method: "native-ui",
+        method: "config",
         language: "json",
         note:
           "Open Settings > Tools > AI Assistant > Model Context Protocol (MCP), click +, choose the Global level, and enter this configuration:",
@@ -309,7 +309,7 @@ export const EDITORS: EditorConfig[] = [
       },
       {
         label: "Project level",
-        method: "native-ui",
+        method: "config",
         language: "json",
         note:
           "Open Settings > Tools > AI Assistant > Model Context Protocol (MCP), click +, choose the Project level, and enter this configuration. Only do this in a project you trust.",

@@ -9,23 +9,23 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fastify/cookie": "^11.0.2",
-    "@fastify/cors": "^11.0.0",
-    "@fastify/jwt": "^9.0.0",
-    "@modelcontextprotocol/sdk": "^1.28.0",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/jwt": "^10.2.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@pubky-pulse/db": "workspace:*",
     "@pubky-pulse/shared": "workspace:*",
-    "dotenv": "^16.6.1",
-    "drizzle-orm": "^0.39.0",
-    "fastify": "^5.2.0",
-    "fastify-plugin": "^5.1.0",
-    "pg-boss": "^12.14.0",
-    "postgres": "^3.4.0",
-    "zod": "^4.3.6"
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.12.3",
+    "fastify-plugin": "^6.0.0",
+    "pg-boss": "^12.30.0",
+    "postgres": "^3.4.9",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^25.4.0",
-    "tsx": "^4.19.0",
+    "tsx": "^4.23.13",
     "typescript": "^5.7.0"
   }
 }

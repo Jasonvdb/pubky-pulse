@@ -78,15 +78,20 @@ export async function projectOwnersRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "User not found in this team" });
       }
 
-      await addProjectOwner(app.db, projectId, userId);
+      const added = await addProjectOwner(app.db, projectId, userId);
 
-      logAuditEvent(app.db, auth, {
-        team_id: access.project.team_id,
-        action: "create",
-        resource_type: "project_owner",
-        resource_id: userId,
-        metadata: { project_id: projectId },
-      });
+      // Only a real grant is audited. The endpoint is idempotent, so a retry
+      // returns the same 200 — recording a second "create" for it would make
+      // the log claim an ownership change that never happened.
+      if (added) {
+        logAuditEvent(app.db, auth, {
+          team_id: access.project.team_id,
+          action: "create",
+          resource_type: "project_owner",
+          resource_id: userId,
+          metadata: { project_id: projectId },
+        });
+      }
 
       return ownerListResponse(app, projectId, auth);
     },

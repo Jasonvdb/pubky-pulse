@@ -439,6 +439,29 @@ describe("PUT /v1/projects/:projectId/owners/:userId", () => {
     expect(ids.filter((id) => id === ownerB.userId)).toHaveLength(1);
   });
 
+  it("audits the grant once even when the request is retried", async () => {
+    const first = await putOwner(projectA, ownerB.userId, ownerA.token);
+    const second = await putOwner(projectA, ownerB.userId, ownerA.token);
+
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+
+    // `logAuditEvent` is fire-and-forget, so both requests' writes get time to
+    // land before counting: a missing second row must be a decision, not a race.
+    await new Promise((r) => setTimeout(r, 150));
+
+    const owners = await ownerIdsInDb(projectA);
+    expect(owners.filter((id) => id === ownerB.userId)).toHaveLength(1);
+
+    const audits = await client`
+      SELECT id FROM audit_logs
+      WHERE resource_type = 'project_owner'
+        AND resource_id = ${ownerB.userId}
+        AND metadata->>'project_id' = ${projectA}
+    `;
+    expect(audits).toHaveLength(1);
+  });
+
   it("404s when the target is not a member of the team", async () => {
     const [outsider] = await client`
       INSERT INTO users (email, name) VALUES ('outsider@example.com', 'Outsider') RETURNING id

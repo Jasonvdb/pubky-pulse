@@ -189,20 +189,27 @@ export async function removeProjectOwner(
 }
 
 /**
- * Add an owner if they are not one already.
+ * Add an owner if they are not one already. Returns whether a row was actually
+ * inserted, so a caller can tell a real grant from a retry.
  *
  * `ON CONFLICT DO NOTHING` against the unique (project_id, user_id) index makes
- * the PUT idempotent without a read-then-write race.
+ * the PUT idempotent without a read-then-write race, and `RETURNING` gives that
+ * same statement's outcome: the conflict path returns no row. Callers that only
+ * need the row to exist (project creation) can ignore the result; the owner
+ * route uses it so a retried PUT does not record a second audit event for a
+ * change that did not happen.
  */
 export async function addProjectOwner(
   db: Db | Tx,
   projectId: string,
   userId: string,
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const inserted = await db
     .insert(projectOwners)
     .values({ project_id: projectId, user_id: userId })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ user_id: projectOwners.user_id });
+  return inserted.length > 0;
 }
 
 /** How many owners a project currently has. */

@@ -33,12 +33,16 @@ function parseLevelParam(
  * cover `/checkout/payment` too. The boundary is the slash, so `/checkout` does
  * not sweep in `/checkout-abandoned`, and a native screen name with no slash in
  * it keeps behaving as an exact match. `starts_with` rather than `LIKE`, so a
- * `%` or `_` typed into the filter stays a literal character.
+ * `%` or `_` typed into the filter stays a literal character. A value that
+ * already ends in a slash — the site root `/` above all — is its own boundary,
+ * so it becomes the prefix as-is rather than being doubled into `//`, which
+ * would match nothing.
  */
 function screenNameCondition(screenName: string) {
+  const prefix = screenName.endsWith("/") ? screenName : `${screenName}/`;
   return or(
     eq(events.screen_name, screenName),
-    sql`starts_with(${events.screen_name}, ${`${screenName}/`})`,
+    sql`starts_with(${events.screen_name}, ${prefix})`,
   );
 }
 

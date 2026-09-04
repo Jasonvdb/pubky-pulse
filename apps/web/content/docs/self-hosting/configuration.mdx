@@ -74,7 +74,9 @@ See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins) for the 
 - **Behind a proxy** (`TRUST_PROXY=127.0.0.1,::1`): the address comes from `X-Forwarded-For`, so each visitor gets their own bucket. The nginx configuration in the [deployment guide](/docs/self-hosting/deployment) already sets the header.
 - **Directly reachable** (`TRUST_PROXY=false`, the default): the socket address is used. Leave it off here — trusting the header on a server anyone can reach lets a caller choose their own bucket, and with it their own quota.
 
-Set it to the addresses or CIDR ranges the proxy reaches node from, comma-separated, rather than to `true`. `127.0.0.1,::1` covers nginx on loopback, which is the standard deployment; the shorthand `loopback` means the same. The server then walks the header from the right and stops at the first hop that is not on the list — the entry nginx appended.
+Set it to the addresses or CIDR ranges the proxy reaches node from, comma-separated, rather than to `true`. `127.0.0.1,::1` covers nginx on loopback, which is the standard deployment; the shorthand `loopback` means the same. The server then walks the header from the right and stops at the first hop that is not on the list — the entry nginx wrote.
+
+That makes nginx responsible for writing a visitor address there. Behind Cloudflare, nginx's own peer is the Cloudflare edge, so appending `$proxy_add_x_forwarded_for` would hand the API an edge address and put every visitor behind that edge in one rate-limit bucket. The deployment guide's nginx config therefore trusts `CF-Connecting-IP` only from Cloudflare's published ranges — making `$remote_addr` the verified visitor — and then **sets** `X-Forwarded-For $remote_addr` instead of appending, so the header holds exactly the one address nginx verified.
 
 `TRUST_PROXY=true` trusts every hop, and so takes the **leftmost** entry. That entry is whatever the caller sent, so a caller can prepend an address and choose which bucket it draws from. A hop count is not accepted at all: the server refuses to start rather than silently trusting nothing.
 

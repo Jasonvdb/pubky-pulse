@@ -347,6 +347,17 @@ describe("GET /v1/events", () => {
       expect(messagesOf(res)).toEqual(["Checkout", "Payment"]);
     });
 
+    it("matches every path under the site root when filtering by \"/\"", async () => {
+      await ingestEvents([
+        { level: "info", message: "Home", session_id: TEST_SESSION_ID, screen_name: "/" },
+        { level: "info", message: "Checkout", session_id: TEST_SESSION_ID, screen_name: "/checkout" },
+        { level: "info", message: "Payment", session_id: TEST_SESSION_ID, screen_name: "/checkout/payment" },
+      ]);
+
+      const res = await queryEvents({ screen_name: "/" });
+      expect(messagesOf(res)).toEqual(["Checkout", "Home", "Payment"]);
+    });
+
     it("stops at the path separator rather than matching any prefix", async () => {
       await ingestEvents([
         { level: "info", message: "Checkout", session_id: TEST_SESSION_ID, screen_name: "/checkout" },

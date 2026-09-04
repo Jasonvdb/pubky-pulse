@@ -128,6 +128,7 @@ const EXPECTED_GUIDE_WEB_TOPICS = [
  */
 const EXPECTED_INSTRUCTION_KEYWORDS = [
   "Projects & apps",
+  "allowed_origins",
   "Events & analytics",
   "Metrics & funnels",
   "Issues",

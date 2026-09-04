@@ -74,6 +74,16 @@ pm2 reload all                       # Zero-downtime reload
 Create the nginx config at `/etc/nginx/sites-available/pubky-pulse`:
 
 ```nginx
+# Recover the visitor's address from Cloudflare.
+# nginx's peer is the Cloudflare edge, so CF-Connecting-IP is trusted only from
+# Cloudflare's own ranges and $remote_addr then holds the real visitor.
+# Copy the current lists from https://www.cloudflare.com/ips/ (one
+# set_real_ip_from per CIDR) and refresh them when Cloudflare changes them —
+# they are too long, and change too often, to reproduce here.
+set_real_ip_from 173.245.48.0/20;   # ...and the rest of /ips-v4
+set_real_ip_from 2400:cb00::/32;    # ...and the rest of /ips-v6
+real_ip_header CF-Connecting-IP;
+
 # API server (agent keys, dashboard API, auth, attachment uploads/downloads)
 server {
     listen 80;
@@ -89,7 +99,7 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
@@ -119,7 +129,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
@@ -136,7 +146,7 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
@@ -153,6 +163,10 @@ systemctl reload nginx
 ```
 
 The ingest server block sets `client_max_body_size 2m` to allow compressed event batches. The API and web server blocks include WebSocket upgrade headers for potential future use.
+
+### Visitor IP addresses
+
+The API buckets a client key's rate limit per key **and** per caller IP, so the address nginx forwards has to be the visitor's. Behind Cloudflare, nginx's own peer is the Cloudflare edge, so an appended `$proxy_add_x_forwarded_for` would forward an edge address and put every visitor behind that edge in one bucket. The `real_ip` block fixes that first: `CF-Connecting-IP` is believed only from Cloudflare's published ranges, and `$remote_addr` becomes the verified visitor. Each proxy block then **sets** `X-Forwarded-For $remote_addr` rather than appending, so the header the API reads is exactly the one address nginx verified — which is what `TRUST_PROXY=127.0.0.1,::1` then trusts. If you run nginx without Cloudflare in front, drop the `real_ip` block: `$remote_addr` is already the visitor.
 
 ### Attachments
 

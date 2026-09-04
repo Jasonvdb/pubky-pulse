@@ -1,0 +1,52 @@
+---
+title: Screens
+description: Automatic route tracking for single-page apps, plus Pulse.trackScreen() for anything the URL does not describe.
+---
+
+With `trackPageViews` on (the default), the SDK patches `pushState` / `replaceState` and listens for `popstate`, emitting a screen event whenever `location.pathname` changes. Hash-only changes — in-page anchors — are ignored.
+
+## What It Emits
+
+| Event | Level | When | Attributes |
+|-------|-------|------|------------|
+| `sdk:screen_appeared` | debug | A screen becomes visible | `screen_name` set to the new screen |
+| `sdk:screen_disappeared` | debug | The previous screen is left | `screen_name` set, `_duration_ms` with the time it was visible |
+
+Both are debug-level, so they are filtered out of the default production view. Switch to development data (or filter by level) to see screen flow when you need it. `sdk:screen_disappeared` carries the duration and is the more useful analytics signal; `sdk:screen_appeared` is retained so you can spot screens that were opened but never left.
+
+## Manual Screens
+
+For anything the URL does not describe — a modal, a wizard step, a tab — name it yourself:
+
+```typescript
+Pulse.trackScreen("Checkout / Payment");
+```
+
+`trackScreen` also sets the default `screen_name` for the events that follow, until the next screen change. Repeating the current name is a no-op, so calling it on every render is safe.
+
+## Routers Without the History API
+
+Some hash routers never touch `pushState`, so there is nothing for the SDK to observe. Turn the automatic tracking off and drive it from your own route handler:
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "com.example.web",
+  trackPageViews: false,
+});
+
+router.afterEach((to) => {
+  Pulse.trackScreen(to.name ?? to.path);
+});
+```
+
+With `trackPageViews` off, the SDK still keeps a current screen — only `trackScreen()` moves it.
+
+## Overriding a Single Event
+
+To tag one event with a different screen without changing the current one, pass `screenName` in the per-call options:
+
+```typescript
+Pulse.info("exported_report", { rows: 940 }, { screenName: "Reports" });
+```

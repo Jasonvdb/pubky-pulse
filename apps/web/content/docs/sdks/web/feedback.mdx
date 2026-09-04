@@ -1,0 +1,69 @@
+---
+title: User Feedback
+description: Collect free-text feedback from browser users with Pulse.sendFeedback().
+---
+
+The Web SDK ships the API, not the form. Render whatever fits your product and hand the message to `Pulse.sendFeedback()`; the submission is linked automatically to the current session, user id, app version, and environment.
+
+See the [Feedback concept page](/docs/concepts/feedback) for the status lifecycle, comments, and how to work with feedback once it is captured.
+
+## Sending Feedback
+
+```typescript
+const receipt = await Pulse.sendFeedback(message, {
+  name: form.name,
+  email: form.email,
+});
+
+console.log(receipt.id);        // uuid of the new feedback row
+console.log(receipt.createdAt); // Date the server recorded
+```
+
+Unlike the logging methods, `sendFeedback` is **not** fire-and-forget and is never retried — someone is waiting on the result — so handle the rejection and let them try again.
+
+## Options
+
+| Option | Default | Notes |
+|---|---|---|
+| `name` | — | Submitter name. Trimmed; an empty value is omitted. |
+| `email` | — | Submitter email. Trimmed and validated server-side. |
+
+Everything else — session id, user id, app version, environment, device model, OS version, and the dev flag — is filled in from the configured SDK state.
+
+## Form Example
+
+```tsx
+function FeedbackForm() {
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await Pulse.sendFeedback(message, { email: user?.email });
+      setSent(true);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  if (sent) return <p>Thanks — we read every one of these.</p>;
+
+  return (
+    <form onSubmit={submit}>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={4000} />
+      {error && <p role="alert">{error}</p>}
+      <button type="submit" disabled={!message.trim()}>Send</button>
+    </form>
+  );
+}
+```
+
+## Limits
+
+- `message` is required, trimmed, and capped at 4000 characters. The SDK rejects an empty or over-long message before it reaches the network.
+- The server rejects invalid emails and environments that do not match the API key's app platform; those come back as thrown errors with the server's reason in the message.
+
+A successful submission also logs an `sdk:feedback_submitted` event recording whether a name and email were supplied — never their values.

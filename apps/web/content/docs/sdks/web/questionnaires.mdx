@@ -1,0 +1,131 @@
+---
+title: Questionnaires
+description: Fetch surveys by slug, render your own form, and save drafts or submissions with the Web SDK's answer helpers.
+---
+
+The Web SDK ships the data and the answer bookkeeping; the form is yours. Fetch a questionnaire by slug, render it however you like, and save the answers.
+
+## Prerequisite
+
+Create a questionnaire with a slug first — via the [dashboard](/dashboard/questionnaires) or [MCP](/docs/mcp/questionnaires) (`create-questionnaire`). The SDK only reads and saves; it does not define questionnaires. See [Questionnaires](/docs/concepts/questionnaires) for the schema, the question types, and how responses are analysed.
+
+## Fetching
+
+```typescript
+import { Pulse, type PulseQuestionnaire } from "@synonymdev/pubky-pulse-web";
+
+const result = await Pulse.fetchQuestionnaire("nps-q3");
+
+if (result.ineligibleReason) {
+  // "already_responded" | "globally_dismissed" | "inactive" — not an error
+  return;
+}
+
+showSurvey(result.questionnaire!, result.inProgress?.answers);
+```
+
+`fetchQuestionnaire(slug, options?)` returns a `PulseQuestionnaireFetchResult`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `questionnaire` | `PulseQuestionnaire` | The definition — `id`, `slug`, `name`, optional `description`, and the versioned `schema`. Set when the user is eligible. |
+| `inProgress` | `PulseQuestionnaireDraft` | An unsubmitted response to resume: its `responseId` and the `answers` saved so far. |
+| `ineligibleReason` | `"already_responded" \| "globally_dismissed" \| "inactive"` | Why there is nothing to show. A normal outcome, not an error. |
+
+Pass `{ force: true }` to bypass the `already_responded` and `globally_dismissed` gates so you can preview the flow without resetting state. `inactive` is still enforced server-side — there is no spec to return for a paused questionnaire.
+
+An unknown slug or a failed request throws a `PulseQuestionnaireError` with a `reason` you can branch on: `not_configured`, `not_found`, `invalid_answers`, `already_responded`, `globally_dismissed`, `inactive`, `server_error`, or `network_error`.
+
+## Answer Helpers
+
+The helpers are pure functions over a plain object, so they work with React state, a Svelte store, or bare DOM alike.
+
+| Helper | Purpose |
+|---|---|
+| `createAnswerStore(prefill?)` | Start a store, optionally pre-filled from a draft's `answers`. Unusable values are dropped. |
+| `setAnswer(store, questionId, value)` | Return a new store with one answer set. `undefined`, `null`, or an empty selection clears it. |
+| `isAnswered(store, question)` | True when the question has a usable answer of the right shape. |
+| `hasAllRequired(store, schema)` | True when every question marked `required` has an answer — gate your submit button on it. |
+| `collected(store, schema)` | The answer set to send: only ids the schema still knows about, text trimmed, multi-choice ids sorted. |
+| `firstUnansweredIndex(store, schema)` | Where to land a resumed flow. |
+
+## Saving Answers
+
+`saveQuestionnaireResponse(slug, answers, isComplete)` saves a draft when `isComplete` is `false` and submits when it is `true`. Always send the full accumulated set — `collected()` produces it.
+
+```tsx
+import {
+  Pulse,
+  collected,
+  createAnswerStore,
+  firstUnansweredIndex,
+  hasAllRequired,
+  isAnswered,
+  setAnswer,
+  type PulseQuestionnaire,
+  type PulseQuestionnaireAnswers,
+  type PulseQuestionnaireAnswerStore,
+} from "@synonymdev/pubky-pulse-web";
+
+function Survey({
+  questionnaire,
+  draft,
+}: {
+  questionnaire: PulseQuestionnaire;
+  draft?: PulseQuestionnaireAnswers;
+}) {
+  const [answers, setAnswers] = useState<PulseQuestionnaireAnswerStore>(() =>
+    createAnswerStore(draft),
+  );
+  const [index, setIndex] = useState(() => firstUnansweredIndex(answers, questionnaire.schema));
+
+  const question = questionnaire.schema.questions[index];
+
+  function answer(value: string | string[] | number) {
+    const next = setAnswer(answers, question.id, value);
+    setAnswers(next);
+    // Always send the full accumulated set; a draft save is cheap.
+    void Pulse.saveQuestionnaireResponse(
+      questionnaire.slug,
+      collected(next, questionnaire.schema),
+      false,
+    );
+  }
+
+  async function submit() {
+    const receipt = await Pulse.saveQuestionnaireResponse(
+      questionnaire.slug,
+      collected(answers, questionnaire.schema),
+      true,
+    );
+    if (receipt.wasSubmitted) showThanks();
+  }
+
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+      <h2>{question.title}</h2>
+      {question.subtitle && <p>{question.subtitle}</p>}
+      {/* render by question.type: text, single_choice, multi_choice, rating, nps */}
+      <button type="button"
+              disabled={index >= questionnaire.schema.questions.length - 1
+                || (question.required && !isAnswered(answers, question))}
+              onClick={() => setIndex(index + 1)}>
+        Next
+      </button>
+      <button type="submit" disabled={!hasAllRequired(answers, questionnaire.schema)}>
+        Submit
+      </button>
+    </form>
+  );
+}
+```
+
+The receipt carries `id`, `createdAt`, and `wasSubmitted` — true only on the call that flipped the response from draft to submitted, so a resumed flow shows its success state exactly once.
+
+## Opting Out
+
+```typescript
+const dismissedAt = await Pulse.dismissQuestionnaires();
+```
+
+This opts the current user out of every questionnaire and returns the timestamp the server recorded. Later fetches for that user come back with `ineligibleReason: "globally_dismissed"`. Offer it wherever you would offer a "don't ask me again" control.

@@ -1,0 +1,49 @@
+---
+title: Identity
+description: Anonymous ids, Pulse.setUser(), clearUser(), and reading the current session id in the browser.
+---
+
+Every browser gets an anonymous id at `configure()` time and events are attributed to it right away. When the person signs in, `setUser` links the two so the session that led to the sign-up is not orphaned.
+
+## Anonymous Ids
+
+The anonymous id is `pulse_anon_<uuid>`, stored in `localStorage` so it survives reloads and tabs. It is created on the first `configure()` and reused from then on.
+
+## Identifying a User
+
+```typescript
+await Pulse.setUser(user.id);
+```
+
+`setUser` does three things in order:
+
+1. **Flushes** the events already buffered, so they reach the server under the anonymous id.
+2. **Claims** them server-side — the anonymous history is reassigned to the real user id.
+3. **Switches** the id stamped on subsequent events.
+
+Doing it in that order matters: switching first would split the person across two rows, because the claim would miss the events still in flight. The identifier is persisted, so a later page load re-runs the claim in the background; the claim is idempotent, so calling `setUser` on every page load where you know who the user is costs nothing.
+
+An empty identifier throws. A repeat call with the same id is a no-op.
+
+## Reading the Current Ids
+
+```typescript
+Pulse.currentUserId; // the id now stamped on events — user id if set, else the anonymous id
+Pulse.sessionId;     // current session, e.g. to send to your own backend
+```
+
+Both are `undefined` before `configure()` runs.
+
+## Signing Out
+
+```typescript
+Pulse.clearUser({ newAnonymousId: true });
+```
+
+`clearUser()` forgets the identified user and falls back to the existing anonymous id. Pass `newAnonymousId: true` on a shared device so the next person's events are not attributed to the one who just logged out.
+
+## Sessions
+
+A session is a UUID kept in `sessionStorage`, so it survives reloads in the same tab: `configure()` adopts the stored id when the last activity is inside `sessionTimeoutMs` (30 minutes by default), and only mints a new one when nothing is stored or the idle timeout has passed. A newly minted session emits `sdk:session_started`, and the first one of a page load carries a `_launch_ms` attribute read from the Navigation Timing API; an adopted session emits nothing. When a session expires it is replaced, and the expiring one gets an `sdk:session_ended` event only if this page started it — an inherited session ends silently, since the SDK never saw its start and another tab may still be using it. Every log call counts as activity, and returning to a backgrounded tab re-checks the clock.
+
+To join a browser session to backend events, propagate the session id to your own API and scope the server logger with it. See [Next.js](/docs/sdks/web/nextjs) for the complete pattern, and [`Pulse.withSession()`](/docs/sdks/node/identity#withsession) for the Node.js side.

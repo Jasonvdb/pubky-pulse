@@ -45,12 +45,14 @@ Derived server-side:
 
 ## Comments
 
-Each feedback item supports lightweight threaded comments so you can document triage decisions, link to issues, or capture internal context. Both users and agent keys (via MCP) can comment; only the original author can edit their comment, and only the author or a team admin can delete it.
+Each feedback item supports lightweight threaded comments so you can document triage decisions, link to issues, or capture internal context. Any team member can comment, whether or not they own the project, and agent keys (via MCP) can too. Only the author may edit a comment. A comment can be deleted by its author or, for moderation, by a human project owner — moderation never extends to editing someone else's comment, and an agent key may delete only the comments that exact key wrote. See [Authentication & Access Control](/docs/concepts/authentication#comments).
 
 ## Delete vs Dismiss
 
 - **Dismiss** — keep the feedback for audit history; used for "not actionable" rather than "unwanted".
-- **Delete** — soft-delete (sets `deleted_at`). Only users can delete; agent keys receive 403 by design, to prevent an agent from silently removing real user feedback. The daily `soft_delete_cleanup` job hard-deletes deleted feedback (and its comments) 7 days after `deleted_at`.
+- **Delete** — soft-delete (sets `deleted_at`). Only humans can delete; agent keys receive 403 by design, to prevent an agent from silently removing real user feedback. The daily `soft_delete_cleanup` job hard-deletes deleted feedback (and its comments) 7 days after `deleted_at`.
+
+Both are project-scoped writes: changing a feedback item's status and deleting it require ownership of the project it belongs to, and `feedback:write` on an agent key is necessary but not sufficient. Non-owners keep full read access and can still comment — see [Authentication & Access Control](/docs/concepts/authentication#project-ownership).
 
 ## Theming the SDK View
 

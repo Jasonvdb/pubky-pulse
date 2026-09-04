@@ -127,14 +127,16 @@ Statuses are independent of the global "Don't show again" dismissal — they're 
 
 ## Comments
 
-Each response gets a comment thread mirroring [feedback comments](./feedback#comments) — author-only edit, author-or-admin delete, both users and agent keys can comment.
+Each response gets a comment thread mirroring [feedback comments](./feedback#comments) — any team member can comment, only the author may edit, and a comment is deleted by its author or, for moderation, by a human project owner. An agent key may delete only the comments that exact key wrote. See [Authentication & Access Control](/docs/concepts/authentication#comments).
 
 ## Permissions
 
 - `questionnaires:read` — read definitions, responses, analytics
 - `questionnaires:write` — create/update/comment, update response status
 - Client SDK keys use `events:write` for ingest (the same scope as feedback)
-- Soft-deleting a questionnaire is **user-only**. Agent keys get 403 — by design, to prevent an agent from removing live SDK integrations
+- Deleting a questionnaire or a questionnaire response is **human-only**. Agent keys get 403 — by design, to prevent an agent from removing live SDK integrations or real user submissions
+
+Permissions are necessary but not sufficient: creating, updating and deleting questionnaires, and changing or deleting responses, also require ownership of the project, while commenting deliberately does not — see [Authentication & Access Control](/docs/concepts/authentication#project-ownership).
 
 ## Related Resources
 

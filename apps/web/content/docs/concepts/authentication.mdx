@@ -119,7 +119,7 @@ Each API key has a `permissions` array that controls what it can do. Permissions
 | Permission | Client | Agent | Import | Description |
 |---|---|---|---|---|
 | `events:write` | Yes | -- | Yes | Ingest events and identity claims |
-| `users:write` | Yes | Yes | Yes | Claim anonymous users and set user properties |
+| `users:write` | Yes | -- | Yes | Claim anonymous users and set user properties (SDK ingestion only -- agent keys cannot hold it) |
 | `events:read` | -- | Yes | -- | Query events |
 | `funnels:read` | -- | Yes | -- | Read funnel definitions and analytics |
 | `funnels:write` | -- | Yes | -- | Create, update and delete funnel definitions |

@@ -15,30 +15,6 @@ import {
   maskKey,
 } from "@/lib/mcp-editors";
 
-function renderNote(note: string) {
-  return (
-    <div className="mb-3 text-sm [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs">
-      {note.split("\n").map((line, i) => {
-        if (line.startsWith("```")) return null;
-        if (line.startsWith("- **")) {
-          const match = line.match(/- \*\*(.+?)\*\* `(.+?)`/);
-          if (match)
-            return (
-              <p key={i}>
-                <strong>{match[1]}</strong> <code>{match[2]}</code>
-              </p>
-            );
-        }
-        if (line.match(/^\d+\./)) {
-          return <p key={i}>{line}</p>;
-        }
-        if (line.trim() === "") return null;
-        return <p key={i}>{line}</p>;
-      })}
-    </div>
-  );
-}
-
 export function McpSetupInstructions() {
   const { user, teams, isLoading, mutate } = useUser();
   const [keyVisible, setKeyVisible] = useState(false);
@@ -168,7 +144,7 @@ export function McpSetupInstructions() {
               </div>
 
               {/* Note */}
-              {scope.note && renderNote(scope.note)}
+              {scope.note && <p className="mb-3 text-sm">{scope.note}</p>}
 
               {/* Copyable setup content */}
               <div className="relative">

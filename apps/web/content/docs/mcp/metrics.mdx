@@ -76,8 +76,8 @@ Query aggregated metric statistics: event counts by phase, success rate, duratio
 | `until` | string | No | End time |
 | `app_id` | UUID | No | Filter by app |
 | `app_version` | string | No | Filter by app version |
-| `device_model` | string | No | Filter by device model |
-| `os_version` | string | No | Filter by OS version |
+| `device_model` | string | No | Filter by device model, or by browser on web (`Chrome 120`) |
+| `os_version` | string | No | Filter by OS version, or by OS name and version on web (`macOS 10.15.7`) |
 | `user_id` | string | No | Filter by user |
 | `environment` | string | No | Filter by environment |
 | `group_by` | string | No | Group results (see below) |
@@ -89,8 +89,8 @@ Query aggregated metric statistics: event counts by phase, success rate, duratio
 |-------|-------------|
 | `app_id` | Group by app |
 | `app_version` | Group by app version |
-| `device_model` | Group by device model |
-| `os_version` | Group by OS version |
+| `device_model` | Group by device model — by browser for web events |
+| `os_version` | Group by OS version — by OS name and version for web events |
 | `environment` | Group by environment |
 | `time:hour` | Group by hour |
 | `time:day` | Group by day |

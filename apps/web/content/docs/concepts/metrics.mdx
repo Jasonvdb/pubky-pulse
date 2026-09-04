@@ -142,14 +142,16 @@ Queries support a `group_by` parameter to segment results:
 
 - `app_id` -- by app
 - `app_version` -- by app version
-- `device_model` -- by device hardware
-- `os_version` -- by OS version
+- `device_model` -- by device hardware, or by browser for web events (`Chrome 120`)
+- `os_version` -- by OS version, or by OS name and version for web events (`macOS 10.15.7`)
 - `environment` -- by runtime platform
 - `time:hour`, `time:day`, `time:week` -- by time bucket
 
+Metric events copy `device_model` and `os_version` from the event that produced them, so grouping a browser app's metrics by `device_model` answers "is checkout slow only in Safari?" without any extra instrumentation. Group by `environment` first when a project mixes web with native apps -- otherwise a browser and a phone land in the same table with no way to tell them apart.
+
 ### Filtering
 
-Queries accept optional filters: `since`, `until`, `app_id`, `app_version`, `device_model`, `os_version`, `user_id`, `environment`, and `data_mode`.
+Queries accept optional filters: `since`, `until`, `app_id`, `app_version`, `device_model`, `os_version`, `user_id`, `environment`, and `data_mode`. `device_model` and `os_version` are exact matches against the stored value, so filter a browser app on the browser string as it is recorded (`Chrome 120`, not `Chrome`).
 
 For API details, see the [metrics API reference](/docs/api-reference/metrics). For SDK usage, see the [Swift SDK](/docs/sdks/swift/metrics) or [Node SDK](/docs/sdks/node/metrics) guides.
 

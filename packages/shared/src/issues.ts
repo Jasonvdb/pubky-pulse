@@ -47,6 +47,10 @@ export interface IssueOccurrenceResponse {
   sdk_name: string | null;
   sdk_version: string | null;
   environment: string | null;
+  /** Device model on native apps; the browser and its major version on web. */
+  device_model: string | null;
+  /** OS version on native apps; the OS name and version on web. */
+  os_version: string | null;
   event_id: string | null;
   country_code: string | null;
   timestamp: string;
@@ -150,20 +154,85 @@ export function normalizeErrorMessage(message: string): string {
 }
 
 /**
+ * Browser wordings of the same JavaScript fault, mapped to one canonical form.
+ *
+ * Chrome, Firefox and Safari each phrase the same `TypeError` differently, so
+ * without this one bug in one line of code becomes three issues. Each entry's
+ * `canonical` is a template whose `$1` is replaced with the property, function
+ * or variable name taken from the pattern's capture group (reduced to its last
+ * dotted segment, so `cart.total` and `total` agree). The canonical forms quote
+ * nothing: `normalizeErrorMessage` runs afterwards and would replace a quoted
+ * name with `'<s>'`, collapsing every fault in a file onto one fingerprint.
+ *
+ * Order matters: the broad "<expr> is undefined" and "<expr> is not a function"
+ * shapes come last so the more specific browser phrasings win.
+ */
+export const BROWSER_ERROR_PATTERNS: ReadonlyArray<{ pattern: RegExp; canonical: string }> = [
+  // Chrome: Cannot read properties of undefined (reading 'total')
+  { pattern: /^cannot read properties of (?:undefined|null) \(reading '([^']+)'\)$/i, canonical: "<undefined-property> $1" },
+  // Chrome (legacy): Cannot read property 'total' of undefined
+  { pattern: /^cannot read property '([^']+)' of (?:undefined|null)$/i, canonical: "<undefined-property> $1" },
+  // Firefox: can't access property "total", cart is undefined
+  { pattern: /^can't access property "([^"]+)", .+ is (?:undefined|null)$/i, canonical: "<undefined-property> $1" },
+  // Safari: undefined is not an object (evaluating 'cart.total')
+  { pattern: /^(?:undefined|null) is not an object \(evaluating '([^']+)'\)$/i, canonical: "<undefined-property> $1" },
+  // Safari: Can't find variable: cart
+  { pattern: /^can't find variable: (\S+)$/i, canonical: "<not-defined> $1" },
+  // Chrome/Firefox: cart is not defined
+  { pattern: /^(\S+) is not defined$/i, canonical: "<not-defined> $1" },
+  // Chrome/Firefox: cart.total is not a function
+  // Safari:         cart.total is not a function. (In 'cart.total()', 'cart.total' is undefined)
+  { pattern: /^(\S+) is not a function(?:\.\s*\(in\b[\s\S]*\))?$/i, canonical: "<not-a-function> $1" },
+  // Firefox: cart.total is undefined
+  { pattern: /^(\S+) is (?:undefined|null)$/i, canonical: "<undefined-property> $1" },
+  // Every browser, for an error thrown by a script served cross-origin.
+  { pattern: /^script error\.?$/i, canonical: "<cross-origin-script-error>" },
+];
+
+/** `cart.items.total` → `total`; anything without a dot is returned as-is. */
+function lastPropertySegment(expression: string): string {
+  const segments = expression.split(".").filter((s) => s.length > 0);
+  return segments.length > 0 ? segments[segments.length - 1] : expression;
+}
+
+/**
+ * Rewrites a browser error message into a browser-independent canonical form,
+ * keeping the property/function/variable name so distinct faults stay distinct.
+ * Messages that match no pattern are returned unchanged.
+ *
+ * Only meaningful for `environment === "web"` — see generateIssueFingerprint.
+ */
+export function canonicalizeBrowserErrorMessage(message: string): string {
+  const trimmed = message.trim();
+  for (const { pattern, canonical } of BROWSER_ERROR_PATTERNS) {
+    const match = pattern.exec(trimmed);
+    if (!match) continue;
+    const name = lastPropertySegment(match[1] ?? "");
+    // Function replacement so a name containing "$" is inserted literally.
+    return canonical.replace("$1", () => name);
+  }
+  return message;
+}
+
+/**
  * Generates a SHA-256 fingerprint for an error.
  * Based on normalized message + source_module, optionally augmented by a
  * per-event discriminator (e.g. `${method} ${host}${path}` for sdk:network_request).
  *
  * When `discriminator` is null/undefined the hash input is byte-identical to
  * the legacy 2-arg form, so existing fingerprints for non-network events
- * remain stable.
+ * remain stable. Likewise `environment`: only `"web"` canonicalizes the
+ * message, so fingerprints for every other environment are untouched.
  */
 export async function generateIssueFingerprint(
   message: string,
   sourceModule: string | null,
   discriminator?: string | null,
+  environment?: string | null,
 ): Promise<string> {
-  const normalized = normalizeErrorMessage(message);
+  const normalized = normalizeErrorMessage(
+    environment === "web" ? canonicalizeBrowserErrorMessage(message) : message,
+  );
   const base = `${sourceModule ?? ""}:${normalized}`;
   const input = discriminator == null
     ? base

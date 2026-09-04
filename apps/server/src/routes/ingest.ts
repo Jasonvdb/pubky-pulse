@@ -8,6 +8,7 @@ import {
 import type { IngestRequest, IngestEventPayload } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
+import { enforceWebAppOrigin } from "../middleware/origin.js";
 import {
   validateEventPayload,
   buildEventRow,
@@ -24,7 +25,7 @@ import {
 export async function ingestRoutes(app: FastifyInstance) {
   app.post<{ Body: IngestRequest }>(
     "/ingest",
-    { preHandler: [requirePermission("events:write"), rateLimit] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       const { bundle_id, events: payloads } = request.body;

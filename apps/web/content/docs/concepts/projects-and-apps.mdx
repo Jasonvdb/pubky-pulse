@@ -73,6 +73,7 @@ While an app has a single platform, the events it sends carry a more specific `e
 | `ios` | iPhone |
 | `ipados` | iPad |
 | `macos` | Mac (native macOS or Mac Catalyst) |
+| `watchos` | Apple Watch |
 | `android` | Android device |
 | `web` | Web browser |
 | `backend` | Server process |
@@ -92,11 +93,48 @@ Each platform allows a specific set of environments:
 
 ## Bundle ID
 
-Apps with a platform other than `backend` require a `bundle_id` (e.g., `com.example.myapp`). The ingest endpoint validates that the `bundle_id` in each request matches the app's registered bundle ID on every ingestion request.
+Apps with a platform other than `backend` require a `bundle_id`. The ingest endpoint validates that the `bundle_id` in each request matches the app's registered bundle ID on every ingestion request.
+
+What that string looks like follows the platform:
+
+| Platform | Identifier | Example |
+|---|---|---|
+| `apple` | Reverse-DNS bundle identifier | `com.example.acme` |
+| `android` | Application ID | `com.example.acme` |
+| `web` | Site identifier — the site's host reads best | `app.acme.com` |
+| `backend` | None | -- |
+
+A web app's identifier is a name, not an address: it is not parsed as a URL, no scheme or path belongs in it, and it is not what authorises the browser to send. That is [allowed origins](#allowed-origins), below. Keep it stable — it is the value you pass as `bundleId` in `Pulse.configure()`.
 
 Backend-platform apps have no bundle ID, and the ingest route skips this validation for them.
 
-Bundle IDs are **immutable after creation**. The update endpoint only accepts a `name` change. If you need to change a bundle ID, delete the app and create a new one.
+Bundle IDs are **immutable after creation**. The update endpoint accepts a `name` change and, for web apps, an `allowed_origins` change — never a bundle ID. If you need to change one, delete the app and create a new one.
+
+## Allowed Origins
+
+A `web` app carries `allowed_origins`: the list of browser origins its client key may send from. It is empty by default, editable at any time, and meaningful only on the `web` platform — setting it on an `apple`, `android`, or `backend` app is rejected with a `400`.
+
+It exists because a web app's client key is public. It ships inside the page, so anyone can read it out of the network tab. The origin list is what scopes that key to the sites you actually own:
+
+- **Ingest enforcement.** When a request for a web app carries an `Origin` header, that origin must be on the list or the request is refused with `403`. Requests with no `Origin` — native SDKs, backend SDKs, `curl` — pass untouched; none of them can forge a browser origin, and refusing them would break the platforms the list has nothing to say about.
+- **CORS.** Registered origins are allowed automatically, so adding a site is an API or dashboard change rather than a server redeploy. `CORS_ORIGINS` stays what it always was: the dashboard's own origin.
+- **An empty list means no browser can send.** A newly created web app with no origins refuses every request a browser makes. Add the site's origins — including the dev server's, `http://localhost:5173` or whatever port you use — before wiring up the SDK.
+
+Each entry is a full origin and nothing else: scheme, host, and an optional port, with no path, no query string, and no trailing slash. That is exactly the shape of the `Origin` header a browser sends, so the comparison is a string equality rather than a guess about what a pattern meant.
+
+```json
+{
+  "allowed_origins": [
+    "https://app.acme.com",
+    "https://staging.acme.com",
+    "http://localhost:5173"
+  ]
+}
+```
+
+On write, entries are normalised — scheme and host lowercased, a default port dropped (`https://acme.com:443` becomes `https://acme.com`), duplicates collapsed — and anything that is not a bare `http`/`https` origin is rejected with a `400` naming the offending value. Wildcards are not supported; list each host. At most 50 entries per app.
+
+Updating the list **replaces** it, so send the origins you want to keep alongside the new one. Changes take effect on ingest immediately and on CORS within a minute (the union of every web app's origins is cached briefly). Edit it from the app's card in the dashboard, `PATCH /v1/apps/:id`, or the `update-app` MCP tool.
 
 ## Auto-Created Client Key
 
@@ -116,9 +154,9 @@ A common configuration for a cross-platform product:
 |---|---|---|---|
 | Acme | Acme iOS | apple | `com.example.acme` |
 | Acme | Acme Android | android | `com.example.acme` |
-| Acme | Acme Web | web | `com.example.acme` |
+| Acme | Acme Web | web | `app.acme.com` |
 | Acme | Acme API | backend | -- |
 
-All four apps share the same project, so metric definitions, funnel definitions, and cross-platform analytics are unified under "Acme."
+All four apps share the same project, so metric definitions, funnel definitions, and cross-platform analytics are unified under "Acme." Only the web app carries allowed origins; the other three send no `Origin` header.
 
 For managing projects and apps, see the [MCP projects guide](/docs/mcp/projects), the [MCP apps guide](/docs/mcp/apps), or the [API reference](/docs/api-reference/projects).

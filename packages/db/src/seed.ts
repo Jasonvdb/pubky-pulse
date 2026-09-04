@@ -2,7 +2,18 @@ import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { users, teams, teamMembers, projects, projectOwners, apps, apiKeys, events, appUsers, appUserApps, metricDefinitions, funnelDefinitions, questionnaires } from "./schema.js";
 import { eq, and } from "drizzle-orm";
-import { DEFAULT_API_KEY_PERMISSIONS } from "@pubky-pulse/shared";
+import {
+  DEFAULT_API_KEY_PERMISSIONS,
+  ERROR_TYPE_ATTRIBUTE,
+  HTTP_DURATION_MS_ATTRIBUTE,
+  HTTP_METHOD_ATTRIBUTE,
+  HTTP_STATUS_ATTRIBUTE,
+  HTTP_URL_ATTRIBUTE,
+  NETWORK_REQUEST_MESSAGE,
+  PAGE_URL_ATTRIBUTE,
+  REFERRER_ATTRIBUTE,
+  UNHANDLED_ATTRIBUTE,
+} from "@pubky-pulse/shared";
 import crypto from "node:crypto";
 
 if (process.env.NODE_ENV === "production") {
@@ -128,6 +139,30 @@ async function main() {
     name: "Demo API Server Client Key", created_by: user.id, permissions: ["events:write"],
   });
 
+  // --- Demo web app (web) ---
+  // `bundle_id` is the site identifier for a web app, and `allowed_origins`
+  // authorises the browser origins its client key may send from — the local
+  // dashboard dev server, so a Web SDK page served from it can ingest.
+  const webAppKey = "pulse_client_web_0000000000000000000000000000000000000000";
+
+  let [webApp] = await db.select().from(apps).where(and(eq(apps.project_id, project.id), eq(apps.name, "Demo Web")));
+  if (!webApp) {
+    [webApp] = await db.insert(apps).values({
+      team_id: team.id,
+      project_id: project.id,
+      name: "Demo Web",
+      platform: "web",
+      bundle_id: "demo.pubky.org",
+      allowed_origins: ["http://localhost:3000"],
+    }).returning();
+  }
+  console.log(`  Web:     ${webApp.name} (${webApp.id})`);
+
+  await ensureApiKey(db, webAppKey, {
+    key_type: "client", app_id: webApp.id, team_id: team.id,
+    name: "Demo Web Client Key", created_by: user.id, permissions: ["events:write"],
+  });
+
   // --- Seed demo events (always fresh) ---
   const session1 = crypto.randomUUID();
   const session2 = crypto.randomUUID();
@@ -160,6 +195,32 @@ async function main() {
 
   await db.insert(events).values(
     serverEvents.map((e) => ({ ...e, app_id: serverApp.id }))
+  );
+
+  // Web events. The Web SDK reports the browser in `device_model`, the OS in
+  // `os_version`, the URL path in `screen_name`, and never a build number.
+  const webSession = crypto.randomUUID();
+  const webBase = {
+    session_id: webSession,
+    user_id: "user-77",
+    screen_name: "/checkout",
+    environment: "web" as const,
+    device_model: "Chrome 132",
+    os_version: "macOS 15.3",
+    app_version: "1.0.0",
+    build_number: null,
+    locale: "en_US",
+  };
+  const webEvents: Array<Omit<typeof events.$inferInsert, "app_id">> = [
+    { ...webBase, level: "info", message: "Route change to /checkout", source_module: "app/checkout/page.tsx", timestamp: new Date(now - 12 * 60000), custom_attributes: { [PAGE_URL_ATTRIBUTE]: "https://demo.pubky.org/checkout?cart=9f2", [REFERRER_ATTRIBUTE]: "https://demo.pubky.org/" } },
+    { ...webBase, level: "debug", message: "Cart restored from session storage", source_module: "hooks/use-cart.ts", timestamp: new Date(now - 11 * 60000) },
+    { ...webBase, level: "warn", message: "Hydration mismatch: server rendered text did not match the client", source_module: "components/cart-summary.tsx", timestamp: new Date(now - 10 * 60000) },
+    { ...webBase, level: "error", message: NETWORK_REQUEST_MESSAGE, source_module: "lib/api-client.ts", timestamp: new Date(now - 9 * 60000), custom_attributes: { [HTTP_URL_ATTRIBUTE]: "https://api.demo.pubky.org/v1/cart", [HTTP_METHOD_ATTRIBUTE]: "POST", [HTTP_STATUS_ATTRIBUTE]: "0", [HTTP_DURATION_MS_ATTRIBUTE]: "30012" } },
+    { ...webBase, level: "error", message: "Cannot read properties of undefined (reading 'items')", source_module: "app/checkout/page.tsx", timestamp: new Date(now - 8 * 60000), custom_attributes: { [ERROR_TYPE_ATTRIBUTE]: "TypeError", [UNHANDLED_ATTRIBUTE]: "true", [PAGE_URL_ATTRIBUTE]: "https://demo.pubky.org/checkout?cart=9f2" } },
+  ];
+
+  await db.insert(events).values(
+    webEvents.map((e) => ({ ...e, app_id: webApp.id }))
   );
 
   // --- Metric definitions ---
@@ -248,6 +309,7 @@ async function main() {
     { user_id: "user-42", is_anonymous: false, first_seen_at: new Date(now - 8 * 60000), last_seen_at: new Date(now - 2 * 60000), appId: app.id },
     { user_id: "user-99", is_anonymous: false, first_seen_at: new Date(now - 90000), last_seen_at: new Date(now - 30000), appId: app.id },
     { user_id: "pulse_anon_demo-visitor", is_anonymous: true, first_seen_at: new Date(now - 120000), last_seen_at: new Date(), appId: app.id },
+    { user_id: "user-77", is_anonymous: false, first_seen_at: new Date(now - 12 * 60000), last_seen_at: new Date(now - 8 * 60000), appId: webApp.id },
   ];
   for (const row of seedUserRows) {
     const [upserted] = await db
@@ -273,8 +335,9 @@ async function main() {
   console.log("\nSeed complete!");
   console.log(`  Client Key: ${clientKey}`);
   console.log(`  Server Key: ${serverAppKey}`);
+  console.log(`  Web Key:    ${webAppKey}`);
   console.log(`  Agent Key:  ${agentKey}`);
-  console.log(`  Events:     ${seedEvents.length + serverEvents.length} demo events inserted`);
+  console.log(`  Events:     ${seedEvents.length + serverEvents.length + webEvents.length} demo events inserted`);
   console.log("\nRe-run safely at any time — existing data is preserved, fresh events are added.");
 
   process.exit(0);

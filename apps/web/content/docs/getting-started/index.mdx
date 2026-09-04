@@ -110,13 +110,15 @@ From your project's detail page, click **Create App**. Choose the platform that 
 | Web | Browser-based apps |
 | Backend | API servers, workers, serverless functions |
 
-For Apple, Android, and Web platforms, provide a **bundle ID** (e.g., `com.example.myapp`). Backend apps don't need one.
+For Apple, Android, and Web platforms, provide a **bundle ID**. On Apple and Android that's the reverse-DNS identifier (`com.example.myapp`); on Web it's the site identifier, and the site's host reads best (`app.example.com`). Backend apps don't need one.
+
+A **Web** app also asks for **allowed origins** — the browser origins the SDK may send from, one per line, including your dev server (`http://localhost:5173`). A web app's client key ships inside the page, so this list is what scopes it to sites you own; leave it empty and the browser gets a `403`. You can edit it any time from the app's card. See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins).
 
 When you create the app, a client API key (`pulse_client_...`) is generated automatically. **Copy this key** — you'll need it to configure the SDK.
 
 ### Configure the SDK
 
-Follow the installation page for your platform: [Node.js](/docs/sdks/node/installation), [Swift](/docs/sdks/swift/installation), or [Android](/docs/sdks/android/installation). Each SDK is configured with two values: the client key you just copied and the ingest endpoint of your instance (`https://ingest.yourdomain.com`, or `http://localhost:4000` in local development).
+Follow the installation page for your platform: [Web](/docs/sdks/web/installation), [Node.js](/docs/sdks/node/installation), [Swift](/docs/sdks/swift/installation), or [Android](/docs/sdks/android/installation). Each SDK is configured with two values: the client key you just copied and the ingest endpoint of your instance (`https://ingest.yourdomain.com`, or `http://localhost:4000` in local development).
 
 ## What's Next
 

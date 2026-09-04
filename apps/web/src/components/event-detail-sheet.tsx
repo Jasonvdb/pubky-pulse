@@ -14,6 +14,7 @@ import { EventLevelBadge } from "@/components/event-level-badge";
 import { VersionRow } from "@/components/version-badge";
 import { InvestigateTimeline } from "@/components/investigate-timeline";
 import { DetailRow } from "@/components/detail-row";
+import { DeviceDetailRows } from "@/components/device-detail-rows";
 import {
   AttachmentDownloadButton,
   AttachmentUntrustedNotice,
@@ -22,6 +23,7 @@ import { ProjectDot } from "@/lib/project-color";
 import { formatDateTime } from "@/lib/format-date";
 import { formatSdkLabel } from "@/lib/format-sdk";
 import { countryFlag } from "@/lib/country-flag";
+import { environmentLabel } from "@/lib/platforms";
 import { api } from "@/lib/api";
 // Deep import bypasses the barrel export which pulls in node:crypto
 import { formatBytes } from "@pubky-pulse/shared/constants";
@@ -104,14 +106,22 @@ export function EventDetailSheet({ event, open, onOpenChange, onEventSelect, onF
             <DetailRow label="Message" value={event.message} />
             <DetailRow label="User ID" value={event.user_id} onFilter={onFilter && event.user_id ? () => onFilter("user_id", event.user_id!) : undefined} />
             <DetailRow label="Session ID" value={event.session_id} onFilter={onFilter && event.session_id ? () => onFilter("session_id", event.session_id) : undefined} />
-            <DetailRow label="Screen Name" value={event.screen_name} onFilter={onFilter && event.screen_name ? () => onFilter("screen_name", event.screen_name!) : undefined} />
             <DetailRow label="Source Module" value={event.source_module} />
-            <DetailRow label="Environment" value={event.environment} onFilter={onFilter && event.environment ? () => onFilter("environment", event.environment!) : undefined} />
-            <DetailRow label="OS Version" value={event.os_version} />
+            <DetailRow label="Environment" value={environmentLabel(event.environment)} onFilter={onFilter && event.environment ? () => onFilter("environment", event.environment!) : undefined} />
+            <DeviceDetailRows
+              environment={event.environment}
+              deviceModel={event.device_model}
+              osVersion={event.os_version}
+              screenName={event.screen_name}
+              buildNumber={event.build_number}
+              onFilterScreen={
+                onFilter && event.screen_name
+                  ? () => onFilter("screen_name", event.screen_name!)
+                  : undefined
+              }
+            />
             <VersionRow label="App Version" version={event.app_version} latestVersion={latestAppVersion} />
             <DetailRow label="SDK" value={formatSdkLabel(event.sdk_name, event.sdk_version) || null} />
-            <DetailRow label="Build Number" value={event.build_number} />
-            <DetailRow label="Device Model" value={event.device_model} />
             <DetailRow label="Locale" value={event.locale} />
             {(() => {
               const f = countryFlag(event.country_code);

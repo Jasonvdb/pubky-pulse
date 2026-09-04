@@ -181,10 +181,14 @@ export interface CreateAppRequest {
   platform: AppPlatform;
   bundle_id?: string;
   project_id: string;
+  /** Browser origins the site may send from. `web` platform only. */
+  allowed_origins?: string[];
 }
 
 export interface UpdateAppRequest {
   name?: string;
+  /** Replaces the whole list. `web` platform only. */
+  allowed_origins?: string[];
 }
 
 export type AppResponse = Omit<
@@ -239,7 +243,12 @@ export interface EventsQueryParams {
   user_id?: string;
   session_id?: string;
   environment?: string;
+  /** Exact screen name, or a path prefix: `/checkout` also matches `/checkout/payment`. */
   screen_name?: string;
+  /** Device model on native apps; the browser and its major version on web. */
+  device_model?: string;
+  /** OS version on native apps; the OS name and version on web. */
+  os_version?: string;
   since?: string;
   until?: string;
   cursor?: string;
@@ -263,7 +272,12 @@ export interface EventsCountQueryParams {
   user_id?: string;
   session_id?: string;
   environment?: string;
+  /** Exact screen name, or a path prefix: `/checkout` also matches `/checkout/payment`. */
   screen_name?: string;
+  /** Device model on native apps; the browser and its major version on web. */
+  device_model?: string;
+  /** OS version on native apps; the OS name and version on web. */
+  os_version?: string;
   since?: string;
   until?: string;
   data_mode?: DataMode;

@@ -45,6 +45,40 @@ Accept a batch of events for a specific app.
 }
 ```
 
+A batch from a browser looks the same, with the values a browser can report:
+
+```json
+{
+  "bundle_id": "app.acme.com",
+  "events": [
+    {
+      "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "user_id": "pulse_anon_xyz789",
+      "level": "error",
+      "message": "Cannot read properties of undefined (reading 'items')",
+      "source_module": "app/checkout/page.tsx",
+      "screen_name": "/checkout/payment",
+      "custom_attributes": {
+        "_error_type": "TypeError",
+        "_page_url": "https://app.acme.com/checkout/payment?cart=9f2",
+        "_referrer": "https://app.acme.com/checkout"
+      },
+      "environment": "web",
+      "os_version": "macOS 10.15.7",
+      "app_version": "1.4.0",
+      "sdk_name": "pubky-pulse-web",
+      "sdk_version": "0.1.0",
+      "device_model": "Chrome 120",
+      "locale": "en-US",
+      "is_dev": false,
+      "timestamp": "2024-01-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+`bundle_id` is the app's site identifier, `device_model` is the browser, `os_version` is the OS name and version, `screen_name` is the URL path, and there is no `build_number`. See [Field semantics by platform](/docs/concepts/events#field-semantics-by-platform).
+
 ### Field reference
 
 | Field | Type | Required | Description |
@@ -56,21 +90,21 @@ Accept a batch of events for a specific app.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `message` | string | Yes | Event name or description. |
+| `message` | string | Yes | Event name or description. Truncated to 2000 characters. |
 | `level` | string | Yes | One of: `info`, `debug`, `warn`, `error`. |
-| `session_id` | string | Yes | UUID generated per SDK session. |
+| `session_id` | string | Yes | UUID generated per SDK session. Must be a valid UUID. |
 | `client_event_id` | string | No | UUID for deduplication. Events with duplicate IDs (within 48h) are silently skipped. |
 | `user_id` | string | No | User identifier. Anonymous IDs use `pulse_anon_` prefix. |
 | `source_module` | string | No | Module or class that emitted the event. |
-| `screen_name` | string | No | Current screen/page name. |
+| `screen_name` | string | No | Current screen name, or on web the URL path (`/checkout/payment`). |
 | `custom_attributes` | object | No | Key-value string pairs. Values truncated to 200 characters. |
 | `environment` | string | No | Runtime environment. Must match the app's platform. See table below. |
-| `os_version` | string | No | Operating system version. |
+| `os_version` | string | No | Operating system version (`18.0`), or on web the OS name and version (`macOS 10.15.7`). |
 | `app_version` | string | No | Application version string. |
 | `sdk_name` | string | No | Identifier of the Pubky Pulse SDK that produced the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`, `pubky-pulse-web`). Auto-set by official SDKs. |
 | `sdk_version` | string | No | Version of the Pubky Pulse SDK that produced the event. Auto-set by official SDKs. |
-| `build_number` | string | No | Build number. |
-| `device_model` | string | No | Device model identifier. |
+| `build_number` | string | No | Build number. Native only — browsers have none. |
+| `device_model` | string | No | Device model identifier (`iPhone15,2`), or on web the browser and its major version (`Chrome 120`). |
 | `locale` | string | No | User locale (e.g., `en_US`). |
 | `preferred_language` | string | No | The user's top wanted language, unconstrained by what the app ships (e.g. `fr`). Powers localization-demand queries. |
 | `supported_languages` | string[] | No | Languages this app ships. App-level: written through to the app record rather than stored on the event row. |
@@ -89,10 +123,32 @@ Accept a batch of events for a specific app.
 ### Validation rules
 
 - **Batch size:** Maximum 100 events per request.
+- **Session ID:** Must be a valid UUID. A malformed value rejects that one event and leaves the rest of the batch alone.
 - **Timestamps:** Must be valid ISO 8601. Cannot be more than 5 minutes in the future or more than 30 days in the past.
-- **Custom attributes:** Values are strings, truncated to 200 characters.
+- **Message:** Truncated to 2000 characters.
+- **Custom attributes:** Values are coerced to strings and truncated to 200 characters. Reserved keys have their own caps: `_error_stack` 16000, `_page_url` and `_referrer` 2048 each.
+- **Device and version fields:** `device_model`, `os_version`, `app_version`, `build_number`, `sdk_name`, `sdk_version`, `locale`, and `preferred_language` are truncated to their column widths rather than rejected, so an unusually long user-agent-derived value never fails a batch.
 - **Deduplication:** Events with a `client_event_id` that matches an existing event (within the last 48 hours) are silently skipped.
 - **Bundle ID:** For non-backend apps, the `bundle_id` in the request must match the app's registered bundle_id exactly.
+
+Per-event failures are reported in the response's `errors` array; they never fail the whole batch.
+
+### Browser origin enforcement
+
+When the credential belongs to a **web** app and the request carries an `Origin` header, that origin must appear in the app's [`allowed_origins`](/docs/api-reference/apps#allowed_origins). Otherwise the request is refused:
+
+```json
+// 403
+{
+  "error": "Origin \"https://evil.example\" is not an allowed origin for this app. Add it to the app's allowed_origins (PATCH /v1/apps/:id) before sending from it."
+}
+```
+
+This applies to every SDK-facing route — `/v1/ingest`, `/v1/ingest/attachment`, `/v1/feedback`, `/v1/questionnaires/*`, and `/v1/identity/*` — because a web app's client key is public and CORS alone is a browser courtesy, not a server check.
+
+Requests with **no** `Origin` header pass untouched: native SDKs, backend SDKs, and `curl` never send one, and refusing them would break those platforms without making a copied web key any less usable. A web app whose `allowed_origins` is empty therefore accepts server-side callers but refuses every browser.
+
+Rate limiting for client keys buckets per key **and** caller IP, so one visitor of a busy site cannot exhaust the quota for everyone else. Behind a proxy, set `TRUST_PROXY` to that proxy's addresses — `127.0.0.1,::1` for nginx on loopback — so the caller IP is read from the `X-Forwarded-For` entry nginx wrote rather than from the leftmost entry, which the caller writes. `Retry-After` is exposed to browser script on a `429`.
 
 ### Server-derived fields
 

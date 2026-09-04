@@ -36,7 +36,7 @@ function compactEvent(event: Record<string, unknown>): Record<string, unknown> {
 export function registerEventsTools(server: McpServer, app: FastifyInstance, agentKey: string): void {
   server.registerTool("query-events", {
     description:
-      "Query analytics events with flexible filters — project, app, level, user, session, environment, screen, time range, data mode. Defaults to last 24 hours. Returns cursor-paginated results. Set compact=true to drop verbose fields (custom_attributes, device metadata) and stay under MCP token limits. **For investigating an issue's occurrences, use `investigate-event` instead** — it builds a richer breadcrumb (full session + cross-app events for the same user) automatically from an occurrence's `event_id`. Reach for `query-events` for ad-hoc filter-driven searches (all errors of a given level, all events on a screen, walking a session manually).",
+      "Query analytics events with flexible filters — project, app, level, user, session, environment, screen, device/browser, OS, time range, data mode. Defaults to last 24 hours. Returns cursor-paginated results. Set compact=true to drop verbose fields (custom_attributes, device metadata) and stay under MCP token limits. **For investigating an issue's occurrences, use `investigate-event` instead** — it builds a richer breadcrumb (full session + cross-app events for the same user) automatically from an occurrence's `event_id`. Reach for `query-events` for ad-hoc filter-driven searches (all errors of a given level, all events on a screen, walking a session manually).",
     inputSchema: {
       project_id: z.string().uuid().optional().describe("Filter by project"),
       app_id: z.string().uuid().optional().describe("Filter by app (takes precedence over project_id)"),
@@ -44,7 +44,9 @@ export function registerEventsTools(server: McpServer, app: FastifyInstance, age
       user_id: z.string().optional().describe("Filter by user ID"),
       session_id: z.string().uuid().optional().describe("Filter by session ID — for issue investigation, prefer `investigate-event` with the occurrence's `event_id` instead, which returns the same session plus cross-app enrichment"),
       environment: z.enum(ENVIRONMENTS).optional().describe("Filter by environment"),
-      screen_name: z.string().optional().describe("Filter by screen name"),
+      screen_name: z.string().optional().describe("Filter by screen name. On web this is the URL path, and the match covers nested paths — \"/checkout\" also returns \"/checkout/payment\" (but not \"/checkout-abandoned\")."),
+      device_model: z.string().optional().describe("Filter by device model, e.g. \"iPhone15,2\". On web this is the browser and its major version, e.g. \"Chrome 120\"."),
+      os_version: z.string().optional().describe("Filter by OS version, e.g. \"18.0\". On web this is the OS name and version, e.g. \"macOS 10.15.7\"."),
       since: z.string().optional().describe("Start time (relative like '1h', '7d' or ISO 8601)"),
       until: z.string().optional().describe("End time (relative or ISO 8601)"),
       cursor: z.string().optional().describe("Pagination cursor from previous response"),

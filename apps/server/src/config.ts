@@ -49,6 +49,62 @@ export function resolveIdentityConfig(env: NodeJS.ProcessEnv): IdentityConfig {
   return result.value;
 }
 
+/**
+ * Dashboard origins allowed by CORS, from a comma-separated list.
+ *
+ * Entries are trimmed and de-duplicated because a value copied out of a deploy
+ * script routinely carries spaces after the commas, and an untrimmed entry can
+ * never match an `Origin` header. An empty or absent variable falls back to the
+ * local dashboard rather than to "no origins", which would lock a developer out
+ * of their own machine.
+ *
+ * Site origins do NOT belong here: a web app carries its own `allowed_origins`,
+ * which the CORS resolver unions with this list.
+ */
+export function parseCorsOrigins(raw: string | undefined): string[] {
+  const entries = [
+    ...new Set(
+      (raw ?? "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0),
+    ),
+  ];
+  return entries.length > 0 ? entries : ["http://localhost:3000"];
+}
+
+/**
+ * How much of `X-Forwarded-For` to believe. Off unless explicitly enabled,
+ * because a server that trusts the header while directly reachable lets any
+ * caller choose its own `request.ip` — and with it, its own rate-limit bucket.
+ * Production terminates at Cloudflare, then nginx, then node on loopback.
+ *
+ * Prefer naming the proxy: any value that is not `true` or `false` is handed to
+ * Fastify as its comma-separated list of trusted addresses or CIDR ranges
+ * (`127.0.0.1,::1` for nginx on loopback, or the shorthand `loopback`). Fastify
+ * then walks the header from the right and stops at the first hop that is not
+ * on the list — the entry the trusted proxy itself appended. Plain `true`
+ * instead takes the leftmost entry, which is whatever the caller sent, so a
+ * caller can prepend an address and pick its own bucket.
+ *
+ * A hop count is rejected rather than passed through: Fastify's `trustProxy` is
+ * `boolean | string | string[] | function`, so a number reaches it as "trust
+ * nothing" rather than "trust N hops".
+ */
+export function resolveTrustProxy(raw: string | undefined): boolean | string {
+  const value = (raw ?? "").trim();
+  const lowered = value.toLowerCase();
+  if (lowered === "" || lowered === "false") return false;
+  if (lowered === "true") return true;
+  if (/^\d+$/.test(value)) {
+    throw new Error(
+      `TRUST_PROXY does not accept a hop count ("${value}"): Fastify reads a numeric value as "trust nothing". ` +
+        "Name the trusted proxy instead, e.g. TRUST_PROXY=127.0.0.1,::1 for nginx on loopback.",
+    );
+  }
+  return value;
+}
+
 const identity = resolveIdentityConfig(process.env);
 
 export const config = {
@@ -57,7 +113,8 @@ export const config = {
   databaseUrl:
     process.env.DATABASE_URL || "postgresql://localhost:5432/pubky_pulse",
   jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me",
-  corsOrigins: process.env.CORS_ORIGINS?.split(",") || ["http://localhost:3000"],
+  corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
+  trustProxy: resolveTrustProxy(process.env.TRUST_PROXY),
   maxDatabaseSizeGb: Number(process.env.MAX_DATABASE_SIZE_GB || 0),
   cookieSecure: isProduction,
   cookieDomain: process.env.COOKIE_DOMAIN || undefined,

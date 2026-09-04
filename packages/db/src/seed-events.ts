@@ -2,7 +2,21 @@ import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
 import { apps, events, appUsers, appUserApps, metricEvents, funnelEvents } from "./schema.js";
 import { eq, isNull, and } from "drizzle-orm";
-import { parseMetricMessage, parseStepMessage } from "@pubky-pulse/shared";
+import {
+  ALLOWED_ENVIRONMENTS_FOR_PLATFORM,
+  ERROR_TYPE_ATTRIBUTE,
+  HTTP_DURATION_MS_ATTRIBUTE,
+  HTTP_METHOD_ATTRIBUTE,
+  HTTP_STATUS_ATTRIBUTE,
+  HTTP_URL_ATTRIBUTE,
+  NETWORK_REQUEST_MESSAGE,
+  PAGE_URL_ATTRIBUTE,
+  REFERRER_ATTRIBUTE,
+  UNHANDLED_ATTRIBUTE,
+  parseMetricMessage,
+  parseStepMessage,
+} from "@pubky-pulse/shared";
+import type { AppPlatform, Environment } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
 
 if (process.env.NODE_ENV === "production") {
@@ -47,11 +61,58 @@ const MODULES = [
   "SearchEngine",
 ];
 
+// On web `screen_name` carries the URL path, not a view class name.
+const WEB_PATHS = [
+  "/",
+  "/login",
+  "/checkout",
+  "/checkout/payment",
+  "/settings/profile",
+];
+
+const WEB_MODULES = [
+  "app/layout.tsx",
+  "app/checkout/page.tsx",
+  "components/cart-summary.tsx",
+  "hooks/use-cart.ts",
+  "lib/api-client.ts",
+  "lib/analytics.ts",
+  "service-worker.js",
+];
+
+// Where the onboarding funnel runs in the browser.
+const WEB_ONBOARDING_PATH = "/onboarding";
+
+const WEB_ORIGIN = "https://demo.pubky.org";
+
 type EventTemplate = {
   level: "info" | "debug" | "warn" | "error";
   weight: number;
   messages: string[];
   customAttributes?: () => Record<string, string>;
+};
+
+// Metric events look the same on every platform, so both template sets share
+// this one entry rather than repeating the message list.
+const METRIC_TEMPLATE: EventTemplate = {
+  level: "info",
+  weight: 12,
+  messages: [
+    "metric:onboarding:record",
+    "metric:photo-conversion:start",
+    "metric:photo-conversion:complete",
+    "metric:photo-conversion:fail",
+    "metric:checkout:start",
+    "metric:checkout:complete",
+    "metric:checkout:fail",
+    "metric:search:record",
+    "metric:share:record",
+    "metric:feature-usage:record",
+  ],
+  customAttributes: () => ({
+    tracking_id: crypto.randomUUID(),
+    duration_ms: String(Math.floor(Math.random() * 5000)),
+  }),
 };
 
 const TEMPLATES: EventTemplate[] = [
@@ -133,26 +194,96 @@ const TEMPLATES: EventTemplate[] = [
       "User cleared all data",
     ],
   },
+  METRIC_TEMPLATE,
+];
+
+// Browser sessions log different things than a native app: routing, hydration,
+// fetch failures and unhandled rejections, with the reserved page/HTTP/error
+// attributes the Web SDK attaches.
+const WEB_TEMPLATES: EventTemplate[] = [
   {
     level: "info",
-    weight: 12,
+    weight: 32,
     messages: [
-      "metric:onboarding:record",
-      "metric:photo-conversion:start",
-      "metric:photo-conversion:complete",
-      "metric:photo-conversion:fail",
-      "metric:checkout:start",
-      "metric:checkout:complete",
-      "metric:checkout:fail",
-      "metric:search:record",
-      "metric:share:record",
-      "metric:feature-usage:record",
+      "Route change to /checkout",
+      "Route change to /settings/profile",
+      "Page view recorded",
+      "User signed in",
+      "Session started",
+      "Service worker activated",
+      "Checkout form submitted",
     ],
     customAttributes: () => ({
-      tracking_id: crypto.randomUUID(),
-      duration_ms: String(Math.floor(Math.random() * 5000)),
+      [PAGE_URL_ATTRIBUTE]: `${WEB_ORIGIN}${pick(WEB_PATHS)}`,
+      [REFERRER_ATTRIBUTE]: `${WEB_ORIGIN}/`,
     }),
   },
+  {
+    level: "debug",
+    weight: 20,
+    messages: [
+      "Hydrating client component tree",
+      "Prefetching route bundle for /checkout",
+      "Cart restored from session storage",
+      "Web vitals: LCP 1.8s",
+      "Font loaded from disk cache",
+      "Service worker cache hit for /_next/static",
+      "Visibility changed to hidden",
+    ],
+  },
+  {
+    level: "warn",
+    weight: 15,
+    messages: [
+      "Hydration mismatch: server rendered text did not match the client",
+      "Slow fetch: 2.3s for /v1/cart",
+      "Third-party script blocked by the browser",
+      "localStorage quota at 90%",
+      "Deprecated API used: document.write",
+      "Cumulative layout shift above threshold (0.19)",
+      "Cookies disabled — falling back to in-memory session",
+    ],
+  },
+  {
+    level: "error",
+    weight: 8,
+    messages: [
+      "Failed to fetch",
+      "Loading chunk 482 failed",
+      "Script error.",
+      "The operation is insecure.",
+    ],
+    customAttributes: () => ({
+      [PAGE_URL_ATTRIBUTE]: `${WEB_ORIGIN}${pick(WEB_PATHS)}`,
+    }),
+  },
+  {
+    level: "error",
+    weight: 6,
+    messages: [
+      "Cannot read properties of undefined (reading 'items')",
+      "cart.total is not a function",
+      "checkoutSession is not defined",
+    ],
+    customAttributes: () => ({
+      [ERROR_TYPE_ATTRIBUTE]: "TypeError",
+      [UNHANDLED_ATTRIBUTE]: "true",
+      [PAGE_URL_ATTRIBUTE]: `${WEB_ORIGIN}${pick(WEB_PATHS)}`,
+    }),
+  },
+  {
+    level: "error",
+    weight: 5,
+    messages: [NETWORK_REQUEST_MESSAGE],
+    customAttributes: () => ({
+      [HTTP_URL_ATTRIBUTE]: `https://api.demo.pubky.org${pick(["/v1/cart", "/v1/session", "/v1/products"])}`,
+      [HTTP_METHOD_ATTRIBUTE]: pick(["GET", "POST"]),
+      // "0" is what the Web SDK reports when the request never completed.
+      [HTTP_STATUS_ATTRIBUTE]: pick(["0", "500", "504"]),
+      [HTTP_DURATION_MS_ATTRIBUTE]: String(1000 + Math.floor(Math.random() * 30000)),
+    }),
+  },
+  METRIC_TEMPLATE,
 ];
 
 // ── Funnel step events ──────────────────────────────────────────────
@@ -166,12 +297,14 @@ const ONBOARDING_STEPS = [
 ];
 
 type DeviceProfile = {
-  environment: "ios" | "ipados" | "macos" | "watchos" | "android" | "web" | "backend";
+  environment: Environment;
   os_version: string;
   device_model: string;
   locale: string;
 };
 
+// On web the SDK reports the browser (name + major version) in `device_model`
+// and the operating system (name + version) in `os_version`.
 const DEVICE_PROFILES: DeviceProfile[] = [
   { environment: "ios", os_version: "18.3", device_model: "iPhone 16", locale: "en_US" },
   { environment: "ios", os_version: "18.3", device_model: "iPhone 16 Pro", locale: "en_US" },
@@ -183,8 +316,11 @@ const DEVICE_PROFILES: DeviceProfile[] = [
   { environment: "android", os_version: "15", device_model: "Pixel 9 Pro", locale: "en_US" },
   { environment: "android", os_version: "14", device_model: "Samsung Galaxy S24", locale: "ko_KR" },
   { environment: "android", os_version: "14", device_model: "OnePlus 12", locale: "en_IN" },
-  { environment: "web", os_version: "Chrome 132", device_model: "Desktop", locale: "en_US" },
-  { environment: "web", os_version: "Safari 18.3", device_model: "Desktop", locale: "en_US" },
+  { environment: "web", os_version: "macOS 15.3", device_model: "Chrome 132", locale: "en_US" },
+  { environment: "web", os_version: "macOS 15.3", device_model: "Safari 18.3", locale: "en_GB" },
+  { environment: "web", os_version: "Windows 10", device_model: "Firefox 134", locale: "de_DE" },
+  { environment: "web", os_version: "Android 15", device_model: "Chrome 132", locale: "en_IN" },
+  { environment: "backend", os_version: "Node.js 22.0.0", device_model: "Server", locale: "en_US" },
 ];
 
 const APP_VERSIONS = ["1.0.0", "1.0.1", "1.1.0", "1.2.0"];
@@ -200,6 +336,39 @@ const USER_IDS = [
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * Device profiles an app of this platform could actually report. Without this
+ * an apple app gets browser sessions and a web app gets iPhones, which then
+ * breaks every environment-aware read in the dashboard.
+ */
+function profilesForPlatform(platform: AppPlatform): DeviceProfile[] {
+  const allowed = ALLOWED_ENVIRONMENTS_FOR_PLATFORM[platform];
+  const profiles = DEVICE_PROFILES.filter((p) => allowed.includes(p.environment));
+  if (profiles.length === 0) {
+    throw new Error(`No device profile for platform "${platform}". Add one to DEVICE_PROFILES.`);
+  }
+  return profiles;
+}
+
+/** Backend events have no screen; web events carry a URL path, not a view name. */
+function screenNameFor(environment: Environment): string | null {
+  if (environment === "backend") return null;
+  return environment === "web" ? pick(WEB_PATHS) : pick(SCREENS);
+}
+
+function moduleFor(environment: Environment): string {
+  return environment === "web" ? pick(WEB_MODULES) : pick(MODULES);
+}
+
+function templatesFor(environment: Environment): EventTemplate[] {
+  return environment === "web" ? WEB_TEMPLATES : TEMPLATES;
+}
+
+/** The Web SDK has no build number to report. */
+function buildNumberFor(environment: Environment): string | null {
+  return environment === "web" ? null : pick(BUILD_NUMBERS);
 }
 
 function weightedPick(templates: EventTemplate[]): EventTemplate {
@@ -241,15 +410,13 @@ async function main() {
     userId: string | null;
     device: DeviceProfile;
     appVersion: string;
-    buildNumber: string;
+    buildNumber: string | null;
     startTime: number;
   }> = [];
 
   for (let i = 0; i < SESSION_COUNT; i++) {
     const app = pick(allApps);
-    const device = app.platform === "backend"
-      ? { environment: "backend" as const, os_version: "Node.js 22.0.0", device_model: "Server", locale: "en_US" }
-      : pick(DEVICE_PROFILES);
+    const device = pick(profilesForPlatform(app.platform));
 
     sessions.push({
       id: crypto.randomUUID(),
@@ -257,7 +424,7 @@ async function main() {
       userId: pick(USER_IDS),
       device,
       appVersion: pick(APP_VERSIONS),
-      buildNumber: pick(BUILD_NUMBERS),
+      buildNumber: buildNumberFor(device.environment),
       startTime: now - Math.floor(Math.random() * spanMs),
     });
   }
@@ -267,7 +434,7 @@ async function main() {
 
   for (let i = 0; i < EVENT_COUNT; i++) {
     const session = pick(sessions);
-    const template = weightedPick(TEMPLATES);
+    const template = weightedPick(templatesFor(session.device.environment));
     const offsetMs = Math.floor(Math.random() * 300_000); // up to 5 min within session
 
     rows.push({
@@ -276,8 +443,8 @@ async function main() {
       user_id: session.userId,
       level: template.level,
       message: pick(template.messages),
-      screen_name: session.device.environment === "backend" ? null : pick(SCREENS),
-      source_module: pick(MODULES),
+      screen_name: screenNameFor(session.device.environment),
+      source_module: moduleFor(session.device.environment),
       environment: session.device.environment,
       os_version: session.device.os_version,
       app_version: session.appVersion,
@@ -345,13 +512,16 @@ async function main() {
 
     for (let u = 0; u < funnelUserCount; u++) {
       const userId = `user-${u + 1}`;
+      const app = pick(clientApps);
+      const device = pick(profilesForPlatform(app.platform));
       const session = {
         id: crypto.randomUUID(),
-        appId: pick(clientApps).id,
-        device: pick(DEVICE_PROFILES.filter((d) => d.environment !== "backend")),
+        appId: app.id,
+        device,
         appVersion: pick(APP_VERSIONS),
-        buildNumber: pick(BUILD_NUMBERS),
+        buildNumber: buildNumberFor(device.environment),
       };
+      const stepScreen = device.environment === "web" ? WEB_ONBOARDING_PATH : "OnboardingScreen";
 
       const baseTime = now - Math.floor(Math.random() * spanMs);
 
@@ -369,7 +539,7 @@ async function main() {
           user_id: userId,
           level: "info",
           message: stepMessage,
-          screen_name: "OnboardingScreen",
+          screen_name: stepScreen,
           source_module: "PubkyPulse",
           environment: session.device.environment,
           os_version: session.device.os_version,
@@ -387,7 +557,7 @@ async function main() {
           user_id: userId,
           step_name: stepName,
           message: stepMessage,
-          screen_name: "OnboardingScreen",
+          screen_name: stepScreen,
           environment: session.device.environment,
           os_version: session.device.os_version,
           app_version: session.appVersion,

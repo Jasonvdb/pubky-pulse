@@ -16,6 +16,7 @@ import type {
 } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
+import { enforceWebAppOrigin } from "../middleware/origin.js";
 import { attachmentStorage } from "../storage/index.js";
 import { config } from "../config.js";
 import { buildSignedDownloadUrl } from "../utils/attachment-signing.js";
@@ -40,7 +41,7 @@ export async function ingestAttachmentRoutes(app: FastifyInstance) {
 
   app.post<{ Body: AttachmentUploadRequest }>(
     "/ingest/attachment",
-    { preHandler: [requirePermission("events:write"), rateLimit] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       if (auth.type !== "api_key" || !auth.app_id) {
@@ -182,7 +183,7 @@ export async function ingestAttachmentRoutes(app: FastifyInstance) {
   app.put<{ Params: { id: string } }>(
     "/ingest/attachment/:id",
     {
-      preHandler: [requirePermission("events:write"), rateLimit],
+      preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin],
       bodyLimit: MAX_UPLOAD_BODY_BYTES,
     },
     async (request, reply) => {

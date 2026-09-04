@@ -5,6 +5,8 @@ description: Forward free-text user feedback from your own frontend to Pubky Pul
 
 The Node SDK can forward user feedback to Pubky Pulse so it lands in the dashboard's feedback tracker alongside feedback captured by the Swift and Android SDKs. Use this when your users submit feedback through your own UI — a web form, a chat widget, a support page — and your Node server acts as the bridge.
 
+A browser page does not have to go through your server: the [Web SDK](/docs/sdks/web/feedback) calls `Pulse.sendFeedback` against Pubky Pulse directly, and the submission is attributed to the web app with its own session and browser details. Forward through Node when the feedback should be attributed to your **backend** app, when it arrives from somewhere other than a browser, or when your server already holds the user identity the browser does not.
+
 See the [Feedback concept page](/docs/concepts/feedback) for the status lifecycle, comments, and how to work with feedback once it's captured.
 
 ## Forwarding Feedback
@@ -47,6 +49,22 @@ app.post("/api/feedback", async (req, res) => {
     }
 });
 ```
+
+The browser sends its own session id so the feedback lands on the same timeline as the events around it:
+
+```typescript
+// Browser — Web SDK
+await fetch("/api/feedback", {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    ...(Pulse.sessionId ? { "X-Pulse-Session-Id": Pulse.sessionId } : {}),
+  },
+  body: JSON.stringify({ message, email }),
+});
+```
+
+With `propagateSessionTo` configured for that origin the header is added automatically — see [Cross-SDK Session Correlation](/docs/sdks/node/identity#cross-sdk-session-correlation). Either way the server reads it off the request, exactly as the Express handler above does, and a malformed value is ignored rather than rejected.
 
 ## Using a Scoped Logger
 

@@ -27,6 +27,8 @@ interface ErrorEvent {
   sdk_name: string | null;
   sdk_version: string | null;
   environment: string | null;
+  device_model: string | null;
+  os_version: string | null;
   country_code: string | null;
   custom_attributes: Record<string, string> | null;
   is_dev: boolean;
@@ -252,8 +254,8 @@ export function issueScanHandler(dispatcher: NotificationDispatcher): JobHandler
         const scanSinceIso = scanSince.toISOString();
         const errorEvents = await client<ErrorEvent[]>`
           SELECT id, app_id, client_event_id, session_id, user_id, message, source_module,
-                 app_version, sdk_name, sdk_version, environment, country_code,
-                 custom_attributes, is_dev, "timestamp"
+                 app_version, sdk_name, sdk_version, environment, device_model, os_version,
+                 country_code, custom_attributes, is_dev, "timestamp"
           FROM events
           WHERE app_id = ${appRow.id}
             AND level = 'error'
@@ -277,6 +279,7 @@ export function issueScanHandler(dispatcher: NotificationDispatcher): JobHandler
               event.message,
               event.source_module,
               discriminatorForEvent(event),
+              event.environment,
             ),
           }))
         );
@@ -409,8 +412,8 @@ export function issueScanHandler(dispatcher: NotificationDispatcher): JobHandler
 
               const eventTimestamp = new Date(event.timestamp).toISOString();
               const result = await client`
-                INSERT INTO issue_occurrences (issue_id, session_id, user_id, app_version, sdk_name, sdk_version, environment, event_id, country_code, "timestamp")
-                VALUES (${issueId}, ${event.session_id}, ${event.user_id}, ${event.app_version}, ${event.sdk_name}, ${event.sdk_version}, ${event.environment}::environment, ${event.id}, ${event.country_code}, ${eventTimestamp}::timestamptz)
+                INSERT INTO issue_occurrences (issue_id, session_id, user_id, app_version, sdk_name, sdk_version, environment, device_model, os_version, event_id, country_code, "timestamp")
+                VALUES (${issueId}, ${event.session_id}, ${event.user_id}, ${event.app_version}, ${event.sdk_name}, ${event.sdk_version}, ${event.environment}::environment, ${event.device_model}, ${event.os_version}, ${event.id}, ${event.country_code}, ${eventTimestamp}::timestamptz)
                 ON CONFLICT (issue_id, session_id) DO NOTHING
               `;
               if (result.count > 0) occurrencesCreated++;

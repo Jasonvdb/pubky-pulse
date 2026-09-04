@@ -18,6 +18,7 @@ import { useMetricQuery, useMetricEvents } from "@/hooks/use-metrics";
 import { AnalyticsFilterBar } from "@/components/analytics-filter-bar";
 import { type FilterChip, truncateId } from "@/components/filter-sheet";
 import { TIME_RANGES, formatTimeRangeChip } from "@/lib/time-ranges";
+import { environmentLabel } from "@/lib/platforms";
 import { formatShortDate, formatTime } from "@/lib/format-date";
 import { CountryCell } from "@/components/country-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,8 +54,10 @@ const METRIC_GROUP_BY_OPTIONS = [
   { value: "time:day", label: "Day" },
   { value: "time:week", label: "Week" },
   { value: "app_version", label: "App Version" },
-  { value: "device_model", label: "Device" },
-  { value: "os_version", label: "OS Version" },
+  // A web metric event reports its browser through `device_model` and its OS
+  // name and version through `os_version`, so both labels read for either.
+  { value: "device_model", label: "Device / Browser" },
+  { value: "os_version", label: "OS" },
   { value: "environment", label: "Environment" },
 ];
 
@@ -204,7 +207,7 @@ export default function MetricDetailPage() {
   const chips = useMemo(() => {
     const c: FilterChip[] = [];
     if (timeRange && timeRange !== "24h") c.push({ label: "Time", value: formatTimeRangeChip(timeRange, sinceInput, untilInput), onDismiss: () => filters.setMany({ time_range: "24h", since: "", until: "" }) });
-    if (environmentVal) c.push({ label: "Env", value: environmentVal, onDismiss: () => filters.set("environment", "") });
+    if (environmentVal) c.push({ label: "Env", value: environmentLabel(environmentVal), onDismiss: () => filters.set("environment", "") });
     if (appVersionVal) c.push({ label: "Version", value: appVersionVal, onDismiss: () => filters.set("app_version", "") });
     if (userIdVal) c.push({ label: "User", value: truncateId(userIdVal), onDismiss: () => filters.set("user_id", "") });
     if (osVersionVal) c.push({ label: "OS", value: osVersionVal, onDismiss: () => filters.set("os_version", "") });
@@ -267,10 +270,10 @@ export default function MetricDetailPage() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">OS Version</label>
+          <label className="text-xs text-muted-foreground">OS</label>
           <Input
             type="text"
-            placeholder="e.g. 18.0"
+            placeholder="e.g. 18.0 or macOS 10.15.7"
             value={filters.get("os_version")}
             onChange={(e) => filters.set("os_version", e.target.value)}
             className="h-8 text-xs"

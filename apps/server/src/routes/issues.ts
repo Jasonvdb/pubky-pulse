@@ -65,6 +65,8 @@ function serializeOccurrence(
     sdk_name: row.sdk_name,
     sdk_version: row.sdk_version,
     environment: row.environment,
+    device_model: row.device_model,
+    os_version: row.os_version,
     event_id: row.event_id,
     country_code: row.country_code,
     timestamp: row.timestamp.toISOString(),

@@ -168,6 +168,9 @@ export const apps = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     platform: appPlatformEnum("platform").notNull(),
     bundle_id: varchar("bundle_id", { length: 255 }),
+    // Browser origins a `web` app may send from. Empty for every other
+    // platform: a native app has no Origin header to authorise.
+    allowed_origins: text("allowed_origins").array().notNull().default([]),
     latest_app_version: varchar("latest_app_version", { length: 50 }),
     latest_app_version_updated_at: timestamp("latest_app_version_updated_at", { withTimezone: true }),
     // The languages this app ships, used to compute the localization gap
@@ -629,6 +632,10 @@ export const issueOccurrences = pgTable(
     sdk_name: varchar("sdk_name", { length: 50 }),
     sdk_version: varchar("sdk_version", { length: 50 }),
     environment: environmentEnum("environment"),
+    // Copied from the source event so "is this Safari only?" is answerable from
+    // the occurrence list alone. On web these carry the browser and the OS.
+    device_model: varchar("device_model", { length: 100 }),
+    os_version: varchar("os_version", { length: 50 }),
     event_id: uuid("event_id"),
     country_code: varchar("country_code", { length: 2 }),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),

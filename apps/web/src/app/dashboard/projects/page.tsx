@@ -23,16 +23,10 @@ import { useTeam } from "@/contexts/team-context";
 import { useProjects } from "@/hooks/use-project";
 import { useUser } from "@/hooks/use-user";
 import { ProjectDot } from "@/lib/project-color";
+import { platformEmoji } from "@/lib/platforms";
 import type { AppResponse } from "@pubky-pulse/shared";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { CardGridSkeleton } from "@/components/ui/skeletons";
-
-const PLATFORM_EMOJI: Record<string, string> = {
-  apple: "🍎",
-  android: "🤖",
-  web: "🌐",
-  backend: "☁️",
-};
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -155,7 +149,7 @@ export default function ProjectsPage() {
                       <ul className="space-y-1 text-sm">
                         {projectApps.map((app) => (
                           <li key={app.id} className="flex items-center gap-2">
-                            <span>{PLATFORM_EMOJI[app.platform] ?? ""}</span>
+                            <span>{platformEmoji(app.platform)}</span>
                             <span className="truncate">{app.name}</span>
                             {app.bundle_id && (
                               <span className="truncate font-mono text-xs text-muted-foreground">

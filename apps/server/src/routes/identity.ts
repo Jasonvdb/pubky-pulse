@@ -15,13 +15,15 @@ import {
 import { ANONYMOUS_ID_PREFIX } from "@pubky-pulse/shared";
 import type { IdentityClaimRequest, IdentityClaimResponse } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
+import { rateLimit } from "../middleware/rate-limit.js";
+import { enforceWebAppOrigin } from "../middleware/origin.js";
 import { resolveProjectIdFromApp } from "../utils/project.js";
 import { mergeAnonAppUserRowIntoReal } from "../utils/claimed-identity.js";
 
 export async function identityRoutes(app: FastifyInstance) {
   app.post<{ Body: IdentityClaimRequest }>(
     "/identity/claim",
-    { preHandler: [requirePermission("events:write")] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       const { anonymous_id, user_id } = request.body;

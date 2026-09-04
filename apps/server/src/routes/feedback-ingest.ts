@@ -11,6 +11,7 @@ import {
 import type { IngestFeedbackRequest } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
+import { enforceWebAppOrigin } from "../middleware/origin.js";
 import { resolveIngestCountryCode } from "../utils/event-processing.js";
 import { resolveClaimedUserIds } from "../utils/claimed-identity.js";
 import { resolveTeamMemberUserIds } from "../utils/team-members.js";
@@ -28,7 +29,7 @@ function trimOrNull(value: string | null | undefined, max: number): string | nul
 export async function feedbackIngestRoutes(app: FastifyInstance) {
   app.post<{ Body: IngestFeedbackRequest }>(
     "/feedback",
-    { preHandler: [requirePermission("events:write"), rateLimit] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       if (auth.type !== "api_key") {

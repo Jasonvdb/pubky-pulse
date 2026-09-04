@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveIdentityConfig } from "../config.js";
+import { parseCorsOrigins, resolveIdentityConfig, resolveTrustProxy } from "../config.js";
 
 /**
  * Startup wiring for the identity configuration.
@@ -121,5 +121,60 @@ describe("resolveIdentityConfig", () => {
     expect(() =>
       resolveIdentityConfig(env({ PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.pubky.org,localhost" })),
     ).toThrow(/PULSE_ALLOWED_EMAIL_DOMAINS contains an invalid domain: "localhost"/);
+  });
+});
+
+/**
+ * The two request-layer switches. Both are pure functions over a raw string for
+ * the same reason `resolveIdentityConfig` is: `config.ts` dotenv-loads the
+ * repo-root `.env` at import, so anything driven through `process.env` here
+ * would read a developer's local file.
+ */
+describe("parseCorsOrigins", () => {
+  it("trims entries and drops empty ones", () => {
+    expect(parseCorsOrigins("https://a.example.com , https://b.example.com,,")).toEqual([
+      "https://a.example.com",
+      "https://b.example.com",
+    ]);
+  });
+
+  it("de-duplicates repeated entries", () => {
+    expect(parseCorsOrigins("https://a.example.com,https://a.example.com")).toEqual([
+      "https://a.example.com",
+    ]);
+  });
+
+  it("falls back to the local dashboard when unset or empty", () => {
+    expect(parseCorsOrigins(undefined)).toEqual(["http://localhost:3000"]);
+    expect(parseCorsOrigins("  , ")).toEqual(["http://localhost:3000"]);
+  });
+});
+
+describe("resolveTrustProxy", () => {
+  it("is off when unset, empty or false", () => {
+    expect(resolveTrustProxy(undefined)).toBe(false);
+    expect(resolveTrustProxy("")).toBe(false);
+    expect(resolveTrustProxy("   ")).toBe(false);
+    expect(resolveTrustProxy("false")).toBe(false);
+    expect(resolveTrustProxy(" FALSE ")).toBe(false);
+  });
+
+  it("accepts true regardless of casing or surrounding whitespace", () => {
+    expect(resolveTrustProxy("true")).toBe(true);
+    expect(resolveTrustProxy(" TRUE ")).toBe(true);
+  });
+
+  it("passes a trusted address list through, trimmed and case-preserving", () => {
+    expect(resolveTrustProxy("127.0.0.1,::1")).toBe("127.0.0.1,::1");
+    expect(resolveTrustProxy("  10.0.0.0/8, 127.0.0.1  ")).toBe("10.0.0.0/8, 127.0.0.1");
+    expect(resolveTrustProxy("loopback")).toBe("loopback");
+  });
+
+  it("rejects a hop count, which Fastify would read as trust nothing", () => {
+    // Fastify types trustProxy as boolean | string | string[] | function, so a
+    // number silently means "trust no proxy" rather than "trust N hops".
+    expect(() => resolveTrustProxy("1")).toThrow(/hop count/);
+    expect(() => resolveTrustProxy(" 2 ")).toThrow(/127\.0\.0\.1,::1/);
+    expect(() => resolveTrustProxy("0")).toThrow(/TRUST_PROXY/);
   });
 });

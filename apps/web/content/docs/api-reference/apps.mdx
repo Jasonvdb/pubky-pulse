@@ -34,12 +34,15 @@ List all apps the caller has access to.
       "name": "iOS App",
       "platform": "apple",
       "bundle_id": "com.example.myapp",
+      "allowed_origins": [],
       "client_secret": "pulse_client_abc123...",
       "created_at": "2024-01-01T00:00:00.000Z"
     }
   ]
 }
 ```
+
+`allowed_origins` is always an array, never `null` — it is empty for every platform except `web`, and empty for a `web` app whose origins have not been set yet. See [POST /v1/apps](#post-v1apps).
 
 Each row also carries `latest_app_version` and `latest_app_version_updated_at` — the current public release as computed from recent production events. See [Latest Version Detection](/docs/concepts/latest-version-detection).
 
@@ -58,6 +61,7 @@ Get a single app by ID.
   "name": "iOS App",
   "platform": "apple",
   "bundle_id": "com.example.myapp",
+  "allowed_origins": [],
   "client_secret": "pulse_client_abc123...",
   "created_at": "2024-01-01T00:00:00.000Z"
 }
@@ -86,8 +90,22 @@ Create a new app within a project. A client API key is automatically generated a
   "name": "iOS App",
   "platform": "apple",
   "bundle_id": "com.example.myapp",
+  "allowed_origins": [],
   "client_secret": "pulse_client_full_key...",
   "created_at": "2024-01-01T00:00:00.000Z"
+}
+```
+
+A web app, with its site identifier and the origins its client key may send from:
+
+```json
+// Request
+{
+  "name": "Acme Web",
+  "platform": "web",
+  "bundle_id": "app.acme.com",
+  "allowed_origins": ["https://app.acme.com", "http://localhost:5173"],
+  "project_id": "uuid"
 }
 ```
 
@@ -97,7 +115,8 @@ Create a new app within a project. A client API key is automatically generated a
 |-------|------|----------|-------------|
 | `name` | string | Yes | Display name for the app. |
 | `platform` | string | Yes | One of: `apple`, `android`, `web`, `backend`. |
-| `bundle_id` | string | Conditional | Required for non-backend platforms. Immutable after creation. |
+| `bundle_id` | string | Conditional | Required for non-backend platforms. Immutable after creation. Reverse-DNS on `apple`/`android` (`com.example.acme`), the site identifier on `web` (`app.acme.com`). |
+| `allowed_origins` | string[] | No | `web` only. Browser origins this site may send from. Defaults to `[]`. |
 | `project_id` | string | Yes | The project this app belongs to. Team is derived from the project. |
 
 ### Platform notes
@@ -105,9 +124,21 @@ Create a new app within a project. A client API key is automatically generated a
 - **Backend** apps do not require a `bundle_id` (it is set to `null`). The ingest route skips bundle_id validation for these apps.
 - **bundle_id is immutable.** It cannot be changed after app creation. To change a bundle_id, delete and recreate the app.
 
+### allowed_origins
+
+Each entry is a full origin — scheme, host, optional port — with no path, no query string, and no trailing slash, which is exactly the shape of the `Origin` header a browser sends. `https://app.acme.com` and `http://localhost:5173` are valid; `acme.com`, `https://acme.com/`, and `https://acme.com/analytics` are not.
+
+- **Web only.** Sending the field for an `apple`, `android`, or `backend` app returns a `400` saying the field is supported for web apps only.
+- **Normalised on write.** Scheme and host are lowercased, a default port is dropped (`https://acme.com:443` → `https://acme.com`), and duplicates collapse. The stored list is what you read back.
+- **Validated on write.** An entry that is not a bare `http`/`https` origin returns a `400` naming the offending value. Wildcards are not supported — list each host. Maximum 50 entries.
+- **Enforced on ingest.** A request for this app carrying an `Origin` header not on the list is refused with `403`. Requests with no `Origin` (native SDKs, backends, `curl`) pass. An empty list therefore blocks every browser request.
+- **Honoured by CORS.** Registered origins are allowed automatically, cached for up to a minute, so adding a site needs no server redeploy and no change to `CORS_ORIGINS`.
+
+See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins) for the reasoning.
+
 ## PATCH /v1/apps/:id
 
-Update an app. Only the `name` field can be changed.
+Update an app's `name`, its `allowed_origins`, or both. At least one is required; `platform` and `bundle_id` are immutable. Fields you omit are left alone, so renaming an app never clears its origin list.
 
 **Auth required:** Yes (`apps:write` permission or JWT) **and ownership of the app's project.**
 
@@ -125,8 +156,22 @@ Update an app. Only the `name` field can be changed.
   "name": "Renamed App",
   "platform": "apple",
   "bundle_id": "com.example.myapp",
+  "allowed_origins": [],
   "client_secret": "pulse_client_abc123...",
   "created_at": "2024-01-01T00:00:00.000Z"
+}
+```
+
+`allowed_origins` **replaces** the whole list — send every origin you want to keep, not just the new one. It is validated exactly as on create, and an update to it is recorded in the audit log with the before and after lists.
+
+```json
+// Request — add a staging host to an existing web app
+{
+  "allowed_origins": [
+    "https://app.acme.com",
+    "https://staging.acme.com",
+    "http://localhost:5173"
+  ]
 }
 ```
 

@@ -3,6 +3,7 @@ import { createDatabaseConnection } from "./index.js";
 import { apps, projects, users, issues, issueFingerprints, issueOccurrences, issueComments } from "./schema.js";
 import { eq, and, isNull } from "drizzle-orm";
 import { generateIssueFingerprint } from "@pubky-pulse/shared";
+import type { Environment } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
 
 if (process.env.NODE_ENV === "production") {
@@ -27,7 +28,7 @@ function ago(ms: number) {
 type IssueDef = {
   title: string;
   sourceModule: string;
-  appName: string; // "Demo App" or "Demo API Server"
+  appName: string; // one of the apps created by `pnpm dev:seed`
   status: "new" | "in_progress" | "resolved" | "silenced" | "regressed";
   isDev: boolean;
   resolvedAtVersion?: string;
@@ -36,7 +37,10 @@ type IssueDef = {
   occurrences: Array<{
     userId: string | null;
     appVersion: string;
-    environment: "ios" | "ipados" | "macos" | "watchos" | "android" | "web" | "backend";
+    environment: Environment;
+    // On web these are the browser (name + major version) and the OS.
+    deviceModel?: string;
+    osVersion?: string;
     timestampOffset: number; // ms before NOW
   }>;
   comments: Array<{
@@ -241,6 +245,77 @@ const ISSUE_DEFS: IssueDef[] = [
     comments: [],
   },
 
+  // ── web ─────────────────────────────────────────────────────────────
+  // One browser bug is one issue: the scan job canonicalizes web error
+  // messages before fingerprinting, so the Chrome, Firefox and Safari wording
+  // of the same fault land here together — which is why the occurrences below
+  // span three browsers.
+  {
+    title: "Cannot read properties of undefined (reading 'items')",
+    sourceModule: "app/checkout/page.tsx",
+    appName: "Demo Web",
+    status: "new",
+    isDev: false,
+    firstSeenAt: ago(4 * DAY),
+    lastSeenAt: ago(2 * HOUR),
+    occurrences: [
+      { userId: "user-77", appVersion: "1.0.0", environment: "web", deviceModel: "Chrome 132", osVersion: "macOS 15.3", timestampOffset: 4 * DAY },
+      { userId: "user-42", appVersion: "1.0.0", environment: "web", deviceModel: "Firefox 134", osVersion: "Windows 10", timestampOffset: 3 * DAY },
+      { userId: null, appVersion: "1.0.1", environment: "web", deviceModel: "Safari 18.3", osVersion: "macOS 15.3", timestampOffset: 1 * DAY },
+      { userId: "user-77", appVersion: "1.0.1", environment: "web", deviceModel: "Chrome 132", osVersion: "Android 15", timestampOffset: 6 * HOUR },
+      { userId: "user-99", appVersion: "1.0.1", environment: "web", deviceModel: "Chrome 132", osVersion: "macOS 15.3", timestampOffset: 2 * HOUR },
+    ],
+    comments: [
+      {
+        authorType: "agent",
+        body: "Reproduces on Chrome, Firefox and Safari, so this is not a browser quirk: the checkout page renders before the cart response resolves and reads `cart.items` on undefined. Guarding the render on a loaded cart should clear it.",
+        createdOffset: 3 * HOUR,
+      },
+    ],
+  },
+  {
+    title: "Failed to fetch",
+    sourceModule: "lib/api-client.ts",
+    appName: "Demo Web",
+    status: "in_progress",
+    isDev: false,
+    firstSeenAt: ago(6 * DAY),
+    lastSeenAt: ago(5 * HOUR),
+    occurrences: [
+      { userId: "user-42", appVersion: "1.0.0", environment: "web", deviceModel: "Chrome 132", osVersion: "macOS 15.3", timestampOffset: 6 * DAY },
+      { userId: null, appVersion: "1.0.0", environment: "web", deviceModel: "Chrome 132", osVersion: "Android 15", timestampOffset: 2 * DAY },
+      { userId: "user-77", appVersion: "1.0.1", environment: "web", deviceModel: "Safari 18.3", osVersion: "macOS 15.3", timestampOffset: 5 * HOUR },
+    ],
+    comments: [
+      {
+        authorType: "user",
+        body: "Mostly mobile Chrome — looks like the request is aborted when the tab is backgrounded mid-checkout rather than a real API failure.",
+        createdOffset: 1 * DAY,
+      },
+    ],
+  },
+  {
+    title: "Hydration failed because the server rendered HTML did not match the client",
+    sourceModule: "components/cart-summary.tsx",
+    appName: "Demo Web",
+    status: "resolved",
+    isDev: false,
+    resolvedAtVersion: "1.0.1",
+    firstSeenAt: ago(12 * DAY),
+    lastSeenAt: ago(9 * DAY),
+    occurrences: [
+      { userId: "user-77", appVersion: "1.0.0", environment: "web", deviceModel: "Firefox 134", osVersion: "Windows 10", timestampOffset: 12 * DAY },
+      { userId: "user-42", appVersion: "1.0.0", environment: "web", deviceModel: "Chrome 132", osVersion: "macOS 15.3", timestampOffset: 9 * DAY },
+    ],
+    comments: [
+      {
+        authorType: "user",
+        body: "The cart total was formatted with the server's locale. Fixed in 1.0.1 by formatting after mount.",
+        createdOffset: 8 * DAY,
+      },
+    ],
+  },
+
   // ── new (dev build) ─────────────────────────────────────────────────
   {
     title: "Debug assertion failed: unexpected nil in user defaults",
@@ -273,11 +348,9 @@ async function main() {
   }
 
   const appByName = new Map(allApps.map((a) => [a.name, a]));
-  const demoApp = appByName.get("Demo App");
-  const serverApp = appByName.get("Demo API Server");
-
-  if (!demoApp || !serverApp) {
-    console.error("Expected 'Demo App' and 'Demo API Server'. Run `pnpm dev:seed` first.");
+  const missing = [...new Set(ISSUE_DEFS.map((d) => d.appName))].filter((name) => !appByName.has(name));
+  if (missing.length > 0) {
+    console.error(`Missing app(s): ${missing.join(", ")}. Run \`pnpm dev:seed\` first.`);
     process.exit(1);
   }
 
@@ -294,10 +367,17 @@ async function main() {
   let skipped = 0;
 
   for (const def of ISSUE_DEFS) {
-    const app = def.appName === "Demo App" ? demoApp : serverApp;
+    const app = appByName.get(def.appName)!;
 
-    // Generate real fingerprint
-    const fingerprint = await generateIssueFingerprint(def.title, def.sourceModule);
+    // Generate real fingerprint. The scan job hashes with the source event's
+    // environment, which canonicalizes browser wording on web, so seed with the
+    // environment the occurrences were reported from.
+    const fingerprint = await generateIssueFingerprint(
+      def.title,
+      def.sourceModule,
+      null,
+      def.occurrences[0]?.environment ?? null,
+    );
 
     // Idempotency: skip if fingerprint already exists for this app + is_dev
     const [existing] = await db
@@ -356,6 +436,8 @@ async function main() {
           user_id: occ.userId,
           app_version: occ.appVersion,
           environment: occ.environment,
+          device_model: occ.deviceModel ?? null,
+          os_version: occ.osVersion ?? null,
           timestamp: ago(occ.timestampOffset),
         })),
       )

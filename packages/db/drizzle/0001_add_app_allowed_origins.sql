@@ -1,0 +1,1 @@
+ALTER TABLE "apps" ADD COLUMN "allowed_origins" text[] DEFAULT '{}' NOT NULL;

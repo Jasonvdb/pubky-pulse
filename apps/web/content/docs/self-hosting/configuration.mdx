@@ -13,7 +13,7 @@ The API server auto-loads that root `.env` via dotenv on startup. The web dashbo
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string. Format: `postgresql://user:password@host:5432/dbname`. The setup script prints this value after creating the database. |
 | `JWT_SECRET` | Random string used to sign JWT tokens. Generate with `openssl rand -base64 48`. Must be kept secret. Changing this value invalidates all existing sessions. |
-| `CORS_ORIGINS` | Allowed origin for cross-origin requests from the web dashboard. Set to your dashboard URL (e.g., `https://yourdomain.com`). |
+| `CORS_ORIGINS` | The **dashboard's** origin(s) — comma-separated, entries trimmed. Set it to your dashboard URL (e.g., `https://yourdomain.com`). Origins your customers' browser apps send from do **not** belong here; see [Browser origins](#browser-origins) below. |
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain authentication. Set to `.yourdomain.com` (note the leading dot) so the auth cookie is shared between `yourdomain.com` and `api.yourdomain.com`. Required when the API and dashboard are on different subdomains. |
 | `NEXT_PUBLIC_API_URL` | Base URL of the API server **as reached from the browser** (e.g. `https://api.yourdomain.com`). The only variable the web dashboard reads. Set it in `apps/web/.env`, not the root `.env` — Next.js inlines it at build time, so it must be in place before `pnpm build` and a change only lands after a rebuild. Unset, the dashboard calls `http://localhost:4000`. |
 | `PULSE_ATTACHMENTS_SIGNING_SECRET` | **Required in production.** Random string used to sign attachment download URLs. Generate with `openssl rand -hex 32`. Must differ from `JWT_SECRET`. Outside production, falls back to `JWT_SECRET` so local dev just works. |
@@ -46,6 +46,7 @@ See [Authentication & Access Control](/docs/concepts/authentication) for what th
 |----------|---------|-------------|
 | `PORT` | `4000` | Port the API server listens on. |
 | `HOST` | `0.0.0.0` | Bind address for the API server. |
+| `TRUST_PROXY` | `false` | How much of `X-Forwarded-For` to believe when reading the caller's address. Set it to the proxy's addresses or CIDR ranges — `127.0.0.1,::1` for the standard deployment of Cloudflare, then nginx, then node on loopback, where nginx already forwards the header. `true` trusts every hop and takes the caller-supplied leftmost entry; a hop count is rejected at startup. See [Trusting the proxy](#trusting-the-proxy). |
 | `MAX_DATABASE_SIZE_GB` | `0` (disabled) | When set to a positive number, enables automatic pruning. An hourly check drops the oldest monthly event partitions when the database exceeds this size. |
 | `RESEND_API_KEY` | (empty) | API key from [Resend](https://resend.com) for sending verification emails. If not set, verification codes are printed to the server console (useful for single-user or development setups). |
 | `EMAIL_FROM` | `noreply@pulse.pubky.org` | The "from" address used when sending verification and notification emails via Resend. Replace the default with an address on your own domain. |
@@ -56,6 +57,29 @@ See [Authentication & Access Control](/docs/concepts/authentication) for what th
 | `PULSE_ATTACHMENTS_PATH` | `./data/attachments` (dev) / `/opt/pubky-pulse-attachments` (prod) | Directory on disk where event attachment bytes are stored. Must be writable by the API server process. Exclude from `pg_dump` backups — attachments live on disk, not in Postgres. |
 | `PULSE_ATTACHMENTS_INTERNAL_URI` | (empty) | Optional internal URI prefix used by nginx `X-Accel-Redirect` when serving attachment downloads. See `deploy/attachments-nginx-snippet.conf`. |
 
+## Browser origins
+
+`CORS_ORIGINS` is the dashboard's own origin and nothing else. The origins a browser may run the [Web SDK](/docs/sdks/web) from live on the app record: every `web` app carries an editable `allowed_origins` list, the server allows those through CORS automatically (recomputed at most once a minute), and ingest refuses a browser request whose `Origin` is not on the list.
+
+That split is deliberate. Adding a customer site is an ordinary API or dashboard change made by whoever owns the project, not an env-var edit and a restart — and because the list lives per app, a key lifted out of one site's page cannot be used from a browser on another.
+
+Two CORS details are set for browser SDKs and need nothing from you: preflights are cacheable for a day (`Access-Control-Max-Age: 86400`), and `Retry-After` is exposed so an SDK's backoff can read it off a `429`.
+
+See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins) for the rules, and [POST /v1/apps](/docs/api-reference/apps#post-v1apps) for the API.
+
+## Trusting the proxy
+
+`TRUST_PROXY` decides what the server treats as the caller's IP address, and that address is half of a client key's rate-limit bucket. A client key is public — a browser app ships it in the page — so client keys are bucketed per key **and** per caller IP; without that, one busy visitor would rate limit every other visitor of the same site.
+
+- **Behind a proxy** (`TRUST_PROXY=127.0.0.1,::1`): the address comes from `X-Forwarded-For`, so each visitor gets their own bucket. The nginx configuration in the [deployment guide](/docs/self-hosting/deployment) already sets the header.
+- **Directly reachable** (`TRUST_PROXY=false`, the default): the socket address is used. Leave it off here — trusting the header on a server anyone can reach lets a caller choose their own bucket, and with it their own quota.
+
+Set it to the addresses or CIDR ranges the proxy reaches node from, comma-separated, rather than to `true`. `127.0.0.1,::1` covers nginx on loopback, which is the standard deployment; the shorthand `loopback` means the same. The server then walks the header from the right and stops at the first hop that is not on the list — the entry nginx wrote.
+
+That makes nginx responsible for writing a visitor address there. Behind Cloudflare, nginx's own peer is the Cloudflare edge, so appending `$proxy_add_x_forwarded_for` would hand the API an edge address and put every visitor behind that edge in one rate-limit bucket. The deployment guide's nginx config therefore trusts `CF-Connecting-IP` only from Cloudflare's published ranges — making `$remote_addr` the verified visitor — and then **sets** `X-Forwarded-For $remote_addr` instead of appending, so the header holds exactly the one address nginx verified.
+
+`TRUST_PROXY=true` trusts every hop, and so takes the **leftmost** entry. That entry is whatever the caller sent, so a caller can prepend an address and choose which bucket it draws from. A hop count is not accepted at all: the server refuses to start rather than silently trusting nothing.
+
 ## Example `.env` file
 
 ```bash
@@ -65,6 +89,7 @@ JWT_SECRET=your-random-64-char-secret-here
 PORT=4000
 HOST=0.0.0.0
 CORS_ORIGINS=https://yourdomain.com
+TRUST_PROXY=127.0.0.1,::1
 WEB_APP_URL=https://yourdomain.com
 API_PUBLIC_URL=https://api.yourdomain.com
 COOKIE_DOMAIN=.yourdomain.com

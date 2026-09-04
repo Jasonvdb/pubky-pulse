@@ -21,7 +21,9 @@ Query analytics events with flexible filters. Defaults to the last 24 hours.
 | `user_id` | string | No | Filter by user ID |
 | `session_id` | UUID | No | Filter by session ID |
 | `environment` | string | No | `ios`, `ipados`, `macos`, `watchos`, `android`, `web`, or `backend` |
-| `screen_name` | string | No | Filter by screen name |
+| `screen_name` | string | No | Filter by screen name. Exact or path-prefix: `/checkout` also returns `/checkout/payment`, but not `/checkout-abandoned` |
+| `device_model` | string | No | Filter by device model (`iPhone15,2`), or by browser on web (`Chrome 120`) |
+| `os_version` | string | No | Filter by OS version (`18.0`), or by OS name and version on web (`macOS 10.15.7`) |
 | `since` | string | No | Start time — relative (`1h`, `7d`) or ISO 8601 |
 | `until` | string | No | End time — relative or ISO 8601 |
 | `cursor` | string | No | Pagination cursor from previous response (tied to the current `order`) |
@@ -31,6 +33,8 @@ Query analytics events with flexible filters. Defaults to the last 24 hours.
 | `compact` | boolean | No | Drop verbose fields (`custom_attributes`, device metadata) to stay under MCP token limits |
 
 Returns `{ events: [...], cursor, has_more }`. Pass `cursor` to the next call for pagination.
+
+`device_model`, `os_version`, and `screen_name` hold different things per platform — the browser, the OS name and version, and the URL path on `web`; the hardware model, the OS version, and the screen name on native. Both device filters are exact matches, so filter on the value as recorded (`Chrome 120`, not `Chrome`). See [Field semantics by platform](/docs/concepts/events#field-semantics-by-platform).
 
 ### Session reconstruction
 

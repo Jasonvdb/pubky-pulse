@@ -49,6 +49,7 @@ import {
 import { MessageSquare, ChevronDown, Clock, Mail, User as UserIcon } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { ProjectDot } from "@/lib/project-color";
+import { environmentLabel, isWebEnvironment } from "@/lib/platforms";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { KanbanSkeleton } from "@/components/ui/skeletons";
 
@@ -208,11 +209,17 @@ function FeedbackDetailModal({
                   <a href={`mailto:${feedback.submitter_email}`} className="text-primary hover:underline">{feedback.submitter_email}</a>
                 </div>
               )}
-              <div><span className="text-muted-foreground">Version:</span> {feedback.app_version ?? "—"}{feedback.environment ? ` (${feedback.environment})` : ""}</div>
+              <div><span className="text-muted-foreground">Version:</span> {feedback.app_version ?? "—"}{feedback.environment ? ` (${environmentLabel(feedback.environment)})` : ""}</div>
               {(feedback.sdk_name || feedback.sdk_version) && (
                 <div className="font-mono"><span className="text-muted-foreground">SDK:</span> {formatSdkLabel(feedback.sdk_name, feedback.sdk_version)}</div>
               )}
-              <div><span className="text-muted-foreground">Device:</span> {feedback.device_model ?? "—"}{feedback.os_version ? `  OS ${feedback.os_version}` : ""}</div>
+              <div>
+                <span className="text-muted-foreground">
+                  {isWebEnvironment(feedback.environment) ? "Browser:" : "Device:"}
+                </span>{" "}
+                {feedback.device_model ?? "—"}
+                {feedback.os_version ? `  OS ${feedback.os_version}` : ""}
+              </div>
               <div>
                 <span className="text-muted-foreground">User ID:</span>{" "}
                 {feedback.user_id ? (

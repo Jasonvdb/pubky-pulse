@@ -29,13 +29,41 @@ The 90-day window keeps partition pruning effective and matches the cadence at w
   "id": "...",
   "name": "Lofi Web",
   "platform": "web",
-  "bundle_id": "com.example.lofi",
+  "bundle_id": "app.lofi.com",
+  "allowed_origins": ["https://app.lofi.com"],
   "latest_app_version": "1.4.2",
   "latest_app_version_updated_at": "2026-04-23T06:15:00.000Z"
 }
 ```
 
 `latest_app_version` is `null` until the first sync runs, and is reset to `null` whenever an app has no production events with a version in the trailing 90 days.
+
+## Web apps must set `appVersion`
+
+A native app gets its version from its bundle and a build number alongside it. A browser app has neither: the only release identifier a web event carries is the `appVersion` you pass to `Pulse.configure()`, and web events never carry a `build_number` at all.
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "app.acme.com",
+  appVersion: "1.4.0", // wire this to your build's version, not to a git SHA
+});
+```
+
+Leave it unset and `latest_app_version` stays `null` forever: no version badge anywhere, and [issue regression detection](/docs/concepts/issues#regression-detection) has nothing to compare, so a fixed issue can never be shown as regressed.
+
+**The value has to increase between releases.** Versions are compared segment by segment; numeric segments compare numerically, but anything non-numeric falls back to plain string ordering. A git SHA or a content hash therefore orders alphabetically rather than chronologically — `b12ef00` outranks `a3f9c21` whichever you built first — and "latest" becomes whichever hash happens to sort highest. Feed it something monotonic instead:
+
+| Value | Works | Why |
+|---|---|---|
+| `1.4.0` | Yes | Numeric segments, compares correctly |
+| `2026.04.23` | Yes | Date-style versions are handled |
+| `1.4.0-rc.2` | Yes | Ranks below the `1.4.0` release, as semver expects |
+| `a3f9c21` | **No** | Sorts alphabetically; unrelated to build order |
+| `main-2f4c9` | **No** | Same problem, with a stable prefix that hides it |
+
+A common fix is to inject the package version at build time (`process.env.npm_package_version`, or your bundler's define/replace step) rather than the commit that produced it.
 
 ## Issues "is on latest" semantics
 
@@ -58,4 +86,4 @@ If the issue's most recent occurrence was on the latest release, the badge is gr
 
 - Only production events count (`is_dev = false`). If your builds never mark themselves as dev, pre-release builds can push the computed "latest" ahead of what your users actually have. Set the SDK's data mode correctly on internal builds -- see [Data Mode](/docs/concepts/data-mode).
 - A version only becomes "latest" once at least one production event has arrived from it. Expect the badge to lag a release by however long it takes the first user to open the new build, plus up to an hour for the next sync.
-- Versions are compared with a semver-aware comparator that handles standard formats (`1.2.3`), build-number suffixes (`1.2.3 (456)`), and date-style versions (`2024.10.15`).
+- Versions are compared with a semver-aware comparator that handles standard formats (`1.2.3`), build-number suffixes (`1.2.3 (456)`), and date-style versions (`2024.10.15`). Non-numeric segments compare as plain strings, so a non-monotonic version (a git SHA) produces a stable but meaningless ordering — see [Web apps must set `appVersion`](#web-apps-must-set-appversion).

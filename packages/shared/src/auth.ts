@@ -175,6 +175,11 @@ export interface App {
   name: string;
   platform: AppPlatform;
   bundle_id: string | null;
+  /**
+   * Browser origins this app may send from. Only meaningful for `web` apps;
+   * always `[]` for the others. See `normalizeAllowedOrigins` in ./origins.ts.
+   */
+  allowed_origins: string[];
   latest_app_version: string | null;
   latest_app_version_updated_at: Date | null;
   /** Languages this app ships (Bundle.main.localizations), drives the localization gap. */

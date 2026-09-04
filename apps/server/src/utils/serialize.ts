@@ -206,6 +206,7 @@ export function serializeApp(
   a: {
     id: string; team_id: string; project_id: string;
     name: string; platform: string; bundle_id: string | null;
+    allowed_origins?: string[] | null;
     latest_app_version?: string | null;
     latest_app_version_updated_at?: Date | null;
     supported_languages?: string[] | null;
@@ -222,6 +223,10 @@ export function serializeApp(
     name: a.name,
     platform: a.platform,
     bundle_id: a.bundle_id,
+    // Always a list, never null: "no origins registered" and "this platform has
+    // no origins" are both the empty list, and a client rendering the app form
+    // never has to special-case one of them.
+    allowed_origins: a.allowed_origins ?? [],
     latest_app_version: a.latest_app_version ?? null,
     latest_app_version_updated_at: a.latest_app_version_updated_at?.toISOString() ?? null,
     supported_languages: a.supported_languages ?? null,

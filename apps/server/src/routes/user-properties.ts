@@ -8,13 +8,15 @@ import {
 } from "@pubky-pulse/shared";
 import type { SetUserPropertiesRequest, SetUserPropertiesResponse } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
+import { rateLimit } from "../middleware/rate-limit.js";
+import { enforceWebAppOrigin } from "../middleware/origin.js";
 import { mergeUserProperties } from "../utils/user-properties.js";
 import { resolveAccessibleProjectIdFromApp } from "../utils/project.js";
 
 export async function userPropertiesRoutes(app: FastifyInstance) {
   app.post<{ Body: SetUserPropertiesRequest }>(
     "/identity/properties",
-    { preHandler: [requirePermission("users:write")] },
+    { preHandler: [requirePermission("users:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       const { user_id, properties } = request.body;

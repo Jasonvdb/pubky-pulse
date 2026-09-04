@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { createDatabaseConnection } from "@pubky-pulse/db";
 import { config } from "./config.js";
 import { buildServer } from "./app.js";
+import { createCorsOriginResolver } from "./utils/app-origins.js";
 import { bootstrapSingletonTeam } from "./services/bootstrap-team.js";
 import { createEmailService } from "./services/email.js";
 import { JobRunner } from "./services/job-runner.js";
@@ -11,7 +12,11 @@ import { inAppAdapter } from "./services/notifications/adapters/in-app.js";
 import { createEmailAdapter } from "./services/notifications/adapters/email.js";
 import type { ChannelAdapter } from "./services/notifications/types.js";
 
-const app = Fastify({ logger: true });
+// `trustProxy` decides what `request.ip` means, and `request.ip` is half of a
+// client key's rate-limit bucket. Enabled only where a proxy really does
+// terminate in front of node (production: Cloudflare, then nginx, then
+// loopback) — see TRUST_PROXY in .env.example.
+const app = Fastify({ logger: true, trustProxy: config.trustProxy });
 
 // Database
 const db = createDatabaseConnection(config.databaseUrl);
@@ -132,9 +137,17 @@ await buildServer({
   jobRunner,
   notificationDispatcher,
   cors: {
-    origin: config.corsOrigins,
+    // Resolved per request: the configured dashboard origins, plus whatever
+    // origins live web apps have registered on themselves.
+    origin: createCorsOriginResolver(db, config.corsOrigins),
     credentials: true,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+    // Preflights are cacheable for a day; an SDK that batches events would
+    // otherwise pay an OPTIONS round trip per flush.
+    maxAge: 86400,
+    // The SDK's backoff reads Retry-After off a 429, which a browser hides
+    // from script unless the header is explicitly exposed.
+    exposedHeaders: ["Retry-After"],
   },
   jwtSecret: config.jwtSecret,
 });

@@ -4,6 +4,17 @@ import { z } from "zod";
 import { APP_PLATFORMS, DATA_MODES } from "@pubky-pulse/shared";
 import { callApi, buildQuery } from "../helpers.js";
 
+/**
+ * Shared by create-app and update-app: the same field, described once so the
+ * two tools can never explain it differently.
+ */
+const ALLOWED_ORIGINS_SCHEMA = z.array(z.string()).optional().describe(
+  "Browser origins this site may send from, e.g. [\"https://app.example.com\", \"http://localhost:3000\"]. " +
+    "Web platform only — rejected for apple, android and backend apps. Each entry is a full origin: scheme, host " +
+    "and optional port, with no path and no trailing slash. Replaces the whole list. A web app whose list is empty " +
+    "refuses every request that carries an Origin header, which is every request a browser makes.",
+);
+
 export function registerAppsTools(server: McpServer, app: FastifyInstance, agentKey: string): void {
   server.registerTool("list-apps", {
     description:
@@ -36,28 +47,40 @@ export function registerAppsTools(server: McpServer, app: FastifyInstance, agent
       platform: z.enum(APP_PLATFORMS).describe("Target platform"),
       project_id: z.string().uuid().describe("Parent project ID"),
       bundle_id: z.string().optional().describe("Bundle identifier (required for non-backend platforms, immutable)"),
+      allowed_origins: ALLOWED_ORIGINS_SCHEMA,
     },
-  }, async ({ name, platform, project_id, bundle_id }) => {
+  }, async ({ name, platform, project_id, bundle_id, allowed_origins }) => {
     return callApi(app, agentKey, {
       method: "POST",
       url: "/v1/apps",
-      payload: { name, platform, project_id, ...(bundle_id !== undefined ? { bundle_id } : {}) },
+      payload: {
+        name,
+        platform,
+        project_id,
+        ...(bundle_id !== undefined ? { bundle_id } : {}),
+        ...(allowed_origins !== undefined ? { allowed_origins } : {}),
+      },
     });
   });
 
   server.registerTool("update-app", {
     description:
-      "Update an app's name. Requires apps:write permission AND that the human who created this key currently owns the app's project. " +
+      "Update an app's name and/or its allowed browser origins. At least one of them is required; bundle_id and platform are immutable. " +
+      "Requires apps:write permission AND that the human who created this key currently owns the app's project. " +
       "Deleting an app is human-only and has no MCP tool.",
     inputSchema: {
       app_id: z.string().uuid().describe("The app ID"),
-      name: z.string().describe("New app name"),
+      name: z.string().optional().describe("New app name"),
+      allowed_origins: ALLOWED_ORIGINS_SCHEMA,
     },
-  }, async ({ app_id, name }) => {
+  }, async ({ app_id, name, allowed_origins }) => {
     return callApi(app, agentKey, {
       method: "PATCH",
       url: `/v1/apps/${app_id}`,
-      payload: { name },
+      payload: {
+        ...(name !== undefined ? { name } : {}),
+        ...(allowed_origins !== undefined ? { allowed_origins } : {}),
+      },
     });
   });
 

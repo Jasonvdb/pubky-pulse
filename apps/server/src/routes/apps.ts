@@ -2,7 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, asc } from "drizzle-orm";
 import { apps, apiKeys } from "@pubky-pulse/db";
 import type { CreateAppRequest, UpdateAppRequest } from "@pubky-pulse/shared";
-import { APP_PLATFORMS, DEFAULT_API_KEY_PERMISSIONS, generateApiKeySecret } from "@pubky-pulse/shared";
+import {
+  APP_PLATFORMS,
+  DEFAULT_API_KEY_PERMISSIONS,
+  generateApiKeySecret,
+  normalizeAllowedOrigins,
+} from "@pubky-pulse/shared";
 import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { serializeApp, getClientSecret, getClientSecretMap } from "../utils/serialize.js";
 import { logAuditEvent } from "../utils/audit.js";
@@ -13,6 +18,28 @@ import {
   resolveAppInProject,
 } from "../utils/project-access.js";
 import { getOwnedProjectIds } from "../utils/project-owners.js";
+import { invalidateWebAppOriginsCache } from "../utils/app-origins.js";
+
+/**
+ * Validate an `allowed_origins` body field for an app on `platform`.
+ *
+ * The list only means anything for a browser: a native or backend app sends no
+ * `Origin`, so accepting one there would store a rule nothing ever consults and
+ * read like protection that is not being applied. Returns the normalized list,
+ * or an error message for the caller to send as a 400.
+ */
+function validateAllowedOrigins(
+  value: unknown,
+  platform: string,
+): { ok: true; value: string[] } | { ok: false; error: string } {
+  if (platform !== "web") {
+    return {
+      ok: false,
+      error: `allowed_origins is only supported for web apps, not ${platform} apps`,
+    };
+  }
+  return normalizeAllowedOrigins(value);
+}
 
 export async function appsRoutes(app: FastifyInstance) {
   // List apps for the authenticated user's teams
@@ -88,7 +115,7 @@ export async function appsRoutes(app: FastifyInstance) {
     { preHandler: requirePermission("apps:write") },
     async (request, reply) => {
       const auth = request.auth;
-      const { name, platform, bundle_id, project_id } = request.body;
+      const { name, platform, bundle_id, project_id, allowed_origins } = request.body;
 
       if (!name || !platform || !project_id) {
         return reply
@@ -109,6 +136,13 @@ export async function appsRoutes(app: FastifyInstance) {
         return reply
           .code(400)
           .send({ error: "bundle_id is required for non-backend platforms" });
+      }
+
+      let origins: string[] = [];
+      if (allowed_origins !== undefined) {
+        const validated = validateAllowedOrigins(allowed_origins, platform);
+        if (!validated.ok) return reply.code(400).send({ error: validated.error });
+        origins = validated.value;
       }
 
       // An app is project configuration, so creating one is an ordinary
@@ -134,6 +168,7 @@ export async function appsRoutes(app: FastifyInstance) {
             name,
             platform,
             bundle_id: bundle_id || null,
+            allowed_origins: origins,
           })
           .returning();
 
@@ -157,8 +192,10 @@ export async function appsRoutes(app: FastifyInstance) {
         action: "create",
         resource_type: "app",
         resource_id: created.id,
-        metadata: { name, platform, bundle_id: bundle_id || null },
+        metadata: { name, platform, bundle_id: bundle_id || null, allowed_origins: origins },
       });
+
+      invalidateWebAppOriginsCache();
 
       // The creator just proved project ownership above, so they are entitled
       // to the client secret this request minted.
@@ -173,10 +210,13 @@ export async function appsRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const auth = request.auth;
       const { id } = request.params;
-      const { name } = request.body;
+      const { name, allowed_origins } = request.body;
 
-      if (!name) {
+      if (name === undefined && allowed_origins === undefined) {
         return reply.code(400).send({ error: "At least one field to update is required" });
+      }
+      if (name !== undefined && !name) {
+        return reply.code(400).send({ error: "name must be a non-empty string" });
       }
 
       // The app is resolved together with the project that contains it, so
@@ -188,18 +228,38 @@ export async function appsRoutes(app: FastifyInstance) {
       if (!applyProjectWrite(contained, auth, reply, { permission: "apps:write" })) return;
       const existing = contained.resource;
 
+      // Only the fields the body actually carried are written, so a request
+      // that renames an app cannot silently clear its origin list, and one that
+      // edits origins cannot rename it. The guard above already established
+      // that at least one of them is present.
+      const changes: Record<string, { before: unknown; after: unknown }> = {};
+      const updates: { name?: string; allowed_origins?: string[] } = {};
+
+      if (name !== undefined) {
+        updates.name = name;
+        changes.name = { before: existing.name, after: name };
+      }
+      if (allowed_origins !== undefined) {
+        const validated = validateAllowedOrigins(allowed_origins, existing.platform);
+        if (!validated.ok) return reply.code(400).send({ error: validated.error });
+        updates.allowed_origins = validated.value;
+        changes.allowed_origins = { before: existing.allowed_origins, after: validated.value };
+      }
+
       const [updated] = await app.db
         .update(apps)
-        .set({ name })
+        .set(updates)
         .where(eq(apps.id, id))
         .returning();
+
+      if (updates.allowed_origins) invalidateWebAppOriginsCache();
 
       logAuditEvent(app.db, auth, {
         team_id: existing.team_id,
         action: "update",
         resource_type: "app",
         resource_id: id,
-        changes: { name: { before: existing.name, after: name } },
+        changes,
       });
 
       // Only a project owner reaches this line, so the secret is theirs to see.
@@ -252,6 +312,8 @@ export async function appsRoutes(app: FastifyInstance) {
           .set({ deleted_at: now })
           .where(and(eq(apiKeys.app_id, id), isNull(apiKeys.deleted_at))),
       ]);
+
+      invalidateWebAppOriginsCache();
 
       logAuditEvent(app.db, auth, {
         team_id: existing.team_id,

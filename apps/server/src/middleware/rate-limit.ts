@@ -11,11 +11,30 @@ const MAX_TOKENS = 100;
 const REFILL_RATE = 10; // tokens per second
 const REFILL_INTERVAL_MS = 1000;
 
+/**
+ * Which bucket a request draws from.
+ *
+ * A client key is public — a web app ships it inside the page and a mobile app
+ * ships it inside the binary — so one bucket per client key is really one
+ * bucket for every visitor of that app at once: the busiest site would rate
+ * limit its own users, and any one visitor could drain the key for all of them.
+ * Client keys therefore bucket per key *and* caller IP.
+ *
+ * Agent and import keys are operator credentials held by one caller, and a
+ * signed-in user is already one identity, so both keep a single bucket — an
+ * IP split there would only hand a caller more quota by changing address.
+ *
+ * `request.ip` is the socket address unless `TRUST_PROXY` is on, in which case
+ * it follows `X-Forwarded-For`. Trusting that header on a directly reachable
+ * server would let a caller pick its own bucket, which is why it is off by
+ * default.
+ */
 function getRateLimitBucketKey(request: FastifyRequest): string {
   if (request.auth) {
-    return request.auth.type === "api_key"
-      ? `key:${request.auth.key_id}`
-      : `user:${request.auth.user_id}`;
+    if (request.auth.type !== "api_key") return `user:${request.auth.user_id}`;
+    return request.auth.key_type === "client"
+      ? `key:${request.auth.key_id}:ip:${request.ip}`
+      : `key:${request.auth.key_id}`;
   }
   return `ip:${request.ip}`;
 }
@@ -47,6 +66,11 @@ export async function rateLimit(
   }
 
   bucket.tokens--;
+}
+
+/** Test-only: drop every bucket so a suite can start from a known state. */
+export function resetRateLimitBuckets(): void {
+  buckets.clear();
 }
 
 // Cleanup old buckets every 5 minutes

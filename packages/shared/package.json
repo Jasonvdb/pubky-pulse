@@ -33,6 +33,10 @@
       "types": "./dist/preferences.d.ts",
       "import": "./dist/preferences.js"
     },
+    "./origins": {
+      "types": "./dist/origins.d.ts",
+      "import": "./dist/origins.js"
+    },
     "./questionnaires": {
       "types": "./dist/questionnaires.d.ts",
       "import": "./dist/questionnaires.js"

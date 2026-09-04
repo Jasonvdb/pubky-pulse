@@ -527,3 +527,157 @@ describe("DELETE /v1/apps/:id", () => {
     expect(res.statusCode).toBe(403);
   });
 });
+
+/**
+ * `allowed_origins` is what actually scopes a web app's public client key to
+ * the sites its operator owns, so the write path is where a bad entry has to be
+ * refused — the enforcement hook can only compare against what was stored.
+ */
+describe("app allowed_origins", () => {
+  const WEB_APP = {
+    name: "Web App",
+    platform: "web",
+    bundle_id: "app.example.com",
+  };
+
+  async function createWebApp(token: string, allowed_origins?: unknown) {
+    return app.inject({
+      method: "POST",
+      url: "/v1/apps",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        ...WEB_APP,
+        project_id: testData.projectId,
+        ...(allowed_origins !== undefined ? { allowed_origins } : {}),
+      },
+    });
+  }
+
+  it("stores normalized origins on create", async () => {
+    const token = await getToken(app);
+    const res = await createWebApp(token, [
+      "HTTPS://App.Example.com",
+      "http://localhost:3000",
+      "https://app.example.com",
+    ]);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().allowed_origins).toEqual([
+      "https://app.example.com",
+      "http://localhost:3000",
+    ]);
+  });
+
+  it("defaults to an empty list when create omits the field", async () => {
+    const token = await getToken(app);
+    const res = await createWebApp(token);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().allowed_origins).toEqual([]);
+  });
+
+  it("serializes an empty list for a non-web app", async () => {
+    const token = await getToken(app);
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/apps/${testData.appId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.json().allowed_origins).toEqual([]);
+  });
+
+  it("rejects an origin with a path", async () => {
+    const token = await getToken(app);
+    const res = await createWebApp(token, ["https://app.example.com/analytics"]);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain("https://app.example.com/analytics");
+  });
+
+  it("rejects allowed_origins on a non-web platform", async () => {
+    const token = await getToken(app);
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/apps",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: "Apple App",
+        platform: "apple",
+        bundle_id: "org.pubky.pulse.origins",
+        project_id: testData.projectId,
+        allowed_origins: ["https://app.example.com"],
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain("only supported for web apps");
+  });
+
+  it("replaces the whole list on update and audit-logs the change", async () => {
+    const token = await getToken(app);
+    const created = await createWebApp(token, ["https://app.example.com"]);
+    const appId = created.json().id;
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/v1/apps/${appId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { allowed_origins: ["https://staging.example.com"] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().allowed_origins).toEqual(["https://staging.example.com"]);
+
+    const logs = await app.inject({
+      method: "GET",
+      url: `/v1/teams/${testData.teamId}/audit-logs`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const entry = logs
+      .json()
+      .audit_logs.find(
+        (l: any) => l.resource_id === appId && l.action === "update",
+      );
+    expect(entry.changes.allowed_origins).toEqual({
+      before: ["https://app.example.com"],
+      after: ["https://staging.example.com"],
+    });
+  });
+
+  it("clears the list when update sends an empty array", async () => {
+    const token = await getToken(app);
+    const created = await createWebApp(token, ["https://app.example.com"]);
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/v1/apps/${created.json().id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { allowed_origins: [] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().allowed_origins).toEqual([]);
+  });
+
+  it("rejects updating allowed_origins on a non-web app", async () => {
+    const token = await getToken(app);
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/v1/apps/${testData.appId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { allowed_origins: ["https://app.example.com"] },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain("only supported for web apps");
+  });
+
+  it("rejects a non-array value", async () => {
+    const token = await getToken(app);
+    const res = await createWebApp(token, "https://app.example.com");
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain("must be an array");
+  });
+});

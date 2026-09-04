@@ -57,6 +57,8 @@ export const TEST_ANDROID_BUNDLE_ID = "org.pubky.pulse.test.android";
 export const TEST_BUNDLE_ID = "org.pubky.pulse.test";
 // Web apps identify themselves by site, not by reverse-DNS bundle.
 export const TEST_WEB_BUNDLE_ID = "test.pulse.pubky.org";
+/** The one origin `seedWebTestApp` registers on the web fixture app. */
+export const TEST_WEB_ORIGIN = "https://test.pulse.pubky.org";
 export const TEST_SESSION_ID = "00000000-0000-0000-0000-000000000001";
 export const TEST_USER = {
   email: "test@pulse.pubky.org",
@@ -121,8 +123,13 @@ export const testJobHandler: JobHandler = async (ctx, params) => {
   return { test: true };
 };
 
-export async function buildApp() {
-  const app = Fastify({ logger: false });
+/**
+ * @param opts.trustProxy mirrors the `TRUST_PROXY` deployment switch, so a suite
+ *   can drive `X-Forwarded-For` the way the proxied production server sees it.
+ *   Off by default, exactly as the server is off by default.
+ */
+export async function buildApp(opts: { trustProxy?: boolean } = {}) {
+  const app = Fastify({ logger: false, trustProxy: opts.trustProxy ?? false });
   const db = createDatabaseConnection(TEST_DB_URL);
 
   const jobRunner = new JobRunner({
@@ -424,8 +431,11 @@ export async function seedWebTestApp(): Promise<{
     `;
 
     const [webApp] = await client`
-      INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
-      VALUES (${team.id}, ${webProject.id}, 'Test Web App', 'web', ${TEST_WEB_BUNDLE_ID})
+      INSERT INTO apps (team_id, project_id, name, platform, bundle_id, allowed_origins)
+      VALUES (
+        ${team.id}, ${webProject.id}, 'Test Web App', 'web', ${TEST_WEB_BUNDLE_ID},
+        ${client.array([TEST_WEB_ORIGIN])}
+      )
       RETURNING id
     `;
 

@@ -181,10 +181,14 @@ export interface CreateAppRequest {
   platform: AppPlatform;
   bundle_id?: string;
   project_id: string;
+  /** Browser origins the site may send from. `web` platform only. */
+  allowed_origins?: string[];
 }
 
 export interface UpdateAppRequest {
   name?: string;
+  /** Replaces the whole list. `web` platform only. */
+  allowed_origins?: string[];
 }
 
 export type AppResponse = Omit<

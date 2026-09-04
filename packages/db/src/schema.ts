@@ -168,6 +168,9 @@ export const apps = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     platform: appPlatformEnum("platform").notNull(),
     bundle_id: varchar("bundle_id", { length: 255 }),
+    // Browser origins a `web` app may send from. Empty for every other
+    // platform: a native app has no Origin header to authorise.
+    allowed_origins: text("allowed_origins").array().notNull().default([]),
     latest_app_version: varchar("latest_app_version", { length: 50 }),
     latest_app_version_updated_at: timestamp("latest_app_version_updated_at", { withTimezone: true }),
     // The languages this app ships, used to compute the localization gap

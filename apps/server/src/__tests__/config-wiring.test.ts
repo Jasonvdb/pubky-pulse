@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveIdentityConfig } from "../config.js";
+import { parseCorsOrigins, resolveIdentityConfig, resolveTrustProxy } from "../config.js";
 
 /**
  * Startup wiring for the identity configuration.
@@ -121,5 +121,46 @@ describe("resolveIdentityConfig", () => {
     expect(() =>
       resolveIdentityConfig(env({ PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.pubky.org,localhost" })),
     ).toThrow(/PULSE_ALLOWED_EMAIL_DOMAINS contains an invalid domain: "localhost"/);
+  });
+});
+
+/**
+ * The two request-layer switches. Both are pure functions over a raw string for
+ * the same reason `resolveIdentityConfig` is: `config.ts` dotenv-loads the
+ * repo-root `.env` at import, so anything driven through `process.env` here
+ * would read a developer's local file.
+ */
+describe("parseCorsOrigins", () => {
+  it("trims entries and drops empty ones", () => {
+    expect(parseCorsOrigins("https://a.example.com , https://b.example.com,,")).toEqual([
+      "https://a.example.com",
+      "https://b.example.com",
+    ]);
+  });
+
+  it("de-duplicates repeated entries", () => {
+    expect(parseCorsOrigins("https://a.example.com,https://a.example.com")).toEqual([
+      "https://a.example.com",
+    ]);
+  });
+
+  it("falls back to the local dashboard when unset or empty", () => {
+    expect(parseCorsOrigins(undefined)).toEqual(["http://localhost:3000"]);
+    expect(parseCorsOrigins("  , ")).toEqual(["http://localhost:3000"]);
+  });
+});
+
+describe("resolveTrustProxy", () => {
+  it("is off unless the value is exactly true", () => {
+    expect(resolveTrustProxy(undefined)).toBe(false);
+    expect(resolveTrustProxy("")).toBe(false);
+    expect(resolveTrustProxy("false")).toBe(false);
+    expect(resolveTrustProxy("1")).toBe(false);
+    expect(resolveTrustProxy("yes")).toBe(false);
+  });
+
+  it("accepts true regardless of casing or surrounding whitespace", () => {
+    expect(resolveTrustProxy("true")).toBe(true);
+    expect(resolveTrustProxy(" TRUE ")).toBe(true);
   });
 });

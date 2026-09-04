@@ -17,6 +17,7 @@ import type {
 } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
+import { enforceWebAppOrigin } from "../middleware/origin.js";
 import { resolveIngestCountryCode } from "../utils/event-processing.js";
 import { resolveClaimedUserIds } from "../utils/claimed-identity.js";
 import { resolveTeamMemberUserIds } from "../utils/team-members.js";
@@ -55,7 +56,7 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
   // parametric branch shared with the routes below.
   app.post<{ Body: IngestQuestionnaireDismissRequest }>(
     "/questionnaires/dismiss",
-    { preHandler: [requirePermission("events:write"), rateLimit] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       if (auth.type !== "api_key" || auth.key_type !== "client") {
@@ -105,7 +106,7 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
     Querystring: { user_id?: string; bundle_id?: string; force?: string };
   }>(
     "/questionnaires/:slug",
-    { preHandler: [requirePermission("events:write"), rateLimit] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       if (auth.type !== "api_key" || auth.key_type !== "client") {
@@ -247,7 +248,7 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
   // notification fires only on that flip.
   app.post<{ Params: { slug: string }; Body: IngestQuestionnaireSubmitRequest }>(
     "/questionnaires/:slug/responses",
-    { preHandler: [requirePermission("events:write"), rateLimit] },
+    { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
       if (auth.type !== "api_key" || auth.key_type !== "client") {

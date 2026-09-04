@@ -104,7 +104,29 @@ The scopes chain in either order — `Pulse.withUser(uid).withSession(sid)` prod
 
 ### Cross-SDK Session Correlation
 
-The typical use case is linking backend events to the session of the client that triggered them. Swift clients expose their current session ID via `Pulse.sessionId`; have the client send it as a request header, then scope the handler on the server:
+The typical use case is linking backend events to the session of the client that triggered them. Every client SDK exposes its current session ID as `Pulse.sessionId`; have the client send it as a request header, then scope the handler on the server.
+
+Web client — the SDK adds the header for you on `fetch` requests to the origins you list:
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "app.example.com",
+  propagateSessionTo: ["https://api.example.com"],
+});
+
+// Automatically carries X-Pulse-Session-Id.
+await fetch("https://api.example.com/checkout", { method: "POST" });
+```
+
+Only list origins you control — the header should not leak to third parties. Propagation works by wrapping `fetch`, so `XMLHttpRequest` and `sendBeacon` requests (axios in the browser defaults to XHR) are not annotated and must set the header themselves:
+
+```typescript
+const xhr = new XMLHttpRequest();
+xhr.open("POST", "https://api.example.com/checkout");
+if (Pulse.sessionId) xhr.setRequestHeader("X-Pulse-Session-Id", Pulse.sessionId);
+```
 
 Swift client:
 

@@ -21,7 +21,7 @@ List every app in the team. Reads are team-wide, not limited to the projects thi
 |-----------|------|----------|-------------|
 | `team_id` | UUID | No | Filter by team ID |
 
-Returns `{ apps: [...] }` with each app's `id`, `name`, `platform`, `bundle_id`, `client_secret`, `project_id`, and timestamps. `client_secret` is `null` for an app whose project this key's creator does not own. Each app also carries `latest_app_version` and `latest_app_version_updated_at` — compare these against an event's `app_version` to tell whether the data is from the current release. See [Latest Version Detection](/docs/concepts/latest-version-detection).
+Returns `{ apps: [...] }` with each app's `id`, `name`, `platform`, `bundle_id`, `allowed_origins`, `client_secret`, `project_id`, and timestamps. `allowed_origins` is always an array and is empty for everything but a configured `web` app. `client_secret` is `null` for an app whose project this key's creator does not own. Each app also carries `latest_app_version` and `latest_app_version_updated_at` — compare these against an event's `app_version` to tell whether the data is from the current release. See [Latest Version Detection](/docs/concepts/latest-version-detection).
 
 ## get-app
 
@@ -40,7 +40,8 @@ Create a new app under a project. Returns a `client_secret` for SDK use. Require
 | `name` | string | Yes | App name |
 | `platform` | string | Yes | `apple`, `android`, `web`, or `backend` |
 | `project_id` | UUID | Yes | Parent project ID |
-| `bundle_id` | string | Conditional | Required for non-backend platforms. Immutable after creation. |
+| `bundle_id` | string | Conditional | Required for non-backend platforms. Immutable after creation. Reverse-DNS on `apple`/`android`, the site identifier on `web`. |
+| `allowed_origins` | string[] | No | `web` only. Browser origins this site may send from. |
 
 ```json
 {
@@ -61,14 +62,44 @@ Backend apps omit `bundle_id`:
 }
 ```
 
+A web app's `bundle_id` is the site identifier, and its origins go on the app:
+
+```json
+{
+  "name": "Acme Web",
+  "platform": "web",
+  "project_id": "550e8400-...",
+  "bundle_id": "app.acme.com",
+  "allowed_origins": ["https://app.acme.com", "http://localhost:5173"]
+}
+```
+
+Create the app with the origins already in place. A web app whose list is empty refuses every request carrying an `Origin` header — which is every request a browser makes — so include the developer's local port alongside the production host. Sending the field for a non-web platform is a `400`.
+
 ## update-app
 
-Update an app's name. Requires `apps:write` permission.
+Update an app's `name`, its `allowed_origins`, or both. At least one is required. Requires `apps:write` permission.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `app_id` | UUID | Yes | The app ID |
-| `name` | string | Yes | New app name |
+| `name` | string | No | New app name |
+| `allowed_origins` | string[] | No | `web` only. Replaces the whole list. |
+
+`bundle_id` and `platform` are immutable, and an omitted field is left alone — renaming an app never clears its origins. Because `allowed_origins` replaces the list rather than appending to it, read the current value with [`get-app`](#get-app) first and send it back with the addition:
+
+```json
+{
+  "app_id": "550e8400-...",
+  "allowed_origins": [
+    "https://app.acme.com",
+    "https://staging.acme.com",
+    "http://localhost:5173"
+  ]
+}
+```
+
+Each entry is a full origin — scheme, host, optional port, no path, no trailing slash — lowercased and de-duplicated on write, 50 maximum. See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins).
 
 ## list-app-users
 

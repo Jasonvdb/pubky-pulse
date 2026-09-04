@@ -45,6 +45,33 @@ Import a batch of events for a specific app.
 }
 ```
 
+Historical browser data uses the same shape with the values a browser reports — the browser in `device_model`, the OS name and version in `os_version`, the URL path in `screen_name`, and no `build_number`:
+
+```json
+{
+  "events": [
+    {
+      "client_event_id": "6f1c2a70-2b1d-4d64-9b3e-9d0a0d0b3f11",
+      "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "user_id": "user_123",
+      "level": "info",
+      "message": "checkout_started",
+      "source_module": "app/checkout/page.tsx",
+      "screen_name": "/checkout",
+      "environment": "web",
+      "os_version": "Windows NT 10.0",
+      "app_version": "1.1.0",
+      "device_model": "Firefox 121",
+      "locale": "en-GB",
+      "is_dev": false,
+      "timestamp": "2023-06-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+Import keys are server-side credentials, so an import request carries no `Origin` header and the web app's [allowed origins](/docs/api-reference/apps#allowed_origins) never come into it. `session_id` must still be a valid UUID — generate one per historical session if the source system has no equivalent.
+
 ### How it differs from /v1/ingest
 
 | Feature | /v1/ingest | /v1/import |

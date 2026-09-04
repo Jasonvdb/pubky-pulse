@@ -13,7 +13,7 @@ import { Pulse } from "@synonymdev/pubky-pulse-web";
 Pulse.configure({
   endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
-  bundleId: "com.example.web",
+  bundleId: "app.example.com",
   appVersion: "1.4.0",
 });
 ```
@@ -24,8 +24,8 @@ Pulse.configure({
 |---|---|---|---|
 | `endpoint` | `string` | *required* | Pubky Pulse server URL. A trailing slash is stripped. |
 | `apiKey` | `string` | *required* | Client API key for a web-platform app. Must start with `pulse_client_`. |
-| `bundleId` | `string` | *required* | Bundle id of the Pulse app receiving the events. Must match the app exactly. |
-| `appVersion` | `string` | `undefined` | Version reported with every event. |
+| `bundleId` | `string` | *required* | Site identifier of the Pulse app receiving the events (`app.example.com`). Must match the app's `bundle_id` exactly — it is a name, not a URL, and is not checked against the page's origin. |
+| `appVersion` | `string` | `undefined` | Version reported with every event. Set it, and make it increase between releases — see [App version](#app-version). |
 | `isDev` | `boolean` | `true` on `localhost`, `127.0.0.1`, or a `file:` URL | Marks events as development traffic. See [Data Mode](/docs/concepts/data-mode). |
 | `debug` | `boolean` | `false` | Print the SDK's own diagnostics to the console. |
 | `consoleLogging` | `boolean` | `true` | Mirror logged events to the console. |
@@ -46,6 +46,50 @@ Every numeric option must be a positive integer, and `flushThreshold` must not e
 Set `supportedLanguages` explicitly to the locales your app ships — `supportedLanguages: ["en", "es", "fr"]`. It is an app-level field, not a per-event label: the server writes the first value it sees in a batch through to the app record with source `sdk`, overriding anything set by hand. Leaving it unset sends nothing at all, so a manually configured list stays as it is. See [Ingest](/docs/api-reference/ingest).
 </Callout>
 
+## Allowed Origins
+
+The client key you pass as `apiKey` is public: it ships inside the page, so anyone can read it out of the network tab. What scopes it to your sites is the app's **allowed origins** list — the browser origins the server accepts requests from for this app.
+
+Set it on the app, not in the SDK and not in the server's environment:
+
+- **Where** — the app's card in the dashboard, `PATCH /v1/apps/:id`, or the `update-app` MCP tool. One full origin per entry: scheme, host, optional port, no path and no trailing slash.
+- **Include your dev server** — `http://localhost:5173`, `http://localhost:3000`, whatever you run locally. A missing dev origin is the usual reason nothing arrives while developing.
+- **An empty list blocks every browser.** A newly created web app has no origins, and until it does, ingest answers `403` and CORS refuses the preflight.
+- **`CORS_ORIGINS` is not this.** That server variable is the dashboard's own origin; you do not need a server change to add a site.
+
+See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins).
+
+## App Version
+
+`appVersion` is the only release identifier a browser app has — web events carry no build number — so leaving it unset costs you the version badges across the dashboard and disables [issue regression detection](/docs/concepts/issues#regression-detection) for this app entirely.
+
+It also has to **increase** between releases. Versions compare segment by segment, numerically where a segment is numeric and as plain strings otherwise, so a git SHA or a content hash sorts alphabetically rather than chronologically and "latest" becomes whichever hash happens to sort highest.
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "app.example.com",
+  // Injected at build time from package.json — not the commit SHA.
+  appVersion: __APP_VERSION__,
+});
+```
+
+`1.4.0`, `1.4.0-rc.2`, and `2026.04.23` all order correctly; `a3f9c21` and `main-2f4c9` do not. See [Latest Version Detection](/docs/concepts/latest-version-detection#web-apps-must-set-appversion).
+
+## Page Context Attributes
+
+`screen_name` on a web event holds the URL **path** only — `/checkout/payment`, never the query string. When you need the rest, two reserved `custom_attributes` keys carry it, each capped at 2048 characters instead of the usual 200:
+
+```typescript
+Pulse.info("checkout_started", {
+  _page_url: location.href,
+  _referrer: document.referrer,
+});
+```
+
+Reserved keys are underscore-prefixed and interpreted by the server, so use these two rather than inventing `page_url` of your own. Auto-instrumented `fetch` calls use the same mechanism, recording `_http_url`, `_http_method`, `_http_status`, and `_http_duration_ms` (status `"0"` when the request never completed). See [Custom Attributes](/docs/concepts/events#custom-attributes).
+
 ## What Happens on Configure
 
 1. **Validates** the endpoint, the key format, and every option.
@@ -64,7 +108,7 @@ Calling `configure()` again replaces the pipeline: the old transport is drained 
 Pulse.configure({
   endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
-  bundleId: "com.example.web",
+  bundleId: "app.example.com",
   isDev: location.hostname.endsWith(".staging.example.com"),
 });
 ```
@@ -77,7 +121,7 @@ The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and the `data_
 Pulse.configure({
   endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
-  bundleId: "com.example.web",
+  bundleId: "app.example.com",
   networkTracking: true,
   propagateSessionTo: ["https://api.example.com"],
 });

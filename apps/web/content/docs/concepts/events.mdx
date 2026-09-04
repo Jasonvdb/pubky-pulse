@@ -25,27 +25,40 @@ Each event contains the following fields:
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `message` | string | Yes | What happened -- a human-readable description of the event |
+| `message` | string | Yes | What happened -- a human-readable description of the event. Truncated to 2000 characters |
 | `level` | string | Yes | Log level: `info`, `debug`, `warn`, or `error` |
-| `session_id` | string (UUID) | Yes | Groups events from a single app session |
+| `session_id` | string (UUID) | Yes | Groups events from a single app session. Must be a UUID -- a malformed value rejects that one event, not the batch |
 | `client_event_id` | string (UUID) | No | Client-generated ID used for deduplication |
 | `user_id` | string | No | User identifier (anonymous or real) |
 | `source_module` | string | No | Module or component that generated the event |
-| `screen_name` | string | No | Current screen or page name |
+| `screen_name` | string | No | Current screen name, or on web the URL path (`/checkout/payment`) |
 | `custom_attributes` | object | No | Arbitrary string key-value pairs (200 char value limit) |
 | `environment` | string | No | Runtime environment (`ios`, `ipados`, `macos`, `watchos`, `android`, `web`, `backend`) |
-| `os_version` | string | No | Operating system version |
+| `os_version` | string | No | Operating system version (`18.0`), or on web the OS name and version (`macOS 10.15.7`) |
 | `app_version` | string | No | App version string |
 | `sdk_name` | string | No | Identifier of the Pubky Pulse SDK that produced the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`, `pubky-pulse-web`). Auto-set by official SDKs. |
 | `sdk_version` | string | No | Version of the Pubky Pulse SDK that produced the event. Auto-set by official SDKs. |
-| `build_number` | string | No | App build number |
-| `device_model` | string | No | Device hardware model |
+| `build_number` | string | No | App build number. Native only -- web events never carry one |
+| `device_model` | string | No | Device hardware model (`iPhone15,2`), or on web the browser and its major version (`Chrome 120`) |
 | `locale` | string | No | User locale (e.g., `en_US`) |
 | `country_code` | string | No | 2-letter ISO country code, derived server-side from the request IP via Cloudflare. Never sent by SDKs. Always `null` for backend apps. |
 | `is_dev` | boolean | No | Whether the event came from a development build |
 | `timestamp` | string (ISO 8601) | No | When the event occurred (server uses receipt time if omitted) |
 
 Events are sent to the server in batches via the [ingest endpoint](/docs/api-reference/ingest). The SDKs handle batching automatically.
+
+### Field semantics by platform
+
+Three fields hold different things depending on where the event came from. The dashboard relabels them per environment, and so should you when reading them through the API or MCP:
+
+| Field | Native (`ios`, `ipados`, `macos`, `watchos`, `android`) | Web (`web`) | Backend (`backend`) |
+|---|---|---|---|
+| `device_model` | Hardware model -- `iPhone15,2` | Browser and major version -- `Chrome 120`, `Safari 17` | Usually absent |
+| `os_version` | OS version -- `18.0` | OS name and version -- `macOS 10.15.7`, `Windows NT 10.0` | Usually absent |
+| `screen_name` | Screen or view name -- `CheckoutScreen` | URL path -- `/checkout/payment`, never the query string | Usually absent |
+| `build_number` | Build number -- `42` | Never sent | Usually absent |
+
+The [Web SDK](/docs/sdks/web) parses the browser and OS out of the user agent, so both are best-effort and either can be absent when the browser reports too little to parse. Because web events carry no build number, `app_version` is the only release identifier a browser app has -- see [Latest Version Detection](/docs/concepts/latest-version-detection#web-apps-must-set-appversion).
 
 ## Log Levels
 
@@ -102,23 +115,32 @@ Events can carry arbitrary metadata as `custom_attributes` -- a flat object of s
 }
 ```
 
-The SDKs also auto-capture certain fields as custom attributes. Underscore-prefixed keys (`_*`) are reserved for SDK use — for example, the Swift SDK records `_connection` (wifi, cellular, ethernet, offline) via its network monitor; auto-instrumented network requests carry `_http_url` / `_http_method` / `_http_status`; and `Pulse.error(error)` extracts `_error_type` / `_error_stack` / `_error_code` / `_error_domain` / `_error_cause_<n>_*` from the caught Error so the issue tracker can fingerprint by runtime type. `_error_stack` is exempt from the 200-char value cap (capped at 16000 instead) so stack traces survive intact. Avoid using your own underscore-prefixed keys to prevent collisions with future SDK additions.
+The SDKs also auto-capture certain fields as custom attributes. Underscore-prefixed keys (`_*`) are reserved for SDK use — for example, the Swift SDK records `_connection` (wifi, cellular, ethernet, offline) via its network monitor; auto-instrumented network requests carry `_http_url` / `_http_method` / `_http_status` / `_http_duration_ms` (`_http_status` is `"0"` when the request never completed); and `Pulse.error(error)` extracts `_error_type` / `_error_stack` / `_error_code` / `_error_domain` / `_error_cause_<n>_*` from the caught Error so the issue tracker can fingerprint by runtime type. Avoid using your own underscore-prefixed keys to prevent collisions with future SDK additions.
+
+Two reserved keys carry browser page context, and are the place for what a path alone loses:
+
+| Key | Holds | Cap |
+|---|---|---|
+| `_page_url` | The full URL of the page, query string included | 2048 |
+| `_referrer` | The referring URL | 2048 |
+
+Every other reserved key uses the ordinary 200-character cap, except `_error_stack`, which is capped at 16000 so stack traces survive intact. Non-string values are stringified before the cap is applied, so an object or array cannot slip past it.
 
 ## Auto-Captured Fields
 
 The SDKs automatically populate device and app metadata on every event without any additional configuration:
 
-- **`device_model`** -- hardware model (e.g., "iPhone15,2")
-- **`os_version`** -- operating system version (e.g., "17.4.1")
-- **`app_version`** -- the app's version string from its bundle or package
-- **`build_number`** -- the app's build number
-- **`locale`** -- the device locale (e.g., "en_US")
+- **`device_model`** -- hardware model (e.g., "iPhone15,2"), or the browser on web (e.g., "Chrome 120")
+- **`os_version`** -- operating system version (e.g., "17.4.1"), or the OS name and version on web (e.g., "macOS 10.15.7")
+- **`app_version`** -- the app's version string from its bundle or package; on web, whatever you pass as `appVersion` to `Pulse.configure()`
+- **`build_number`** -- the app's build number (native only)
+- **`locale`** -- the device locale (e.g., "en_US"); `navigator.language` in the browser
 - **`environment`** -- the runtime platform (ios, ipados, macos, watchos, android, web, backend)
 - **`sdk_name`** -- identifier of the Pubky Pulse SDK producing the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`, `pubky-pulse-web`)
 - **`sdk_version`** -- version of the Pubky Pulse SDK producing the event
 - **`is_dev`** -- whether this is a development build (see [Data Mode](/docs/concepts/data-mode))
 
-For SDK-specific details, see the [Swift SDK events guide](/docs/sdks/swift/events) or the [Node SDK events guide](/docs/sdks/node/events).
+For SDK-specific details, see the [Web SDK events guide](/docs/sdks/web/events), the [Swift SDK events guide](/docs/sdks/swift/events), or the [Node SDK events guide](/docs/sdks/node/events).
 
 ### Country (server-derived)
 
@@ -148,7 +170,9 @@ Events can be queried through the [dashboard](/docs/concepts/projects-and-apps),
 - **Log level** -- filter by severity
 - **User ID or session ID** -- trace a specific user or session
 - **Environment** -- filter by platform (ios, android, web, etc.)
-- **Screen name** -- find events from a specific screen
+- **Screen name** -- find events from a specific screen. The match is exact or path-prefixed, so `/checkout` also returns `/checkout/payment` (but not `/checkout-abandoned`)
+- **Device model** -- one hardware model, or one browser on web (`Chrome 120`)
+- **OS version** -- one OS version, or one OS name and version on web (`macOS 10.15.7`)
 - **Date range** -- query a time window
 - **Data mode** -- filter by production, development, or all (see [Data Mode](/docs/concepts/data-mode))
 

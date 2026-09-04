@@ -32,6 +32,22 @@ The normalization strips:
 - Numbers (e.g., `404` becomes `<n>`)
 - Quoted strings (e.g., `"username"` becomes `"<s>"`)
 
+### Browser wording is canonicalized first
+
+Chrome, Firefox, and Safari each phrase the same JavaScript fault differently, so without normalisation one broken line of code becomes three issues — one per browser, splitting the occurrence count and the affected-user count three ways.
+
+For events with `environment: "web"` only, the message is rewritten into a browser-independent form before fingerprinting. These all become one issue:
+
+| Browser | Message |
+|---|---|
+| Chrome | `Cannot read properties of undefined (reading 'total')` |
+| Firefox | `can't access property "total", cart is undefined` |
+| Safari | `undefined is not an object (evaluating 'cart.total')` |
+
+The same applies to the other common shapes: "is not a function", "is not defined" / "Can't find variable:", and the cross-origin `Script error.` literal that every browser emits when a script served from another origin throws.
+
+The property, function, or variable name is **kept** in the canonical form, so `cart.total` and `cart.items` stay separate issues. Only the wording around it collapses. Non-web events are untouched, and so are web messages that match none of the patterns — a fingerprint computed before this existed still resolves to the same issue.
+
 ### Network request errors split by endpoint
 
 `sdk:network_request` errors (connection failures emitted by the Swift SDK's URLSession instrumentation) discriminate on `${method} ${host}${templated_path}` from the event's `_http_url` and `_http_method` custom attributes. So a connection failure to `api.stripe.com/v1/customers/<id>/subscriptions` becomes a different issue from one to your own backend, instead of all SDK-tracked network errors collapsing onto a single issue per source module.
@@ -68,6 +84,7 @@ Each issue tracks **occurrences** — one per unique session where the error hap
 - **App version**: Which version the error occurred in.
 - **SDK name and version**: Which Pubky Pulse SDK (e.g. `pubky-pulse-swift`) and SDK version produced the originating event. Auto-stamped by official SDKs, nullable.
 - **Environment**: iOS, Android, web, backend, etc.
+- **Device model and OS version**: The reporting device — hardware model and OS version on a native app, the browser (`Chrome 120`) and the OS (`macOS 10.15.7`) on web. Compare them across occurrences to tell a browser- or OS-specific fault from a universal one: all-Safari points at the browser, a spread points at your code.
 - **Timestamp**: When the error occurred.
 
 The issue's **occurrence count** and **unique user count** are denormalized for fast querying and sorting by severity. Issue rows also carry **`first_seen_app_version`** and **`last_seen_app_version`**, denormalised by the hourly scan from the underlying occurrences. Pair `last_seen_app_version` with the app's `latest_app_version` to tell whether an issue is still happening on the current release — see [Latest Version Detection](/docs/concepts/latest-version-detection) for the comparison rules and how the green/amber badge is rendered.
@@ -120,6 +137,8 @@ For this reason, `resolved_at_version` is **required** when transitioning an iss
 The comparison is **semver-aware** — `1.10.0` correctly regresses past `1.9.0` (and standard build-number suffixes like `1.2.3 (456)` plus date-style versions like `2024.10.15` are handled). See [Latest Version Detection](/docs/concepts/latest-version-detection) for the full comparator rules.
 
 If the incoming event itself has no `app_version` (e.g. backend events that don't tag versions), the scan does not trigger a regression — there's nothing to compare against.
+
+**Web apps must set `appVersion`, and it must increase.** A browser app has no store build number to fall back on, so `Pulse.configure({ appVersion })` is the only release identifier its events carry. Leave it out and every occurrence has a null version: regression detection never fires, and the dashboard shows the issue with no version badge. Worse than leaving it out is setting it to something that does not increase — a git SHA, a build hash — because the comparator falls back to plain string ordering on non-numeric segments: whether `b12ef00` counts as newer than `a3f9c21` comes down to alphabetical order, not to which one you shipped last. Use a monotonic value: a semver string, or a numeric build counter. See [Latest Version Detection](/docs/concepts/latest-version-detection#web-apps-must-set-appversion).
 
 ## Comments
 

@@ -104,6 +104,24 @@ const EXPECTED_RESOURCES = ["pubky-pulse://guide"] as const;
 const EXPECTED_GUIDE_SDKS = ["**Web**", "**Node**", "**Swift**", "**Android**"] as const;
 
 /**
+ * Facts about the web platform an agent cannot work without and cannot guess:
+ * where a browser origin is authorised, what the device columns hold on web,
+ * and the reserved page-context keys. Every one of them contradicts what the
+ * name of the field suggests to someone who only knows the mobile shape, so
+ * dropping one from the guide is a silent regression rather than a broken
+ * link. Substrings, checked verbatim with `.toContain(...)`.
+ */
+const EXPECTED_GUIDE_WEB_TOPICS = [
+  "allowed_origins",
+  "site identifier",
+  "Chrome 120",
+  "macOS 10.15.7",
+  "_page_url",
+  "_referrer",
+  "_http_duration_ms",
+] as const;
+
+/**
  * Every feature surface named in `SERVER_INSTRUCTIONS` (apps/server/src/mcp/server.ts).
  * When you add a domain to that bullet list, add its substring here.
  * Strings must match verbatim — they're checked with `.toContain(...)`.
@@ -278,6 +296,25 @@ describe("MCP endpoint", () => {
     });
   });
 
+  describe("app tool schemas", () => {
+    it("create-app and update-app accept allowed_origins", async () => {
+      const listRes = await mcpRequest(TEST_AGENT_KEY, "tools/list");
+      const tools = listRes.json().result.tools as Array<{
+        name: string;
+        inputSchema: { properties?: Record<string, unknown> };
+      }>;
+
+      for (const name of ["create-app", "update-app"]) {
+        const tool = tools.find((t) => t.name === name);
+        expect(tool, `tool ${name} not registered`).toBeTruthy();
+        expect(
+          Object.keys(tool!.inputSchema.properties ?? {}),
+          `tool ${name} is missing allowed_origins`,
+        ).toContain("allowed_origins");
+      }
+    });
+  });
+
   describe("resource listing", () => {
     it("exposes the operational guide resource", async () => {
       const listRes = await mcpRequest(TEST_AGENT_KEY, "resources/list");
@@ -299,6 +336,13 @@ describe("MCP endpoint", () => {
       }
       // The bold names alone predate the Web SDK bullet; assert its package too.
       expect(contents[0].text).toContain("@synonymdev/pubky-pulse-web");
+      for (const topic of EXPECTED_GUIDE_WEB_TOPICS) {
+        expect(contents[0].text, `MCP guide missing web topic "${topic}"`).toContain(topic);
+      }
+      // CORS_ORIGINS is the dashboard's own origin now — a web app authorises
+      // its browser origins on the app record, so the guide must not send an
+      // agent back to the env var it cannot edit.
+      expect(contents[0].text).not.toContain("add the site's origin to the server's");
     });
   });
 

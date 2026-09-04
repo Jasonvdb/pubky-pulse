@@ -43,7 +43,7 @@ Each step in the `steps` array:
 |-------|------|-------------|
 | `name` | string | Step display name |
 | `event_filter.step_name` | string | Match events with this step_name (what devs pass to `step()`) |
-| `event_filter.screen_name` | string | Match events on this screen |
+| `event_filter.screen_name` | string | Match events on this screen — exact match. On web this is the URL path (`/checkout`), so it will not match `/checkout/payment` |
 
 ```json
 {

@@ -24,8 +24,8 @@ Events are stamped with `environment: "web"` and `sdk_name: "pubky-pulse-web"`, 
 ## Requirements
 
 - Any evergreen browser (Chrome, Edge, Firefox, Safari); the build targets ES2020
-- A Pubky Pulse app with platform `web`, its bundle id, and a client API key (`pulse_client_...`)
-- The site's origin listed in the server's `CORS_ORIGINS`
+- A Pubky Pulse app with platform `web`, its site identifier, and a client API key (`pulse_client_...`)
+- The site's origin listed in that app's **allowed origins**
 
 ## Quick Start
 
@@ -35,7 +35,7 @@ import { Pulse } from "@synonymdev/pubky-pulse-web";
 Pulse.configure({
   endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
-  bundleId: "com.example.web",
+  bundleId: "app.example.com",
   appVersion: "1.4.0",
 });
 
@@ -46,9 +46,10 @@ Configure as early in the page's life as you can. Calls made before `configure()
 
 ## Server Setup
 
-1. Create an app with platform `web` and give it a bundle id, either in the [dashboard](/dashboard) or with the `create-app` MCP tool. The bundle id is the same string you pass as `bundleId`.
-2. Add the site's origin to the server's `CORS_ORIGINS`, including the port you use in development (`http://localhost:5173`, say). Without it the browser blocks every request.
-3. Copy the app's client key. It starts with `pulse_client_`, is public and ingest-scoped — it writes events, feedback, and user data for this one app, and reads questionnaire specs plus the in-progress draft answers of the `user_id` a request names; it cannot read events, metrics, or project data — and is meant to ship in your bundle. Never put an agent key (`pulse_agent_...`) in a browser.
+1. Create an app with platform `web`, either in the [dashboard](/dashboard) or with the `create-app` MCP tool. Its bundle id is the **site identifier** — the site's host reads best (`app.example.com`) — and is the same string you pass as `bundleId`. It is a name, not an address: no scheme, no path.
+2. List the site's **allowed origins** on that app, including the port you use in development (`http://localhost:5173`, say). This is per app, editable at any time, and nothing to do with the server's `CORS_ORIGINS`, which is the dashboard's own origin. A web app with no origins refuses every browser request with a `403`, and an origin that is not on the list is blocked by CORS before the request is even sent. See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins).
+3. Set `appVersion` to something that increases with each release. It is the only version a browser app reports — there is no build number — so without it the dashboard shows no version badges and [issue regression detection](/docs/concepts/issues#regression-detection) has nothing to compare. A git SHA is worse than nothing: it orders alphabetically. See [Latest Version Detection](/docs/concepts/latest-version-detection#web-apps-must-set-appversion).
+4. Copy the app's client key. It starts with `pulse_client_`, is public and ingest-scoped — it writes events, feedback, and user data for this one app, and reads questionnaire specs plus the in-progress draft answers of the `user_id` a request names; it cannot read events, metrics, or project data — and is meant to ship in your bundle. Never put an agent key (`pulse_agent_...`) in a browser.
 
 ## Next Steps
 

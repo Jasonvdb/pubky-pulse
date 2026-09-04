@@ -38,7 +38,7 @@ No bundler needed; import the module straight from a CDN.
   Pulse.configure({
     endpoint: "https://ingest.pulse.pubky.org",
     apiKey: "pulse_client_...",
-    bundleId: "com.example.web",
+    bundleId: "app.example.com",
   });
 
   document.querySelector("#buy").addEventListener("click", () => {
@@ -60,7 +60,7 @@ export function App() {
     Pulse.configure({
       endpoint: import.meta.env.VITE_PULSE_ENDPOINT,
       apiKey: import.meta.env.VITE_PULSE_KEY,
-      bundleId: "com.example.web",
+      bundleId: "app.example.com",
       appVersion: __APP_VERSION__,
     });
   }, []);
@@ -88,7 +88,7 @@ If your router does not use the History API (some hash routers do not), turn `tr
     Pulse.configure({
       endpoint: PUBLIC_PULSE_ENDPOINT,
       apiKey: PUBLIC_PULSE_KEY,
-      bundleId: "com.example.web",
+      bundleId: "app.example.com",
     });
 
     return () => void Pulse.shutdown();
@@ -115,7 +115,7 @@ export const appConfig: ApplicationConfig = {
         Pulse.configure({
           endpoint: environment.pulseEndpoint,
           apiKey: environment.pulseKey,
-          bundleId: "com.example.web",
+          bundleId: "app.example.com",
           appVersion: environment.version,
         });
       },

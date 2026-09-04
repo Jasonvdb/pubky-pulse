@@ -66,6 +66,8 @@ The step name you pass to `step()` must match the `step_name` in the funnel defi
 
 You can also define steps that match on `screen_name` instead of or in addition to `step_name`. A step filter matching `screen_name: "CheckoutScreen"` would count any event from that screen.
 
+On web, `screen_name` is the URL **path** the SDK captured -- `/checkout`, `/checkout/payment` -- with no origin and no query string. The step filter is an **exact** match, so `screen_name: "/checkout"` counts events on `/checkout` and not on `/checkout/payment`. Routes with a variable segment (`/orders/8f21/confirm`) never match a fixed filter at all: name those steps with `Pulse.step()` instead of relying on the path.
+
 ## Analysis Modes
 
 Funnel queries support two modes that change how step completion is evaluated:

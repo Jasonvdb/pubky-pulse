@@ -12,7 +12,7 @@ The system is backed by two tables. Keeping them separate means a failed email r
 | Table | Purpose |
 |-------|---------|
 | `notifications` | Per-user inbox row. One per recipient, written synchronously on enqueue. Carries the pre-rendered `title`, `body`, optional deep `link`, structured `data`, `read_at`, `deleted_at`. |
-| `notification_deliveries` | Per-channel attempt log. One row per `(notification, channel)`. Status moves `pending → sent | failed | skipped`. The `in_app` row is created and marked `sent` synchronously alongside the inbox insert. |
+| `notification_deliveries` | Per-channel attempt log. One row per enabled `(notification, channel)`. Status moves `pending → sent | failed | skipped`. When `in_app` is enabled, its delivery marker is created and marked `sent` synchronously alongside the unconditional inbox insert. |
 
 ## Channels
 

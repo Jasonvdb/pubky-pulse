@@ -144,7 +144,3 @@ Running locally, the same pages are at `http://localhost:3000/docs`. They are MD
 ## License
 
 MIT — see [LICENSE](./LICENSE).
-
-## History
-
-Pubky Pulse started as a copy of the owlmetry monorepo; the pre-rework tree is tagged `owlmetry-baseline`.

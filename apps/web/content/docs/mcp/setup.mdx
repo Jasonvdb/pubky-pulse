@@ -1,6 +1,6 @@
 ---
 title: Setup
-description: Connect your MCP client to Pubky Pulse using its fastest supported setup method.
+description: Check MCP client compatibility and connect to Pubky Pulse using the fastest supported setup method.
 ---
 
 ## Prerequisites
@@ -23,13 +23,13 @@ The MCP endpoint is `POST /mcp` on your Pubky Pulse API server, and it exposes a
 
 ## Client Setup
 
-Pick your client below. The fastest safe supported method is first, with project-level and extension-specific fallbacks where available. We support **Claude Code**, **Codex**, **OpenCode**, **Cursor**, **VS Code**, **Claude Desktop**, **Windsurf**, **Zed**, **JetBrains** (IntelliJ, WebStorm, PyCharm, etc.), **Cline**, and **Roo Code**.
+Pick your client below. The compatibility matrix puts the fastest safe supported method first, with project-level and extension-specific fallbacks where available. A client must support Streamable HTTP with a custom Bearer authorization header. **Claude Desktop** remains in the matrix to document why it cannot currently connect directly; the other listed clients are supported.
 
 <McpSetupInstructions />
 
 ## Other MCP Clients
 
-Any MCP-compatible client can connect to Pubky Pulse. The endpoint uses:
+Other MCP clients can connect only if they support Streamable HTTP and a custom `Authorization` Bearer header. The endpoint uses:
 
 - **Server name:** `pubky-pulse` (the dashboard emits `pubky-pulse-local-dev` when it is itself running in development, so a local entry doesn't collide with your production one)
 - **Transport:** Streamable HTTP (stateless JSON)

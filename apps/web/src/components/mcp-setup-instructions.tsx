@@ -111,6 +111,7 @@ export function McpSetupInstructions() {
           const scope = editor.scopes[scopeIdx];
           const setupText = scope.content(activeKey, MCP_URL, SERVER_NAME);
           const setupDisplay = scope.content(displayKey, MCP_URL, SERVER_NAME);
+          const isUnsupported = scope.method === "unsupported";
           return (
             <Tab key={editor.name} value={editor.name}>
               {/* Scope toggle — only shown when editor has multiple scopes */}
@@ -137,7 +138,13 @@ export function McpSetupInstructions() {
               )}
 
               <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="rounded-full bg-brand/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-brand">
+                <span
+                  className={`rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${
+                    isUnsupported
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-brand/10 text-brand"
+                  }`}
+                >
                   {SETUP_METHOD_LABELS[scope.method]}
                 </span>
                 <span>{scope.label}</span>
@@ -151,9 +158,11 @@ export function McpSetupInstructions() {
                 <pre className="overflow-x-auto rounded-lg border border-border bg-fd-code-background p-4 text-sm">
                   <code data-language={scope.language}>{setupDisplay}</code>
                 </pre>
-                <div className="absolute right-2 top-2">
-                  <CopyButton text={setupText} />
-                </div>
+                {!isUnsupported && (
+                  <div className="absolute right-2 top-2">
+                    <CopyButton text={setupText} />
+                  </div>
+                )}
               </div>
 
               {/* Callout */}

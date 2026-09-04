@@ -57,7 +57,7 @@ claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky
   --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
 ```
 
-Any supported MCP client works (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code). The [MCP setup guide](/docs/mcp/setup) leads with the fastest safe method for each one and includes project-level or extension-specific fallbacks where available.
+Supported clients include Claude Code, Codex, OpenCode, Cursor, VS Code, Windsurf, Zed, JetBrains, Cline, and Roo Code. The [MCP setup guide](/docs/mcp/setup) leads with the fastest safe method for each and includes project-level or extension-specific fallbacks where available. Claude Desktop remains in the compatibility matrix, but cannot currently connect directly because its remote connectors cannot send Pubky Pulse's required static Bearer header.
 
 Verify the connection by asking your agent to call the `whoami` tool. It should return your key type, team, and permissions.
 

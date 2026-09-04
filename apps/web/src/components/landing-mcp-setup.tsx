@@ -7,6 +7,7 @@ import {
   MCP_URL,
   SERVER_NAME,
   SETUP_METHOD_LABELS,
+  maskKey,
 } from "@/lib/mcp-editors";
 import { useUser } from "@/hooks/use-user";
 import { api } from "@/lib/api";
@@ -34,11 +35,14 @@ export function LandingMcpSetup() {
       .finally(() => setLazyCreating(false));
   }, [isAuthenticated, firstTeam, defaultKey, lazyCreating, mutate]);
   const activeKey = defaultKey || PLACEHOLDER;
+  const displayKey = maskKey(activeKey);
   const hasRealKey = activeKey !== PLACEHOLDER;
 
   const editor = EDITORS[selectedEditor];
   const scope = editor.scopes[0];
   const setupText = scope.content(activeKey, MCP_URL, SERVER_NAME);
+  const setupDisplay = scope.content(displayKey, MCP_URL, SERVER_NAME);
+  const isUnsupported = scope.method === "unsupported";
 
   return (
     <div>
@@ -75,11 +79,17 @@ export function LandingMcpSetup() {
               <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
             </div>
             <span className="ml-2 text-xs font-medium text-muted-foreground">{editor.name}</span>
-            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                isUnsupported
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-brand/10 text-brand"
+              }`}
+            >
               {SETUP_METHOD_LABELS[scope.method]}
             </span>
           </div>
-          <TerminalCopyButton text={setupText} />
+          {!isUnsupported && <TerminalCopyButton text={setupText} />}
         </div>
         <p className="border-b border-border px-5 py-3 text-xs leading-relaxed text-muted-foreground">
           <span className="mr-2 inline-flex rounded bg-white/5 px-1.5 py-0.5 font-semibold text-card-foreground">
@@ -90,13 +100,13 @@ export function LandingMcpSetup() {
         <pre className="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed">
           <code className="text-card-foreground" data-language={scope.language}>
             {hasRealKey
-              ? setupText.split(activeKey).map((part, i, arr) => (
+              ? setupDisplay.split(displayKey).map((part, i, arr) => (
                   <span key={i}>
                     {part}
-                    {i < arr.length - 1 && <span className="text-brand">{activeKey}</span>}
+                    {i < arr.length - 1 && <span className="text-brand">{displayKey}</span>}
                   </span>
                 ))
-              : setupText}
+              : setupDisplay}
           </code>
         </pre>
         {editor.callout && (

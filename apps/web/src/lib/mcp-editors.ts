@@ -12,12 +12,13 @@ export const MCP_URL = `${API_URL}/mcp`;
 const IS_DEV = process.env.NODE_ENV === "development";
 export const SERVER_NAME = IS_DEV ? "pubky-pulse-local-dev" : "pubky-pulse";
 
-export type SetupMethod = "command" | "native-ui" | "config";
+export type SetupMethod = "command" | "native-ui" | "config" | "unsupported";
 
 export const SETUP_METHOD_LABELS: Record<SetupMethod, string> = {
   command: "Command",
   "native-ui": "Native UI",
   config: "Config",
+  unsupported: "Unavailable",
 };
 
 export interface EditorScope {
@@ -156,12 +157,16 @@ export const EDITORS: EditorConfig[] = [
         method: "config",
         language: "json",
         note:
-          "Add to .cursor/mcp.json. This file may be shared: never commit the generated literal key; use Cursor's ${env:PUBKY_PULSE_AGENT_KEY} interpolation first.",
-        content: (key, url, name) =>
+          "Add to .cursor/mcp.json. Set PUBKY_PULSE_AGENT_KEY before launching Cursor; the shared config references it without storing the key.",
+        content: (_key, url, name) =>
           JSON.stringify(
             {
               mcpServers: {
-                [name]: { type: "http", url, headers: { Authorization: `Bearer ${key}` } },
+                [name]: {
+                  type: "http",
+                  url,
+                  headers: { Authorization: "Bearer ${env:PUBKY_PULSE_AGENT_KEY}" },
+                },
               },
             },
             null,
@@ -224,16 +229,15 @@ export const EDITORS: EditorConfig[] = [
   {
     name: "Claude Desktop",
     callout:
-      "Direct connection works only when Add custom connector exposes custom HTTP request-header fields, a beta and organization-dependent feature. If those fields are absent, Claude Desktop cannot connect directly because Pubky Pulse requires bearer authentication. Custom connectors may be shared with the organization, so a per-user agent key may be unsuitable; confirm your organization's policy before saving it.",
+      "Claude Desktop's official remote custom connectors run from Anthropic's cloud and accept a URL with optional OAuth client credentials, not a static Authorization header. Pubky Pulse must add OAuth before direct connection is possible; local and private endpoints are also unreachable from Anthropic's cloud.",
     scopes: [
       {
-        label: "Direct remote (beta)",
-        method: "native-ui",
+        label: "Direct connection",
+        method: "unsupported",
         language: "text",
-        note:
-          "Open Customize > Connectors > Add custom connector in Claude Desktop, enter these values, then save.",
-        content: (key, url) =>
-          `URL: ${url}\nHTTP header name: Authorization\nHTTP header value: Bearer ${key}`,
+        note: "No direct setup is currently available.",
+        content: () =>
+          "Direct connection is unavailable.\nClaude Desktop cannot send Pubky Pulse's required static Bearer header.\nPubky Pulse must add OAuth support first.\nLocal and private endpoints cannot be reached from Anthropic's cloud.",
       },
     ],
   },

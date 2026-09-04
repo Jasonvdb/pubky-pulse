@@ -41,6 +41,7 @@ import {
   getProjectOwners,
   resolveAccessLevel,
 } from "../utils/project-owners.js";
+import { hasPostgresErrorCode } from "../utils/postgres-error.js";
 
 /**
  * Thrown out of the create transaction when a soft-deleted project already
@@ -306,13 +307,13 @@ export async function projectsRoutes(app: FastifyInstance) {
 
         const owners = await getProjectOwners(app.db, created.id);
         return reply.code(201).send(serializeProject(created, owners, actorUserId));
-      } catch (err: any) {
+      } catch (err) {
         if (err instanceof SlugHeldBySoftDeletedProjectError) {
           return reply
             .code(409)
             .send({ error: "A project with this slug already exists in your team" });
         }
-        if (err.code === PG_UNIQUE_VIOLATION) {
+        if (hasPostgresErrorCode(err, PG_UNIQUE_VIOLATION)) {
           return reply
             .code(409)
             .send({ error: "A project with this slug already exists in your team" });

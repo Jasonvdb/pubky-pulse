@@ -23,6 +23,7 @@ import {
   resolveMetricDefinitionInProject,
 } from "../utils/project-access.js";
 import { encodeKeysetCursor, decodeKeysetCursor } from "../utils/pagination.js";
+import { hasPostgresErrorCode } from "../utils/postgres-error.js";
 
 function serializeMetricDefinition(row: typeof metricDefinitions.$inferSelect) {
   return {
@@ -266,8 +267,8 @@ export async function metricsRoutes(app: FastifyInstance) {
         });
 
         return reply.code(201).send(serializeMetricDefinition(created));
-      } catch (err: any) {
-        if (err.code === PG_UNIQUE_VIOLATION) {
+      } catch (err) {
+        if (hasPostgresErrorCode(err, PG_UNIQUE_VIOLATION)) {
           return reply.code(409).send({ error: "A metric with this slug already exists in this project" });
         }
         throw err;

@@ -16,7 +16,7 @@
     "@pubky-pulse/db": "workspace:*",
     "@pubky-pulse/shared": "workspace:*",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.39.0",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.3",
     "fastify-plugin": "^6.0.0",
     "pg-boss": "^12.30.0",

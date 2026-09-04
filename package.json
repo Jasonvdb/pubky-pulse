@@ -28,7 +28,7 @@
       "esbuild"
     ],
     "overrides": {
-      "drizzle-orm": "0.39.3"
+      "drizzle-orm": "0.45.2"
     }
   },
   "engines": {

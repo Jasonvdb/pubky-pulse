@@ -111,6 +111,38 @@ async function ownerIdsInDb(projectId: string): Promise<string[]> {
   return rows.map((r) => r.user_id as string);
 }
 
+/** The slug a project currently holds, so a test can ask for it back. */
+async function slugOf(projectId: string): Promise<string> {
+  const [row] = await client`SELECT slug FROM projects WHERE id = ${projectId}`;
+  return row.slug as string;
+}
+
+/** Soft-delete a project as `DELETE /v1/projects/:id` does, keeping its slug taken. */
+async function softDelete(projectId: string): Promise<void> {
+  await client`UPDATE projects SET deleted_at = now() WHERE id = ${projectId}`;
+}
+
+/** Whether the row is still present at all — a hard delete removes it entirely. */
+async function projectExists(projectId: string): Promise<boolean> {
+  const [row] = await client`SELECT 1 AS present FROM projects WHERE id = ${projectId}`;
+  return row !== undefined;
+}
+
+async function insertAppInProject(projectId: string): Promise<string> {
+  const suffix = randomUUID().slice(0, 8);
+  const [row] = await client`
+    INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
+    VALUES (${teamId}, ${projectId}, ${`Owned App ${suffix}`}, 'apple', ${`dev.ownership.${suffix}`})
+    RETURNING id
+  `;
+  return row.id as string;
+}
+
+async function appExists(appId: string): Promise<boolean> {
+  const [row] = await client`SELECT 1 AS present FROM apps WHERE id = ${appId}`;
+  return row !== undefined;
+}
+
 function bearer(credential: string) {
   return { authorization: `Bearer ${credential}` };
 }
@@ -210,6 +242,94 @@ describe("project creation ownership", () => {
     });
 
     expect(res.statusCode).toBe(403);
+  });
+
+  it("refuses to reclaim a colleague's soft-deleted slug, leaving the project intact", async () => {
+    // Creating with a taken slug frees it by *hard*-deleting the soft-deleted
+    // project and everything under it, ending the 7-day undo window. Any member
+    // can create a project now, so without an authority check a colleague could
+    // destroy ownerA's deleted project just by guessing its slug.
+    const slug = await slugOf(projectA);
+    const appId = await insertAppInProject(projectA);
+    await softDelete(projectA);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/projects",
+      headers: bearer(ownerB.token),
+      payload: { team_id: teamId, name: "Slug Grab", slug },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatch(/slug already exists/i);
+    expect(await projectExists(projectA)).toBe(true);
+    expect(await appExists(appId)).toBe(true);
+  });
+
+  it("lets the original owner reuse their own soft-deleted slug", async () => {
+    const slug = await slugOf(projectA);
+    await softDelete(projectA);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/projects",
+      headers: bearer(ownerA.token),
+      payload: { team_id: teamId, name: "Reborn", slug },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().id).not.toBe(projectA);
+    expect(await projectExists(projectA)).toBe(false);
+    expect(await ownerIdsInDb(res.json().id)).toEqual([ownerA.userId]);
+  });
+
+  it("refuses an agent key the slug even when its creator owns the deleted project", async () => {
+    // Hard-deleting a project is one of the human-only destructive operations,
+    // and reclaiming a slug is exactly that under another name.
+    const key = await insertAgentKey(ownerA.userId, ["projects:write", "projects:read"]);
+    const slug = await slugOf(projectA);
+    await softDelete(projectA);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/projects",
+      headers: bearer(key),
+      payload: { team_id: teamId, name: "Agent Grab", slug },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(await projectExists(projectA)).toBe(true);
+  });
+
+  it("lets the team owner reclaim the slug of an orphaned soft-deleted project", async () => {
+    const slug = await slugOf(projectA);
+    await client`DELETE FROM project_owners WHERE project_id = ${projectA}`;
+    await softDelete(projectA);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/projects",
+      headers: bearer(teamOwner.token),
+      payload: { team_id: teamId, name: "Recovered", slug },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(await projectExists(projectA)).toBe(false);
+  });
+
+  it("does not let the team owner reclaim a slug that still has an owner", async () => {
+    const slug = await slugOf(projectA);
+    await softDelete(projectA);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/projects",
+      headers: bearer(teamOwner.token),
+      payload: { team_id: teamId, name: "Overreach", slug },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(await projectExists(projectA)).toBe(true);
   });
 
   it("leaves no project behind when the first owner cannot be inserted", async () => {

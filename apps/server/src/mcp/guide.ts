@@ -344,10 +344,13 @@ Your agent key has specific permissions. They are **necessary but not sufficient
 | \`funnels:write\` | create-funnel, update-funnel, delete-funnel |
 | \`issues:read\` | list-issues, get-issue, list-issue-comments |
 | \`issues:write\` | resolve-issue, silence-issue, reopen-issue, claim-issue, merge-issues, add-issue-comment |
+| \`feedback:read\` | list-feedback, get-feedback |
+| \`feedback:write\` | update-feedback-status, add-feedback-comment |
+| \`questionnaires:read\` | list-questionnaires, get-questionnaire, get-questionnaire-analytics, list-questionnaire-responses, get-questionnaire-response |
+| \`questionnaires:write\` | create-questionnaire, update-questionnaire, update-questionnaire-response-status, add-questionnaire-response-comment |
 | \`jobs:read\` | list-jobs, get-job |
 | \`jobs:write\` | trigger-job, cancel-job |
 | \`audit_logs:read\` | list-audit-logs |
-| \`users:write\` | Set user properties |
 
 Three different \`403\`s are worth telling apart:
 

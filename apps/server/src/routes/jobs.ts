@@ -98,6 +98,20 @@ export async function jobsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: `Cannot trigger system job "${job_type}" via API` });
       }
 
+      // Nothing validated the parameter bag before, so a caller could smuggle
+      // any key at all into a handler's params. Only the names the job type
+      // declares are accepted; an unknown one is a 400 rather than a silently
+      // ignored field.
+      const submittedParams = params ?? {};
+      const declaredParams = new Set(meta.params.map((p) => p.name));
+      for (const key of Object.keys(submittedParams)) {
+        if (!declaredParams.has(key)) {
+          return reply
+            .code(400)
+            .send({ error: `Unknown parameter "${key}" for job type "${job_type}"` });
+        }
+      }
+
       // `JOB_TYPE_META.scope` is only "system" | "project" and system jobs are
       // refused above, so every triggerable job is project-scoped and must name
       // its project. There is no team-wide maintenance trigger to special-case.
@@ -149,10 +163,19 @@ export async function jobsRoutes(app: FastifyInstance) {
           ? `manual:user:${auth.user_id}`
           : `manual:api_key:${auth.key_id}`;
 
-      // Merge project_id into params so job handlers can access it uniformly
+      // Merge project_id into params so job handlers can access it uniformly.
+      // The authorized `project_id` is written LAST: `params.project_id` is
+      // what the stats aggregators read as their target, and they
+      // DELETE-then-INSERT the rollup tables for it — a foreign id there would
+      // re-aggregate another project's history, and a null/absent one would fan
+      // out across every project (which is what the *scheduled* path relies on,
+      // and exactly why a request must never be able to ask for it). Stripping
+      // the caller's own `project_id` keeps the value that was authorized above
+      // as the only one that can reach a handler.
+      const { project_id: _callerProjectId, ...safeParams } = submittedParams;
       const jobParams = {
-        ...(project_id ? { project_id } : {}),
-        ...params,
+        ...safeParams,
+        project_id,
       };
 
       const run = await app.jobRunner.trigger(job_type, {

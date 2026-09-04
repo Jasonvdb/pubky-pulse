@@ -828,6 +828,33 @@ describe("containment resolvers", () => {
     expect(captured.body?.error).toBe("Feedback not found");
   });
 
+  // The cancel route no longer checks `hasTeamAccess(auth, run.team_id)` by
+  // hand — the containment resolver carries that guard now, so it is pinned
+  // here for both principal kinds. A run in another team must be a 404 (never
+  // a 403, which would confirm the id names a real run somewhere).
+  it("a job run in another team is 404 for a singleton team member", async () => {
+    const foreign = await createForeignTeam();
+    const { result, captured } = await probe((reply) =>
+      resolveJobRunAccess(app, { runId: foreign.jobRunId }, userContext(ownerA), reply),
+    );
+
+    expect(result).toBeNull();
+    expect(captured.code).toBe(404);
+    expect(captured.body?.error).toBe("Job run not found");
+  });
+
+  it("a job run in another team is 404 for a singleton agent key", async () => {
+    const foreign = await createForeignTeam();
+    const auth = agentContext(ownerA.userId, ["jobs:write"]);
+    const { result, captured } = await probe((reply) =>
+      resolveJobRunAccess(app, { runId: foreign.jobRunId }, auth, reply),
+    );
+
+    expect(result).toBeNull();
+    expect(captured.code).toBe(404);
+    expect(captured.body?.error).toBe("Job run not found");
+  });
+
   it("a soft-deleted comment no longer resolves", async () => {
     await client`UPDATE issue_comments SET deleted_at = now() WHERE id = ${resourcesA.issueCommentId}`;
     const auth = userContext(ownerA);

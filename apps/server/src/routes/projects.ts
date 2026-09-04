@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, isNotNull, asc } from "drizzle-orm";
-import { projects, apps, apiKeys, metricDefinitions, funnelDefinitions } from "@pubky-pulse/db";
+import { projects, projectOwners, apps, apiKeys, metricDefinitions, funnelDefinitions } from "@pubky-pulse/db";
 import type {
   CreateProjectRequest,
   ProjectOwnerResponse,
@@ -30,6 +30,7 @@ import { pickUnusedProjectColor } from "../utils/project-color.js";
 import {
   enforceProjectWrite,
   evaluateProjectWrite,
+  hasTeamOwnerAuthority,
   resolveActorUserId,
   resolveProjectAccess,
 } from "../utils/project-access.js";
@@ -40,6 +41,14 @@ import {
   getProjectOwners,
   resolveAccessLevel,
 } from "../utils/project-owners.js";
+
+/**
+ * Thrown out of the create transaction when a soft-deleted project already
+ * holds the requested slug and the caller has no authority to destroy it.
+ * Rolls the transaction back and is answered with the same 409 as an active
+ * duplicate, so the response never distinguishes the two.
+ */
+class SlugHeldBySoftDeletedProjectError extends Error {}
 
 /**
  * Every project response carries its owner list and the caller's own effective
@@ -225,16 +234,42 @@ export async function projectsRoutes(app: FastifyInstance) {
         // committed without an owner row would be ownerless, and therefore
         // writable by nobody but the team owner's recovery path.
         const created = await app.db.transaction(async (tx) => {
-          // Clear any soft-deleted project with the same slug so it can be reused
-          await tx
-            .delete(projects)
+          // A soft-deleted project holds its slug for the 7-day undo window.
+          // Freeing it means hard-deleting that project and everything under it
+          // — apps, keys, events, issues, feedback, attachments — so only the
+          // authority that could have deleted the project in the first place
+          // may do it: a *human* who owns that project, or the singleton team
+          // owner reclaiming a slug from an orphaned one. Any team member can
+          // create a project now, so without this check a colleague (or an
+          // agent key owning nothing) could permanently destroy someone else's
+          // deleted project by guessing its slug.
+          const [held] = await tx
+            .select({ id: projects.id })
+            .from(projects)
             .where(
               and(
                 eq(projects.team_id, team_id),
                 eq(projects.slug, slug),
                 isNotNull(projects.deleted_at)
               )
-            );
+            )
+            .limit(1);
+
+          if (held) {
+            const heldOwners = await tx
+              .select({ user_id: projectOwners.user_id })
+              .from(projectOwners)
+              .where(eq(projectOwners.project_id, held.id));
+
+            const mayReclaim =
+              auth.type === "user" &&
+              (heldOwners.some((o) => o.user_id === actorUserId) ||
+                (hasTeamOwnerAuthority(auth) && heldOwners.length === 0));
+
+            if (!mayReclaim) throw new SlugHeldBySoftDeletedProjectError();
+
+            await tx.delete(projects).where(eq(projects.id, held.id));
+          }
 
           const [row] = await tx
             .insert(projects)
@@ -272,6 +307,11 @@ export async function projectsRoutes(app: FastifyInstance) {
         const owners = await getProjectOwners(app.db, created.id);
         return reply.code(201).send(serializeProject(created, owners, actorUserId));
       } catch (err: any) {
+        if (err instanceof SlugHeldBySoftDeletedProjectError) {
+          return reply
+            .code(409)
+            .send({ error: "A project with this slug already exists in your team" });
+        }
         if (err.code === PG_UNIQUE_VIOLATION) {
           return reply
             .code(409)

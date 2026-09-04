@@ -676,8 +676,10 @@ export async function addTeamMember(
  * of that boundary here instead. The rows are deliberately unreachable through
  * the human login flow, which is exactly the situation under test.
  *
- * The event and feedback rows exist so a boundary test can name real foreign
- * data: a 404 for an id that never existed proves nothing about isolation.
+ * The event, feedback and job-run rows exist so a boundary test can name real
+ * foreign data: a 404 for an id that never existed proves nothing about
+ * isolation. The job run is left `running` so a cross-team cancel attempt
+ * reaches the containment guard rather than stopping at a status check.
  */
 export async function createForeignTeam(opts: {
   email?: string;
@@ -692,6 +694,7 @@ export async function createForeignTeam(opts: {
   apiKeySecret: string;
   eventId: string;
   feedbackId: string;
+  jobRunId: string;
 }> {
   const suffix = randomUUID().slice(0, 8);
   const {
@@ -750,6 +753,11 @@ export async function createForeignTeam(opts: {
       VALUES (${foreignApp.id}, ${project.id}, ${`Foreign feedback ${suffix}`})
       RETURNING id
     `;
+    const [foreignJobRun] = await client`
+      INSERT INTO job_runs (job_type, status, team_id, project_id, triggered_by)
+      VALUES ('stats_aggregate_daily', 'running', ${team.id}, ${project.id}, 'foreign-team-fixture')
+      RETURNING id
+    `;
     return {
       teamId: team.id as string,
       userId: user.id as string,
@@ -759,6 +767,7 @@ export async function createForeignTeam(opts: {
       apiKeySecret,
       eventId: foreignEvent.id as string,
       feedbackId: foreignFeedback.id as string,
+      jobRunId: foreignJobRun.id as string,
     };
   } finally {
     await client.end();

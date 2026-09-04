@@ -1418,3 +1418,134 @@ describe("cross-project child ids", () => {
     expect(await runStatus(run.id)).toBe("running");
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * The trigger route authorizes the top-level `project_id`, but the stats
+ * aggregators read their target from `params.project_id` — and a caller-supplied
+ * params bag used to be spread over the authorized value. A foreign id there
+ * re-aggregated (DELETE-then-INSERT) another project's rollups; a null one fanned
+ * out over every project in the deployment. Rollup tables are excluded from
+ * retention pruning, so that loss is permanent, while the job_runs row and the
+ * audit event named the project the caller legitimately owned.
+ * ------------------------------------------------------------------------ */
+
+describe("POST /v1/teams/:teamId/jobs/trigger: params cannot redirect the job", () => {
+  const BACKFILL_DAY = "2026-01-01";
+
+  /** A project-level rollup row, as an aggregation run would have written it. */
+  async function seedRollup(projectId: string, count: number): Promise<void> {
+    await client`
+      INSERT INTO events_daily (team_id, project_id, app_id, is_dev, day, event_count)
+      VALUES (${teamId}, ${projectId}, ${null}, false, ${BACKFILL_DAY}, ${count})
+    `;
+  }
+
+  async function rollupCount(projectId: string): Promise<number | null> {
+    const [row] = await client`
+      SELECT event_count FROM events_daily
+      WHERE project_id = ${projectId} AND app_id IS NULL AND day = ${BACKFILL_DAY}
+    `;
+    return row ? Number(row.event_count) : null;
+  }
+
+  async function runParams(runId: string): Promise<Record<string, unknown> | null> {
+    const [row] = await client`SELECT params FROM job_runs WHERE id = ${runId}`;
+    return (row?.params as Record<string, unknown>) ?? null;
+  }
+
+  /**
+   * Wait for the aggregation to finish and assert it really ran. Without this
+   * the "Project B is untouched" assertions could pass for the wrong reason —
+   * a run that failed before its DELETE proves nothing.
+   */
+  async function expectRunCompleted(runId: string): Promise<void> {
+    for (let i = 0; i < 200; i++) {
+      const status = await runStatus(runId);
+      if (status === "completed" || status === "failed" || status === "cancelled") break;
+      await sleep(25);
+    }
+    expect(await runStatus(runId)).toBe("completed");
+  }
+
+  it("ignores a params.project_id naming a project the caller does not own", async () => {
+    await seedRollup(projectB, 42);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/v1/teams/${teamId}/jobs/trigger`,
+      headers: { authorization: `Bearer ${ownerA.token}` },
+      payload: {
+        job_type: FAST_JOB_TYPE,
+        project_id: projectA,
+        params: { start: BACKFILL_DAY, end: BACKFILL_DAY, project_id: projectB },
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const runId = res.json().job_run.id as string;
+    expect((await runParams(runId))?.project_id).toBe(projectA);
+
+    await expectRunCompleted(runId);
+    expect(await rollupCount(projectB)).toBe(42);
+  });
+
+  it("ignores a null params.project_id, which would have fanned out over every project", async () => {
+    await seedRollup(projectB, 7);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/v1/teams/${teamId}/jobs/trigger`,
+      headers: { authorization: `Bearer ${ownerA.token}` },
+      payload: {
+        job_type: FAST_JOB_TYPE,
+        project_id: projectA,
+        params: { start: BACKFILL_DAY, end: BACKFILL_DAY, project_id: null },
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const runId = res.json().job_run.id as string;
+    expect((await runParams(runId))?.project_id).toBe(projectA);
+
+    await expectRunCompleted(runId);
+    expect(await rollupCount(projectB)).toBe(7);
+  });
+
+  it("rejects a params key the job type does not declare", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: `/v1/teams/${teamId}/jobs/trigger`,
+      headers: { authorization: `Bearer ${ownerA.token}` },
+      payload: {
+        job_type: FAST_JOB_TYPE,
+        project_id: projectA,
+        params: { smuggled: "value" },
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(await runIdsForProject(projectA, FAST_JOB_TYPE)).toEqual([]);
+  });
+
+  it("an owning agent key cannot redirect the job either", async () => {
+    await seedRollup(projectB, 13);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/v1/teams/${teamId}/jobs/trigger`,
+      headers: { authorization: `Bearer ${agentOfOwnerA.secret}` },
+      payload: {
+        job_type: FAST_JOB_TYPE,
+        project_id: projectA,
+        params: { start: BACKFILL_DAY, end: BACKFILL_DAY, project_id: projectB },
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const runId = res.json().job_run.id as string;
+    expect((await runParams(runId))?.project_id).toBe(projectA);
+
+    await expectRunCompleted(runId);
+    expect(await rollupCount(projectB)).toBe(13);
+  });
+});

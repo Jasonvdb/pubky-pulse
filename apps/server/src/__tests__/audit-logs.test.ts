@@ -582,6 +582,52 @@ describe("Resource Type Coverage", () => {
     expect(entry.metadata).toMatchObject({ name: "Audit App", platform: "backend" });
   });
 
+  it("project owner add and remove entries logged", async () => {
+    // Owner-list changes grant and revoke project write authority, so they must
+    // leave a trail naming who changed whose access — and, being an ACL record,
+    // must carry no secret material.
+    const project = await createProject("Owners Audited", "owners-audited");
+    const { userId: peerUserId } = await createUserAndGetToken(
+      app,
+      "owner-audit-peer@pulse.pubky.org",
+    );
+    await addTeamMember(teamId, peerUserId, "member");
+
+    const added = await app.inject({
+      method: "PUT",
+      url: `/v1/projects/${project.id}/owners/${peerUserId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(added.statusCode).toBe(200);
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/v1/projects/${project.id}/owners/${peerUserId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(removed.statusCode).toBe(200);
+    await waitForAuditWrites();
+
+    const res = await getAuditLogs(
+      { authorization: `Bearer ${token}` },
+      { resource_type: "project_owner", resource_id: peerUserId },
+    );
+    const entries = res.json().audit_logs as any[];
+    const byAction = new Map(entries.map((e) => [e.action, e]));
+
+    for (const action of ["create", "delete"]) {
+      const entry = byAction.get(action);
+      expect(entry, `no project_owner ${action} entry`).toBeDefined();
+      expect(entry.resource_type).toBe("project_owner");
+      expect(entry.resource_id).toBe(peerUserId);
+      expect(entry.actor_type).toBe("user");
+      expect(entry.actor_id).toBe(testData.userId);
+      // The metadata says which project, and nothing else.
+      expect(entry.metadata).toEqual({ project_id: project.id });
+      expect(JSON.stringify(entry.metadata)).not.toMatch(/secret|pulse_|token/i);
+    }
+  });
+
   it("API key creation and deletion entries logged", async () => {
     // Create a key via the API (POST /v1/auth/keys returns { key, api_key })
     const createRes = await app.inject({

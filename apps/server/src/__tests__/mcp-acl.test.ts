@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import postgres from "postgres";
+import { ALLOWED_PERMISSIONS_BY_KEY_TYPE } from "@pubky-pulse/shared";
 import type { Permission } from "@pubky-pulse/shared";
 import {
   buildApp,
@@ -309,6 +310,50 @@ describe("MCP access control", () => {
     });
   });
 
+  describe("trigger-job forwards params verbatim, so the route must sanitize them", () => {
+    it("cannot aim a job at another project through params.project_id", async () => {
+      const keyWithJobs = await insertAgentKey(ownerA.userId, ["jobs:write"]);
+      const day = "2026-01-01";
+      await client`
+        INSERT INTO events_daily (team_id, project_id, app_id, is_dev, day, event_count)
+        VALUES (${teamId}, ${projectB}, ${null}, false, ${day}, ${21})
+      `;
+
+      const { isError, parsed } = await callTool(keyWithJobs, "trigger-job", {
+        team_id: teamId,
+        job_type: "stats_aggregate_daily",
+        project_id: projectA,
+        params: { start: day, end: day, project_id: projectB },
+      });
+
+      expect(isError).toBe(false);
+      const runId = (parsed.job_run as { id: string }).id;
+      const [run] = await client`SELECT params FROM job_runs WHERE id = ${runId}`;
+      expect((run.params as Record<string, unknown>).project_id).toBe(projectA);
+
+      // Wait the run out, then confirm Project B's rollup is exactly as seeded.
+      // The aggregators DELETE-then-INSERT their target range, and the rollup
+      // tables are excluded from retention pruning, so a redirected run would
+      // have destroyed that history permanently.
+      let status = "";
+      for (let i = 0; i < 200; i++) {
+        const [row] = await client`SELECT status FROM job_runs WHERE id = ${runId}`;
+        status = row.status as string;
+        if (["completed", "failed", "cancelled"].includes(status)) break;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      // The run must really have aggregated: a run that never got to its
+      // DELETE would leave Project B intact for the wrong reason.
+      expect(status).toBe("completed");
+
+      const [rollup] = await client`
+        SELECT event_count FROM events_daily
+        WHERE project_id = ${projectB} AND app_id IS NULL AND day = ${day}
+      `;
+      expect(Number(rollup.event_count)).toBe(21);
+    });
+  });
+
   describe("the comment exception", () => {
     it("comments on a project the key's creator does not own, authored by that exact key", async () => {
       const issueInB = await insertIssue(projectB, appInB);
@@ -423,6 +468,22 @@ describe("MCP access control", () => {
       expect(guide).not.toMatch(/invitation/i);
       // Team roles are `owner | member`; `admin` was removed with them.
       expect(guide).not.toMatch(/admin role/i);
+    });
+
+    it("lists exactly the permissions an agent key is allowed to hold", async () => {
+      // The guide's permission table is what an agent reads to decide whether
+      // to attempt a call. A row for a permission agent keys cannot hold sends
+      // it after an impossible grant; a missing row hides a capability it has.
+      const res = await mcpRequest(agentOfOwnerA, "resources/read", {
+        uri: "pubky-pulse://guide",
+      });
+      const guide: string = res.json().result.contents[0].text;
+
+      const section = guide.slice(guide.indexOf("## Permissions"));
+      const table = section.slice(0, section.indexOf("\n\n", section.indexOf("|---|")));
+      const listed = [...table.matchAll(/\|\s*`([a-z_]+:[a-z_]+)`\s*\|/g)].map((m) => m[1]);
+
+      expect([...listed].sort()).toEqual([...ALLOWED_PERMISSIONS_BY_KEY_TYPE.agent].sort());
     });
   });
 });

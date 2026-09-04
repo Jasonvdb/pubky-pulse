@@ -81,11 +81,12 @@ export function LandingMcpSetup() {
           </div>
           <TerminalCopyButton text={setupText} />
         </div>
-        {scope.note && (
-          <p className="border-b border-border px-5 py-3 text-xs leading-relaxed text-muted-foreground">
-            {scope.note}
-          </p>
-        )}
+        <p className="border-b border-border px-5 py-3 text-xs leading-relaxed text-muted-foreground">
+          <span className="mr-2 inline-flex rounded bg-white/5 px-1.5 py-0.5 font-semibold text-card-foreground">
+            {scope.label}
+          </span>
+          {scope.note}
+        </p>
         <pre className="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed">
           <code className="text-card-foreground" data-language={scope.language}>
             {hasRealKey

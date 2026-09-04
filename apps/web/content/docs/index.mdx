@@ -22,7 +22,7 @@ Your agent can set up the entire integration, query events, diagnose issues, and
 
 The web dashboard is great for exploring data, but you shouldn't need to open it for routine work. Pubky Pulse exposes every operation — creating projects, defining metrics, querying funnels, triaging issues — through its MCP endpoint. **MCP is the agent interface** — configure it once and your agent always has the latest tools. Your agent can set up an entire analytics pipeline, investigate production issues, and act on the results without a human ever touching the dashboard.
 
-- **Setup** — a one-time URL + API key in your client config
+- **Setup** — a one-time URL + API key through your client's command, native UI or config
 - **Updates** — automatic; the tool list always matches the server
 - **Auth** — a static Bearer token in the request headers
 - **Best for** — AI coding agents (Claude Code, Cursor, Codex, and any other MCP-compatible client)
@@ -34,7 +34,7 @@ Learn more: [MCP setup](/docs/mcp/setup)
 
 ## Documentation Sections
 
-- **[Getting Started](/docs/getting-started)** — Run or connect to an instance, sign in, add the MCP server to your editor, and let your agent integrate an SDK.
+- **[Getting Started](/docs/getting-started)** — Run or connect to an instance, sign in, add the MCP server to your client, and let your agent integrate an SDK.
 - **[Concepts](/docs/concepts)** — Core building blocks: [events](/docs/concepts/events), [metrics](/docs/concepts/metrics), [funnels](/docs/concepts/funnels), [issues](/docs/concepts/issues), [projects and apps](/docs/concepts/projects-and-apps), [authentication](/docs/concepts/authentication), and [data mode](/docs/concepts/data-mode).
 - **[Web SDK](/docs/sdks/web)** — Browser SDK for web apps. Zero runtime dependencies. Covers events, route tracking, metrics, funnels, identity, feedback, and questionnaires.
 - **[Node.js SDK](/docs/sdks/node)** — Server-side SDK for backends and serverless functions. Zero runtime dependencies. Covers events, metrics, funnels, identity, and serverless support.

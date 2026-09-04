@@ -110,8 +110,8 @@ export const EDITORS: EditorConfig[] = [
         method: "config",
         language: "json",
         note:
-          "Add to opencode.json or opencode.jsonc in the project root. Do not commit the generated literal key.",
-        content: (key, url, name) =>
+          "Add to opencode.json or opencode.jsonc in the project root. Set PUBKY_PULSE_AGENT_KEY before launching OpenCode; the config references it without storing the key.",
+        content: (_key, url, name) =>
           JSON.stringify(
             {
               $schema: "https://opencode.ai/config.json",
@@ -120,7 +120,7 @@ export const EDITORS: EditorConfig[] = [
                   type: "remote",
                   url,
                   oauth: false,
-                  headers: { Authorization: `Bearer ${key}` },
+                  headers: { Authorization: "Bearer {env:PUBKY_PULSE_AGENT_KEY}" },
                 },
               },
             },
@@ -224,10 +224,10 @@ export const EDITORS: EditorConfig[] = [
   {
     name: "Claude Desktop",
     callout:
-      "Custom headers are beta and organization-dependent, and custom connectors may be shared with the organization. A per-user agent key may be unsuitable; confirm your organization's policy before saving it.",
+      "Direct connection works only when Add custom connector exposes custom HTTP request-header fields, a beta and organization-dependent feature. If those fields are absent, Claude Desktop cannot connect directly because Pubky Pulse requires bearer authentication. Custom connectors may be shared with the organization, so a per-user agent key may be unsuitable; confirm your organization's policy before saving it.",
     scopes: [
       {
-        label: "Add connector",
+        label: "Direct remote (beta)",
         method: "native-ui",
         language: "text",
         note:
@@ -325,16 +325,8 @@ export const EDITORS: EditorConfig[] = [
   {
     name: "Cline",
     callout:
-      "The Cline CLI is separate from the Cline VS Code extension. To configure the extension, use the JSON fallback.",
+      "The Cline CLI is separate from the Cline VS Code extension. The default setup below configures the extension; the CLI wizard is a separate option.",
     scopes: [
-      {
-        label: "Cline CLI",
-        method: "command",
-        language: "bash",
-        note:
-          "Fastest Cline CLI setup. This opens a wizard where you add the Authorization header; it does not configure the VS Code extension.",
-        content: (_key, url, name) => `cline mcp install ${name} --transport http ${url}`,
-      },
       {
         label: "VS Code extension",
         method: "config",
@@ -355,6 +347,14 @@ export const EDITORS: EditorConfig[] = [
             null,
             2,
           ),
+      },
+      {
+        label: "Cline CLI",
+        method: "command",
+        language: "bash",
+        note:
+          "Fastest Cline CLI setup. This opens a wizard where you add the Authorization header; it does not configure the VS Code extension.",
+        content: (_key, url, name) => `cline mcp install ${name} --transport http ${url}`,
       },
     ],
   },

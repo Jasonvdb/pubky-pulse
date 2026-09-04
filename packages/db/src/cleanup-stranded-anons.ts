@@ -3,7 +3,10 @@ import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env") });
+config({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env"),
+  quiet: true,
+});
 
 /**
  * One-off repair for the pre-fix race where offline-queued events flushed

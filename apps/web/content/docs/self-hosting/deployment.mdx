@@ -181,9 +181,27 @@ Create three A records in Cloudflare, all pointing to your VPS public IP with **
 
 ### SSL settings
 
-Set the SSL/TLS encryption mode to **Full** (not "Full (Strict)"). This tells Cloudflare to connect to your origin over HTTPS but does not require a valid certificate on the origin. Since nginx listens on port 80 behind Cloudflare, "Full" mode works with the default setup.
+The nginx example above is HTTP-only. Cloudflare's **Full** and **Full (Strict)** modes connect to the origin over HTTPS on port 443, so neither mode works until origin TLS is configured. Do not use **Flexible** as a workaround: it leaves the edge-to-origin hop unencrypted and can create redirect loops.
 
-If you prefer, you can generate a Cloudflare Origin Certificate (10-year validity) and configure nginx to listen on port 443 with that certificate. In that case, you can use "Full (Strict)" mode.
+The recommended setup is a Cloudflare Origin CA certificate covering the apex, `api`, and `ingest` hostnames. Save its certificate and private key on the server, restrict the private key, then replace `listen 80;` in each application server block above with these directives:
+
+```nginx
+listen 443 ssl http2;
+ssl_certificate /etc/ssl/pubky-pulse/origin.pem;
+ssl_certificate_key /etc/ssl/pubky-pulse/origin.key;
+```
+
+Add one separate HTTP redirect block:
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com api.yourdomain.com ingest.yourdomain.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+Run `nginx -t` before reloading nginx, then set Cloudflare's encryption mode to **Full (Strict)**. A Cloudflare Origin CA or publicly trusted certificate supports Strict mode. If you deliberately use a self-signed origin certificate, use **Full** instead; never use Flexible.
 
 ## SSL without Cloudflare
 
@@ -294,25 +312,62 @@ PGPASSWORD='yourpassword' psql -U pubky_pulse -h 127.0.0.1 -d pubky_pulse \
 
 ### Backups
 
-Dump the Postgres database only — attachment bytes live on disk under `PULSE_ATTACHMENTS_PATH` and must **not** be included in `pg_dump`:
+Dump the Postgres database separately from attachment bytes under `PULSE_ATTACHMENTS_PATH`. Back up attachments with a filesystem or object-storage tool; `pg_dump` cannot include them.
+
+Store the database password in `/root/.pgpass` rather than in the cron definition:
 
 ```bash
-pg_dump --no-owner pubky_pulse | gzip > /opt/pubky-pulse-backups/pubky-pulse-$(date +%F).sql.gz
+printf '%s\n' '127.0.0.1:5432:pubky_pulse:pubky_pulse:yourpassword' > /root/.pgpass
+chmod 600 /root/.pgpass
 ```
 
-If you need to back up attachment files too, sync them separately (e.g. with `rsync` or an object-storage mirror) — do not try to tar them into the SQL dump.
-
-Create the backup directory first (the health-check cron below writes its log there too):
+Create the backup directory and `/usr/local/sbin/pubky-pulse-backup` with the following contents. The temporary file, `pipefail`, integrity checks, and delayed pruning prevent a failed `pg_dump` from replacing good backups or triggering retention cleanup:
 
 ```bash
-mkdir -p /opt/pubky-pulse-backups
+#!/usr/bin/env bash
+set -euo pipefail
+
+backup_dir="/opt/pubky-pulse-backups"
+backup_date="$(date -u +%F)"
+temporary_file="$backup_dir/.pubky-pulse-$backup_date.sql.gz.tmp"
+final_file="$backup_dir/pubky-pulse-$backup_date.sql.gz"
+
+install -d -m 700 "$backup_dir"
+trap 'rm -f "$temporary_file"' EXIT
+
+pg_dump \
+  --host=127.0.0.1 \
+  --username=pubky_pulse \
+  --dbname=pubky_pulse \
+  --no-owner \
+  | gzip -9 > "$temporary_file"
+
+gzip -t "$temporary_file"
+if [[ "$(stat -c %s "$temporary_file")" -lt 1024 ]]; then
+  echo "Backup is unexpectedly small; refusing to publish it" >&2
+  exit 1
+fi
+
+mv "$temporary_file" "$final_file"
+trap - EXIT
+
+find "$backup_dir" -maxdepth 1 -type f \
+  -name 'pubky-pulse-*.sql.gz' -mtime +7 -delete
 ```
 
-A simple daily backup cron that runs at 3am UTC with 7-day rotation:
+Make the script root-only, run it manually once, and verify the resulting archive before scheduling it:
+
+```bash
+chmod 700 /usr/local/sbin/pubky-pulse-backup
+/usr/local/sbin/pubky-pulse-backup
+gzip -t /opt/pubky-pulse-backups/pubky-pulse-$(date -u +%F).sql.gz
+```
+
+Schedule the verified script at 3am UTC with seven-day rotation handled inside the script:
 
 ```bash
 # /etc/cron.d/pubky-pulse-backup
-0 3 * * * root PGPASSWORD='yourpassword' pg_dump -U pubky_pulse -h 127.0.0.1 --no-owner pubky_pulse | gzip > /opt/pubky-pulse-backups/pubky-pulse-$(date +\%F).sql.gz && find /opt/pubky-pulse-backups -name 'pubky-pulse-*.sql.gz' -mtime +7 -delete
+0 3 * * * root /usr/local/sbin/pubky-pulse-backup >> /opt/pubky-pulse-backups/backup.log 2>&1
 ```
 
 ### Health checks

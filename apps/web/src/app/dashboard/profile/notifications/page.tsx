@@ -6,7 +6,6 @@ import {
   NOTIFICATION_TYPES,
   NOTIFICATION_TYPE_META,
   isChannelEnabled,
-  type NotificationChannel,
   type NotificationType,
 } from "@pubky-pulse/shared/preferences";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/use-user-preferences";
@@ -15,33 +14,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 
-const EDITABLE_NOTIFICATION_CHANNELS = ["email"] as const satisfies readonly NotificationChannel[];
-type EditableNotificationChannel = (typeof EDITABLE_NOTIFICATION_CHANNELS)[number];
-
-const CHANNEL_LABEL: Record<EditableNotificationChannel, string> = {
-  email: "Email",
-};
-
 export default function NotificationPreferencesPage() {
   const prefs = useUserPreferences();
   const update = useUpdateUserPreferences();
 
   const configurableTypes = NOTIFICATION_TYPES.filter(
-    (type) =>
-      EDITABLE_NOTIFICATION_CHANNELS.some((channel) =>
-        NOTIFICATION_TYPE_META[type].channels.includes(channel),
-      ),
+    (type) => NOTIFICATION_TYPE_META[type].channels.includes("email"),
   );
 
-  async function setEnabled(
-    type: NotificationType,
-    channel: EditableNotificationChannel,
-    value: boolean,
-  ) {
+  async function setEmailEnabled(type: NotificationType, value: boolean) {
     await update({
       notifications: {
         types: {
-          [type]: { [channel]: value },
+          [type]: { email: value },
         },
       },
     });
@@ -69,27 +54,15 @@ export default function NotificationPreferencesPage() {
                 <p className="text-sm text-muted-foreground">{meta.description}</p>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-6">
-                  {EDITABLE_NOTIFICATION_CHANNELS
-                    .filter((channel) => meta.channels.includes(channel))
-                    .map((channel) => {
-                      const checked = isChannelEnabled(prefs, type, channel);
-                      const id = `pref-${type}-${channel}`;
-                      return (
-                        <div key={channel} className="flex items-center gap-2">
-                          <Checkbox
-                            id={id}
-                            checked={checked}
-                            onCheckedChange={(value) =>
-                              setEnabled(type, channel, value === true)
-                            }
-                          />
-                          <Label htmlFor={id} className="cursor-pointer">
-                            {CHANNEL_LABEL[channel]}
-                          </Label>
-                        </div>
-                      );
-                    })}
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`pref-${type}-email`}
+                    checked={isChannelEnabled(prefs, type, "email")}
+                    onCheckedChange={(value) => setEmailEnabled(type, value === true)}
+                  />
+                  <Label htmlFor={`pref-${type}-email`} className="cursor-pointer">
+                    Email
+                  </Label>
                 </div>
               </CardContent>
             </Card>

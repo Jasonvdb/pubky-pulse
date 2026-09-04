@@ -27,7 +27,7 @@ function assertTestDatabase(connectionUrl: string): void {
   try {
     dbName = new URL(connectionUrl).pathname.replace(/^\//, "") || null;
   } catch {
-    dbName = null;
+    // Not a parseable URL — the guard below rejects it.
   }
   if (!dbName || !dbName.endsWith("_test")) {
     throw new Error(

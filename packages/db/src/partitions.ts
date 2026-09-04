@@ -135,6 +135,10 @@ async function createMonthlyPartition(client: postgres.Sql, config: PartitionCon
     throw new Error(`createMonthlyPartition: invalid partition name "${partitionName}"`);
   }
 
+  // No per-partition indexes are created here: Postgres 11+ propagates every
+  // index declared on the partitioned parent (see drizzle/0000_baseline.sql) to
+  // each attached partition automatically. Creating them by hand would
+  // duplicate the parent's index list and drift from schema.ts.
   try {
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS ${partitionName}
@@ -142,10 +146,6 @@ async function createMonthlyPartition(client: postgres.Sql, config: PartitionCon
         FOR VALUES FROM ('${from}') TO ('${to}');
     `);
 
-    // No per-partition indexes: Postgres 11+ propagates every index declared on
-    // the partitioned parent (see drizzle/0000_baseline.sql) to each attached
-    // partition automatically. Creating them by hand here would duplicate the
-    // parent's index list and drift from schema.ts.
     console.log(`Partition ${partitionName} ready.`);
   } catch (err: any) {
     if (err.code === "42P07") {

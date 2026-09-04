@@ -50,6 +50,7 @@ const DRIZZLE_KIT_BIN = join(dirname(require.resolve("drizzle-kit/api")), "bin.c
 
 const NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 const NO_CHANGES = "No schema changes";
+const NEEDS_GIT = "--check requires a git working tree (it reverts whatever drizzle-kit writes).";
 
 const USAGE = [
   "Usage: pnpm db:generate <snake_case_name> [--custom]",
@@ -182,7 +183,7 @@ function git(args: string[], cwd: string): { status: number; stdout: string } {
 /** Working-tree state of `drizzle/`, as repo-root-relative path -> status code. */
 function drizzleStatus(): Map<string, string> {
   const { status, stdout } = git(["status", "--porcelain", "-uall", "--", "drizzle"], PACKAGE_DIR);
-  if (status !== 0) fail("--check requires a git working tree (it reverts whatever drizzle-kit writes).");
+  if (status !== 0) fail(NEEDS_GIT);
   const entries = new Map<string, string>();
   for (const line of stdout.split("\n")) {
     if (line.length < 4) continue;
@@ -207,20 +208,6 @@ function revertCheckArtifacts(before: Map<string, string>, repoRoot: string): st
     reverted.push(path);
   }
   return reverted;
-}
-
-/** `reverted` collects the cleaned-up paths even if drizzle-kit throws. */
-function runDrizzleKitAndRevert(
-  args: string[],
-  before: Map<string, string>,
-  repoRoot: string,
-  reverted: string[],
-): Run {
-  try {
-    return runDrizzleKit(args);
-  } finally {
-    reverted.push(...revertCheckArtifacts(before, repoRoot));
-  }
 }
 
 function main(): void {
@@ -255,10 +242,10 @@ function main(): void {
 
   if (check) {
     const repoRoot = git(["rev-parse", "--show-toplevel"], PACKAGE_DIR).stdout.trim();
-    if (!repoRoot) fail("--check requires a git working tree (it reverts whatever drizzle-kit writes).");
+    if (!repoRoot) fail(NEEDS_GIT);
     const before = drizzleStatus();
-    const reverted: string[] = [];
-    const run = runDrizzleKitAndRevert(["generate", "--name", name], before, repoRoot, reverted);
+    const run = runDrizzleKit(["generate", "--name", name]);
+    const reverted = revertCheckArtifacts(before, repoRoot);
     if (run.status !== 0) process.exit(run.status);
     if (reverted.length > 0 || !run.stdout.includes(NO_CHANGES)) {
       fail(

@@ -63,12 +63,13 @@ else
   log "Node.js installed: $(node --version)"
 fi
 
-# --- pnpm ---
-if command -v pnpm &>/dev/null; then
+# --- pnpm (pinned to the workspace/CI version) ---
+PNPM_VERSION="10.33.0"
+if command -v pnpm &>/dev/null && [[ "$(pnpm --version)" == "$PNPM_VERSION" ]]; then
   log "pnpm already installed: $(pnpm --version)"
 else
-  log "Installing pnpm..."
-  npm install -g pnpm
+  log "Installing pnpm $PNPM_VERSION..."
+  npm install -g "pnpm@$PNPM_VERSION"
   log "pnpm installed: $(pnpm --version)"
 fi
 
@@ -156,7 +157,11 @@ fi
 
 # --- Setup pm2 to start on boot ---
 log "Configuring pm2 startup..."
-pm2 startup systemd -u root --hp /root --no-interactive 2>/dev/null || true
+pm2 startup systemd -u root --hp /root
+if ! systemctl is-enabled --quiet pm2-root; then
+  err "pm2-root was not enabled; inspect the pm2 startup output before continuing"
+fi
+log "pm2 startup service enabled"
 
 # --- Summary ---
 echo ""

@@ -2,7 +2,7 @@ import { config as dotenvConfig } from "dotenv";
 import { resolve } from "node:path";
 import { parseIdentityConfig, type IdentityConfig } from "@pubky-pulse/shared";
 
-dotenvConfig({ path: resolve(import.meta.dirname, "../../../.env") });
+dotenvConfig({ path: resolve(import.meta.dirname, "../../../.env"), quiet: true });
 
 const isProduction = process.env.NODE_ENV === "production";
 

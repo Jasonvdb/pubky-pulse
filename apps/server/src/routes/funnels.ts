@@ -19,6 +19,7 @@ import {
   enforceProjectWrite,
   resolveFunnelDefinitionInProject,
 } from "../utils/project-access.js";
+import { hasPostgresErrorCode } from "../utils/postgres-error.js";
 
 const MAX_FUNNEL_STEPS = 20;
 
@@ -208,8 +209,8 @@ export async function funnelsRoutes(app: FastifyInstance) {
         });
 
         return reply.code(201).send(serializeFunnelDefinition(created));
-      } catch (err: any) {
-        if (err.code === PG_UNIQUE_VIOLATION) {
+      } catch (err) {
+        if (hasPostgresErrorCode(err, PG_UNIQUE_VIOLATION)) {
           return reply.code(409).send({ error: "A funnel with this slug already exists in this project" });
         }
         throw err;

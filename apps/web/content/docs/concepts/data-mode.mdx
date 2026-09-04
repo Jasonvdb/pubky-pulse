@@ -12,6 +12,8 @@ The `is_dev` field is set by the SDK at event creation time:
 | SDK | How `is_dev` is determined |
 |---|---|
 | Swift | `true` when the app is compiled with the `DEBUG` flag (`#if DEBUG`), which is the default for Xcode debug builds |
+| Android | `true` when the host app is debuggable (the `FLAG_DEBUGGABLE` manifest flag — true for debug builds, false for release) |
+| Web | `true` when the page is served from `localhost`, `127.0.0.1`, or a `file:` URL |
 | Node | `true` when `isDev` is set in the SDK config, which defaults to `process.env.NODE_ENV !== "production"` |
 
 You can also override `is_dev` explicitly in the SDK configuration if the automatic detection does not match your needs.

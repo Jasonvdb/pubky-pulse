@@ -96,6 +96,14 @@ const EXPECTED_TOOLS_BY_DOMAIN = {
 const EXPECTED_RESOURCES = ["pubky-pulse://guide"] as const;
 
 /**
+ * Every SDK named in the guide's "SDK Integration Guides" section
+ * (apps/server/src/mcp/guide.ts). When an SDK is added or renamed there,
+ * update this list. Strings must match verbatim — they're checked with
+ * `.toContain(...)`.
+ */
+const EXPECTED_GUIDE_SDKS = ["**Web**", "**Node**", "**Swift**", "**Android**"] as const;
+
+/**
  * Every feature surface named in `SERVER_INSTRUCTIONS` (apps/server/src/mcp/server.ts).
  * When you add a domain to that bullet list, add its substring here.
  * Strings must match verbatim — they're checked with `.toContain(...)`.
@@ -286,6 +294,11 @@ describe("MCP endpoint", () => {
       expect(contents[0].text).toContain("Pubky Pulse");
       expect(contents[0].text).toContain("Resource Hierarchy");
       expect(contents[0].text).toContain("SDK Integration Guides");
+      for (const sdk of EXPECTED_GUIDE_SDKS) {
+        expect(contents[0].text, `MCP guide missing SDK "${sdk}"`).toContain(sdk);
+      }
+      // The bold names alone predate the Web SDK bullet; assert its package too.
+      expect(contents[0].text).toContain("@synonymdev/pubky-pulse-web");
     });
   });
 

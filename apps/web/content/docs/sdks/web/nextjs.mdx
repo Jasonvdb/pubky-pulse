@@ -1,0 +1,106 @@
+---
+title: Next.js
+description: Pair the Web SDK in client components with the Node.js SDK in route handlers so one session spans both.
+---
+
+A Next.js app has two halves, and Pubky Pulse has an SDK for each: the Web SDK in the browser, the [Node.js SDK](/docs/sdks/node) in route handlers and server actions. Propagate the session id between them and both halves of a request line up in the dashboard's session view.
+
+## Client Component
+
+`configure()` needs `window`, so it lives in a client component. With a valid configuration it is a no-op on the server, so an accidental import from a server component does no work — though it still validates its arguments first, so a missing endpoint or key throws even during a server render.
+
+```tsx
+// app/pulse-provider.tsx
+"use client";
+
+import { useEffect } from "react";
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+
+export function PulseProvider({ userId }: { userId?: string }) {
+  useEffect(() => {
+    Pulse.configure({
+      endpoint: process.env.NEXT_PUBLIC_PULSE_ENDPOINT!,
+      apiKey: process.env.NEXT_PUBLIC_PULSE_KEY!,
+      bundleId: "com.example.web",
+      propagateSessionTo: ["/api"],
+    });
+  }, []);
+
+  useEffect(() => {
+    if (userId) void Pulse.setUser(userId);
+  }, [userId]);
+
+  return null;
+}
+```
+
+Mount it once in the root layout, and keep that layout synchronous:
+
+```tsx
+// app/layout.tsx
+import { PulseProvider } from "./pulse-provider";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <PulseProvider />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+Both keys are `NEXT_PUBLIC_`, which is correct here: the client key is public and ingest-scoped by design. Never put an agent key (`pulse_agent_...`) in a `NEXT_PUBLIC_` variable.
+
+Awaiting a session in the root layout to fill `userId` would run a per-request read on every route in the app and opt the whole tree out of static rendering. It is not needed: `Pulse.setUser()` is a client-side call and the claim is [idempotent](/docs/sdks/web/identity), so pass the id from the client-side session your app already has.
+
+```tsx
+// app/use-pulse-user.ts
+"use client";
+
+import { useEffect } from "react";
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+import { useAuth } from "@/lib/auth";
+
+export function usePulseUser() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) void Pulse.setUser(user.id);
+  }, [user]);
+}
+```
+
+If the id can only come from the server, render `<PulseProvider userId={...} />` from a nested layout that is already dynamic rather than from the root.
+
+## Route Handlers
+
+`propagateSessionTo: ["/api"]` adds an `X-Pulse-Session-Id` header to every `fetch` request whose URL starts with `/api` (requests issued with `XMLHttpRequest` or `sendBeacon` are not annotated). Read it in your route handlers with the Node.js SDK and the browser session and the server session become one trace:
+
+```typescript
+// app/api/checkout/route.ts
+import { Pulse } from "@synonymdev/pubky-pulse-node";
+
+export async function POST(req: Request) {
+  const sessionId = req.headers.get("x-pulse-session-id");
+  const scope = Pulse.withUser(await currentUserId());
+  const log = sessionId ? scope.withSession(sessionId) : scope;
+
+  log.info("checkout_started");
+  return Response.json({ ok: true });
+}
+```
+
+The guard keeps the snippet type-correct — `Headers.get()` returns `string | null` — and the Node SDK ignores a non-UUID value and falls back to its own session id, so a request from outside the browser never breaks the handler. See [`Pulse.withSession()`](/docs/sdks/node/identity#withsession) for the details.
+
+Configure the Node SDK once, in a module your route handlers import — with its own app and its own `pulse_client_` key for a `backend`-platform app. The two SDKs report to different apps in the same project; the shared session id is what joins them.
+
+## Route Tracking
+
+The App Router navigates with the History API, so the Web SDK's automatic screen tracking follows route changes with no extra work. Name the things the URL does not describe — a modal, a step in a checkout — with `Pulse.trackScreen()`. See [Screens](/docs/sdks/web/screens).
+
+## Server Components and Server Actions
+
+Server components never run `configure()`, so log from them with the Node.js SDK, not the Web SDK. Importing the Web SDK on the server is harmless — `configure()` returns without installing anything and log calls before a successful configure are ignored — but nothing is recorded, so shared helpers that must log on both sides should take a logger rather than reach for a singleton.

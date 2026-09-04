@@ -20,14 +20,14 @@ Pubky Pulse uses a single PostgreSQL database (15 or newer; the VPS setup script
 
 Pubky Pulse collects data from web, backend and mobile apps:
 
-- **[Web SDK](/docs/sdks/web)** — browser apps. Coming soon; until it ships, web apps can post to the [ingest API](/docs/api-reference/ingest) directly.
+- **[Web SDK](/docs/sdks/web)** — browser apps (framework-agnostic TypeScript, no UI and no framework bindings)
 - **[Node.js SDK](/docs/sdks/node)** — Express, Fastify, serverless functions, and any Node.js backend
 - **[Swift SDK](/docs/sdks/swift)** — iOS, iPadOS, macOS, and watchOS (distributed as a Swift Package)
 - **[Android SDK](/docs/sdks/android)** — Kotlin apps, with optional Jetpack Compose UI
 
-The Swift and Node.js SDKs have zero runtime dependencies; the Android core module depends only on `kotlinx-coroutines`. Each handles batching, compression, and retry automatically, and events from every platform appear in the same dashboard.
+The Web, Swift, and Node.js SDKs have zero runtime dependencies; the Android core module depends only on `kotlinx-coroutines`. Each handles batching, compression, and retry automatically, and events from every platform appear in the same dashboard.
 
-The SDK repositories are being rebuilt under the [pubky GitHub org](https://github.com/pubky) and are not published yet. The SDK docs describe the API surface as it stands.
+The SDK repositories are being rebuilt under the [pubky GitHub org](https://github.com/pubky) and are not published yet; the Node.js and Web SDKs live under [Jasonvdb](https://github.com/Jasonvdb) until they move. The SDK docs describe the API surface as it stands.
 
 ## Can I self-host Pubky Pulse?
 
@@ -43,10 +43,11 @@ Agent-first means Pubky Pulse is designed so that AI coding agents (Claude Code,
 
 ## Is Pubky Pulse open source?
 
-Yes, under the MIT license. The codebase is spread across a few repos in the [pubky GitHub org](https://github.com/pubky):
+Yes, under the MIT license. The codebase is spread across a few repos, most of them in the [pubky GitHub org](https://github.com/pubky):
 
 - [pubky/pubky-pulse](https://github.com/pubky/pubky-pulse) — server, web dashboard, and deploy scripts
-- [pubky/pubky-pulse-node](https://github.com/pubky/pubky-pulse-node) — Node.js server SDK
+- [Jasonvdb/pubky-pulse-web](https://github.com/Jasonvdb/pubky-pulse-web) — browser SDK
+- [Jasonvdb/pubky-pulse-node](https://github.com/Jasonvdb/pubky-pulse-node) — Node.js server SDK
 - [pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift) — Swift SDK for iOS, iPadOS, macOS, and watchOS
 - [pubky/pubky-pulse-android](https://github.com/pubky/pubky-pulse-android) — Android SDK (Kotlin / Jetpack Compose)
 

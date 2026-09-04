@@ -1,0 +1,99 @@
+---
+title: Configuration
+description: Configure the Web SDK with Pulse.configure() — endpoint, API key, bundle id, tracking toggles, and flush options.
+---
+
+Call `Pulse.configure()` once, as early in the page's life as you can, before logging any events.
+
+## Basic Configuration
+
+```typescript
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "com.example.web",
+  appVersion: "1.4.0",
+});
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `endpoint` | `string` | *required* | Pubky Pulse server URL. A trailing slash is stripped. |
+| `apiKey` | `string` | *required* | Client API key for a web-platform app. Must start with `pulse_client_`. |
+| `bundleId` | `string` | *required* | Bundle id of the Pulse app receiving the events. Must match the app exactly. |
+| `appVersion` | `string` | `undefined` | Version reported with every event. |
+| `isDev` | `boolean` | `true` on `localhost`, `127.0.0.1`, or a `file:` URL | Marks events as development traffic. See [Data Mode](/docs/concepts/data-mode). |
+| `debug` | `boolean` | `false` | Print the SDK's own diagnostics to the console. |
+| `consoleLogging` | `boolean` | `true` | Mirror logged events to the console. |
+| `compressionEnabled` | `boolean` | `true` | gzip request bodies where the browser supports it. |
+| `captureUnhandled` | `boolean` | `true` | Capture uncaught errors and unhandled rejections. See [Events](/docs/sdks/web/events#unhandled-errors). |
+| `trackPageViews` | `boolean` | `true` | Emit screen events for History API navigations. See [Screens](/docs/sdks/web/screens). |
+| `networkTracking` | `boolean` | `false` | Emit an `sdk:network_request` event per `fetch` call. |
+| `propagateSessionTo` | `string[]` | `[]` | URL prefixes whose `fetch` requests receive the `X-Pulse-Session-Id` header. |
+| `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes. |
+| `flushThreshold` | `number` | `20` | Buffered events that trigger an immediate flush. |
+| `maxBufferSize` | `number` | `10000` | Buffered events kept before the oldest are dropped. |
+| `sessionTimeoutMs` | `number` | `1800000` | Idle time (30 minutes) after which a new session starts. |
+| `supportedLanguages` | `string[]` | *not sent* | The locales your app ships. Written through to the app record and used for localization-gap analysis. |
+
+Every numeric option must be a positive integer, and `flushThreshold` must not exceed `maxBufferSize`; invalid values throw at `configure()` time with a `Pubky Pulse: ...` message, so a typo surfaces on the first page load rather than silently dropping your data.
+
+<Callout>
+Set `supportedLanguages` explicitly to the locales your app ships — `supportedLanguages: ["en", "es", "fr"]`. It is an app-level field, not a per-event label: the server writes the first value it sees in a batch through to the app record with source `sdk`, overriding anything set by hand. Leaving it unset sends nothing at all, so a manually configured list stays as it is. See [Ingest](/docs/api-reference/ingest).
+</Callout>
+
+## What Happens on Configure
+
+1. **Validates** the endpoint, the key format, and every option.
+2. **Checks for `window`** — under server rendering there is none, so `configure()` returns without installing anything.
+3. **Loads or creates the anonymous id** (`pulse_anon_<uuid>` in `localStorage`) so the first event already has a user id.
+4. **Starts or resumes a session** — a UUID kept in `sessionStorage`. The stored id is adopted when the last activity is inside `sessionTimeoutMs`, so a reload in the same tab keeps the session and emits no event; `sdk:session_started` is emitted only when a new session actually begins. See [Sessions](/docs/sdks/web/identity#sessions).
+5. **Installs page hooks** — page-visibility flushing, screen tracking when `trackPageViews` is on, unhandled-error capture when `captureUnhandled` is on, and the `fetch` wrapper when `networkTracking` or `propagateSessionTo` needs it.
+
+Calling `configure()` again replaces the pipeline: the old transport is drained and every page hook is removed first.
+
+## Development vs Production Data
+
+`isDev` controls whether events are tagged as development or production data. It defaults to `true` on `localhost`, `127.0.0.1`, and `file:` URLs, so local work stays out of your production numbers without any extra setup. Override it when your staging domain should also count as dev:
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "com.example.web",
+  isDev: location.hostname.endsWith(".staging.example.com"),
+});
+```
+
+The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and the `data_mode` argument on MCP query tools let you separate the two.
+
+## Network Tracking and Session Propagation
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "com.example.web",
+  networkTracking: true,
+  propagateSessionTo: ["https://api.example.com"],
+});
+```
+
+`networkTracking` wraps `window.fetch` and logs an `sdk:network_request` event per call with the method, the URL (query string stripped), the status, and the duration — debug for 2xx/3xx, warn for anything else, error when the request throws. Requests to your Pulse endpoint are skipped.
+
+`propagateSessionTo` lists URL prefixes that receive the `X-Pulse-Session-Id` header on `fetch` requests, and works whether or not `networkTracking` is on. Propagation is implemented by wrapping `fetch`, so requests made with `XMLHttpRequest` or `sendBeacon` — including libraries such as axios that default to XHR in the browser — are not annotated and must set the header themselves. Only list origins you control: the header should not leak to third parties. See [Next.js](/docs/sdks/web/nextjs) for the server side of that trace.
+
+## Flush and Shutdown
+
+Batches are sent every `flushIntervalMs`, or as soon as `flushThreshold` events are buffered. Both ends are available when you need them:
+
+```typescript
+await Pulse.flush();    // send everything buffered, including attachments
+await Pulse.shutdown(); // flush, then remove every page hook the SDK installed
+```
+
+When the page is hidden or unloaded the SDK flushes on its own with a `keepalive` request and parks whatever does not fit in an offline queue in `localStorage`, which is drained on the next page load. Events logged while the browser reports itself offline queue up rather than fail.

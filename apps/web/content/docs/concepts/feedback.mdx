@@ -9,8 +9,8 @@ Unlike [events](./events), feedback is **synchronous**: the SDK waits for the se
 
 ## How It Works
 
-1. A user submits feedback from your app via `PulseFeedbackView` (SwiftUI or Compose) or `Pulse.sendFeedback(...)`, or your own frontend posts to your Node server which forwards it with `Pulse.sendFeedback(...)` from the [Node SDK](/docs/sdks/node/feedback).
-2. The SDK posts a single synchronous request to `POST /v1/feedback` with the current session id, user id, device info, and app version attached (automatically on mobile; caller-supplied on Node).
+1. A user submits feedback from your app via `PulseFeedbackView` (SwiftUI or Compose) or `Pulse.sendFeedback(...)` on mobile, straight from the browser with `Pulse.sendFeedback(...)` from the [Web SDK](/docs/sdks/web/feedback), or your own frontend posts to your Node server which forwards it with `Pulse.sendFeedback(...)` from the [Node SDK](/docs/sdks/node/feedback).
+2. The SDK posts a single synchronous request to `POST /v1/feedback` with the current session id, user id, device info, and app version attached (automatically in the mobile and web SDKs; caller-supplied on Node).
 3. The server validates, stores a row in `feedback`, and returns `{ id, created_at }`.
 4. The feedback appears on the `/dashboard/feedback` kanban and via the MCP `list-feedback` tool.
 
@@ -36,7 +36,7 @@ Submitted from the SDK:
 - **Session id** — links the submission to the user's event timeline
 - **User id** — anonymous id or real user id, auto-resolved server-side if the anon id has since been claimed
 - **Device info** — environment (ios/ipados/macos/watchos/android/web/backend), device model, OS version, app version
-- **SDK name and version** — `sdk_name` (e.g. `pubky-pulse-swift`, `pubky-pulse-node`) and `sdk_version`, auto-stamped by official SDKs
+- **SDK name and version** — `sdk_name` (e.g. `pubky-pulse-swift`, `pubky-pulse-node`, `pubky-pulse-web`) and `sdk_version`, auto-stamped by official SDKs
 - **is_dev** — dev-build flag inferred from the SDK's `#if DEBUG` state
 
 Derived server-side:
@@ -64,4 +64,5 @@ The `PulseFeedbackView` Submit button inherits the SwiftUI environment tint — 
 - [`list-feedback` (MCP)](/docs/mcp/feedback) — agent tooling
 - [Pulse.sendFeedback + PulseFeedbackView](/docs/sdks/swift/feedback) — Swift SDK reference
 - [Pulse.sendFeedback + PulseFeedbackView](/docs/sdks/android/feedback) — Android SDK reference
+- [`Pulse.sendFeedback` (Web SDK)](/docs/sdks/web/feedback) — browser feedback, bring your own form
 - [`Pulse.sendFeedback` (Node SDK)](/docs/sdks/node/feedback) — forward feedback from your own frontend

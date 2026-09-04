@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { normalizeErrorMessage, generateIssueFingerprint } from "../issues.js";
+import {
+  normalizeErrorMessage,
+  generateIssueFingerprint,
+  canonicalizeBrowserErrorMessage,
+} from "../issues.js";
 
 describe("normalizeErrorMessage", () => {
   it("replaces UUIDs with <uuid>", () => {
@@ -297,5 +301,137 @@ describe("generateIssueFingerprint with discriminator", () => {
       "GET api.foo.com/v1/sessions/6ba7b810-9dad-11d1-80b4-00c04fd430c8",
     );
     expect(a).toBe(b);
+  });
+});
+
+// The same missing `cart.total` read, as each engine words it.
+const UNDEFINED_PROPERTY_TRIPLE = [
+  "Cannot read properties of undefined (reading 'total')", // Chrome
+  "cart.total is undefined", // Firefox
+  "undefined is not an object (evaluating 'cart.total')", // Safari
+];
+
+const NOT_A_FUNCTION_TRIPLE = [
+  "cart.total is not a function", // Chrome
+  "cart.total is not a function", // Firefox
+  "cart.total is not a function. (In 'cart.total()', 'cart.total' is undefined)", // Safari
+];
+
+const NOT_DEFINED_TRIPLE = [
+  "cart is not defined", // Chrome
+  "cart is not defined", // Firefox
+  "Can't find variable: cart", // Safari
+];
+
+describe("canonicalizeBrowserErrorMessage", () => {
+  it("collapses the browser wordings of a read on undefined", () => {
+    const canonical = UNDEFINED_PROPERTY_TRIPLE.map(canonicalizeBrowserErrorMessage);
+    expect(new Set(canonical).size).toBe(1);
+    expect(canonical[0]).toBe("<undefined-property> total");
+  });
+
+  it("collapses the null-valued wordings onto the undefined ones", () => {
+    for (const message of [
+      "Cannot read properties of null (reading 'total')",
+      "Cannot read property 'total' of null",
+      "null is not an object (evaluating 'cart.total')",
+      "cart.total is null",
+    ]) {
+      expect(canonicalizeBrowserErrorMessage(message)).toBe("<undefined-property> total");
+    }
+  });
+
+  it("handles the legacy Chrome and Firefox property wordings", () => {
+    expect(canonicalizeBrowserErrorMessage("Cannot read property 'total' of undefined"))
+      .toBe("<undefined-property> total");
+    expect(canonicalizeBrowserErrorMessage('can\'t access property "total", cart is undefined'))
+      .toBe("<undefined-property> total");
+  });
+
+  it("collapses the browser wordings of calling a non-function", () => {
+    const canonical = NOT_A_FUNCTION_TRIPLE.map(canonicalizeBrowserErrorMessage);
+    expect(new Set(canonical).size).toBe(1);
+    expect(canonical[0]).toBe("<not-a-function> total");
+  });
+
+  it("collapses the browser wordings of an undeclared variable", () => {
+    const canonical = NOT_DEFINED_TRIPLE.map(canonicalizeBrowserErrorMessage);
+    expect(new Set(canonical).size).toBe(1);
+    expect(canonical[0]).toBe("<not-defined> cart");
+  });
+
+  it("collapses the cross-origin literal with and without its period", () => {
+    expect(canonicalizeBrowserErrorMessage("Script error.")).toBe("<cross-origin-script-error>");
+    expect(canonicalizeBrowserErrorMessage("Script error")).toBe("<cross-origin-script-error>");
+  });
+
+  it("keeps the property name, so different faults stay distinct", () => {
+    expect(canonicalizeBrowserErrorMessage("Cannot read properties of undefined (reading 'total')"))
+      .not.toBe(canonicalizeBrowserErrorMessage("items is undefined"));
+  });
+
+  it("keeps the fault kind, so a missing property and a bad call stay distinct", () => {
+    expect(canonicalizeBrowserErrorMessage("cart.total is undefined"))
+      .not.toBe(canonicalizeBrowserErrorMessage("cart.total is not a function"));
+  });
+
+  it("reduces a dotted expression to its last segment", () => {
+    expect(canonicalizeBrowserErrorMessage("undefined is not an object (evaluating 'a.b.total')"))
+      .toBe("<undefined-property> total");
+  });
+
+  it("returns unrecognised messages unchanged", () => {
+    expect(canonicalizeBrowserErrorMessage("Checkout failed for order 42"))
+      .toBe("Checkout failed for order 42");
+    expect(canonicalizeBrowserErrorMessage("")).toBe("");
+  });
+});
+
+describe("generateIssueFingerprint with environment", () => {
+  const allTriples = [UNDEFINED_PROPERTY_TRIPLE, NOT_A_FUNCTION_TRIPLE, NOT_DEFINED_TRIPLE];
+
+  it("groups each browser triple onto one fingerprint on web", async () => {
+    for (const triple of allTriples) {
+      const fps = await Promise.all(
+        triple.map((m) => generateIssueFingerprint(m, "Checkout", null, "web")),
+      );
+      expect(new Set(fps).size).toBe(1);
+    }
+  });
+
+  it("keeps the triples apart from each other on web", async () => {
+    const fps = await Promise.all(
+      allTriples.map((triple) => generateIssueFingerprint(triple[0], "Checkout", null, "web")),
+    );
+    expect(new Set(fps).size).toBe(allTriples.length);
+  });
+
+  it("leaves non-web environments split across browser wordings", async () => {
+    for (const environment of [undefined, null, "production", "ios"]) {
+      const fps = await Promise.all(
+        UNDEFINED_PROPERTY_TRIPLE.map((m) =>
+          generateIssueFingerprint(m, "Checkout", null, environment),
+        ),
+      );
+      expect(new Set(fps).size).toBe(UNDEFINED_PROPERTY_TRIPLE.length);
+    }
+  });
+
+  it("matches the legacy 2-arg and 3-arg output for non-web environments", async () => {
+    const legacy2 = await generateIssueFingerprint("cart.total is undefined", "Checkout");
+    const legacy3 = await generateIssueFingerprint("cart.total is undefined", "Checkout", null);
+    expect(await generateIssueFingerprint("cart.total is undefined", "Checkout", null, null)).toBe(legacy2);
+    expect(await generateIssueFingerprint("cart.total is undefined", "Checkout", null, "backend")).toBe(legacy3);
+  });
+
+  it("leaves an unrecognised web message on its legacy fingerprint", async () => {
+    const legacy = await generateIssueFingerprint("Checkout failed", "Checkout");
+    expect(await generateIssueFingerprint("Checkout failed", "Checkout", null, "web")).toBe(legacy);
+  });
+
+  it("still splits web fingerprints by discriminator", async () => {
+    const a = await generateIssueFingerprint("cart.total is undefined", "Checkout", "TypeError", "web");
+    const b = await generateIssueFingerprint("cart.total is undefined", "Checkout", "RangeError", "web");
+    expect(a).not.toBe(b);
   });
 });

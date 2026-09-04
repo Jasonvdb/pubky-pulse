@@ -15,6 +15,13 @@
       "when": 1788532801025,
       "tag": "0001_add_app_allowed_origins",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788533632533,
+      "tag": "0002_add_issue_occurrence_device_fields",
+      "breakpoints": true
     }
   ]
 }

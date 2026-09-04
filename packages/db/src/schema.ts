@@ -632,6 +632,10 @@ export const issueOccurrences = pgTable(
     sdk_name: varchar("sdk_name", { length: 50 }),
     sdk_version: varchar("sdk_version", { length: 50 }),
     environment: environmentEnum("environment"),
+    // Copied from the source event so "is this Safari only?" is answerable from
+    // the occurrence list alone. On web these carry the browser and the OS.
+    device_model: varchar("device_model", { length: 100 }),
+    os_version: varchar("os_version", { length: 50 }),
     event_id: uuid("event_id"),
     country_code: varchar("country_code", { length: 2 }),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),

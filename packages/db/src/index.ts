@@ -4,6 +4,7 @@ import * as schema from "./schema.js";
 
 export * from "./schema.js";
 export * from "./partitions.js";
+export * from "./run-migrations.js";
 export * from "./cleanup.js";
 export * from "./retention.js";
 export { schema };

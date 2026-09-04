@@ -219,10 +219,23 @@ export const apiKeys = pgTable(
   ]
 );
 
-// Events — NOTE: This table is partitioned by month on `timestamp`.
-// Drizzle doesn't natively support partitioning, so the migration SQL
-// must be manually edited to use PARTITION BY RANGE (timestamp).
-// See src/migrate.ts for partition creation logic.
+// Events — NOTE: This table is partitioned by month on `timestamp`, as are
+// `metric_events` and `funnel_events`.
+//
+// Drizzle cannot express partitioning, so `drizzle/0000_baseline.sql` is
+// hand-edited: its CREATE TABLE ends with `) PARTITION BY RANGE ("timestamp");`.
+// Any future migration that recreates one of these tables must do the same.
+// `src/run-migrations.ts` verifies the tables really are partitioned after
+// migrating, then creates the monthly partitions (`src/partitions.ts`).
+//
+// Constraints these three tables must respect:
+//   - no primary key, and no unique index that does not include `timestamp`
+//     (Postgres requires the partition key in every unique constraint)
+//   - no `.concurrently()` on their indexes — Postgres rejects
+//     CREATE INDEX CONCURRENTLY on a partitioned table
+//   - no foreign keys from other tables pointing at them
+//   - declare indexes on the parent only; Postgres 11+ propagates them to every
+//     existing and future partition, so never add per-partition indexes
 export const events = pgTable(
   "events",
   {

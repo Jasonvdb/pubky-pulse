@@ -1,18 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";
 import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-
-const MIGRATIONS_FOLDER = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../../packages/db/drizzle",
-);
 import * as schema from "@pubky-pulse/db";
-import { createDatabaseConnection, ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "@pubky-pulse/db";
+import { createDatabaseConnection, runMigrations } from "@pubky-pulse/db";
 import type { Permission, TeamRole } from "@pubky-pulse/shared";
 import { buildServer } from "../app.js";
 import { bootstrapSingletonTeam } from "../services/bootstrap-team.js";
@@ -24,7 +15,29 @@ import { inAppAdapter } from "../services/notifications/adapters/in-app.js";
 import { createEmailAdapter } from "../services/notifications/adapters/email.js";
 import { notificationDeliverHandler } from "../jobs/notification-deliver.js";
 
-export const TEST_DB_URL = "postgres://localhost:5432/pubky_pulse_test";
+// Every suite connects through this one constant. Override it with
+// TEST_DATABASE_URL (CI does), but only ever at a database whose name ends in
+// `_test` — setupTestDb migrates it and the suites truncate it. Mirrors the
+// guard in packages/db/src/clear.ts.
+export const TEST_DB_URL =
+  process.env.TEST_DATABASE_URL ?? "postgres://localhost:5432/pubky_pulse_test";
+
+function assertTestDatabase(connectionUrl: string): void {
+  let dbName: string | null = null;
+  try {
+    dbName = new URL(connectionUrl).pathname.replace(/^\//, "") || null;
+  } catch {
+    dbName = null;
+  }
+  if (!dbName || !dbName.endsWith("_test")) {
+    throw new Error(
+      `Refusing to run tests against database "${dbName ?? connectionUrl}": the name must end ` +
+        `in "_test". Set TEST_DATABASE_URL to a dedicated test database.`,
+    );
+  }
+}
+
+assertTestDatabase(TEST_DB_URL);
 
 export const TEST_CLIENT_KEY =
   "pulse_client_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -79,154 +92,15 @@ export class TestEmailService implements EmailService {
   }
 }
 
-let migrationClient: postgres.Sql | null = null;
-
 export async function setupTestDb() {
-  migrationClient = postgres(TEST_DB_URL, { max: 1 });
-
-  const migrationDb = drizzle(migrationClient);
-  await migrate(migrationDb, {
-    migrationsFolder: MIGRATIONS_FOLDER,
-  });
-
-  // Set up partitioned events table
-  const result = await migrationClient`
-    SELECT relkind FROM pg_class WHERE relname = 'events'
-  `;
-
-  if (result.length > 0 && result[0].relkind !== "p") {
-    await migrationClient`DROP TABLE IF EXISTS events CASCADE`;
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    // Same runner the CLI uses: migrations, the partitioned-table check, then
+    // this month's partitions. Nothing about the schema is duplicated here.
+    await runMigrations(client, { monthsAhead: 1 });
+  } finally {
+    await client.end();
   }
-
-  if (result.length === 0 || result[0].relkind !== "p") {
-    // Schema mirrors packages/db/src/schema.ts events table. When a column is
-    // added in schema.ts + a drizzle migration, add it here too — on a fresh
-    // DB the migration applies to a regular events table, and then this
-    // DROP+CREATE recreates it as partitioned, so any column not listed here
-    // is silently lost.
-    await migrationClient.unsafe(`
-      CREATE TABLE IF NOT EXISTS events (
-        id UUID DEFAULT gen_random_uuid(),
-        app_id UUID NOT NULL,
-        client_event_id UUID,
-        session_id UUID NOT NULL,
-        user_id VARCHAR(255),
-        api_key_id UUID,
-        level log_level NOT NULL,
-        source_module TEXT,
-        message TEXT NOT NULL,
-        screen_name VARCHAR(255),
-        custom_attributes JSONB,
-        environment environment,
-        os_version VARCHAR(50),
-        app_version VARCHAR(50),
-        sdk_name VARCHAR(50),
-        sdk_version VARCHAR(50),
-        device_model VARCHAR(100),
-        build_number VARCHAR(50),
-        locale VARCHAR(20),
-        preferred_language VARCHAR(35),
-        country_code VARCHAR(2),
-        is_dev BOOLEAN NOT NULL DEFAULT FALSE,
-        "timestamp" TIMESTAMPTZ NOT NULL,
-        received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      ) PARTITION BY RANGE ("timestamp");
-    `);
-  }
-
-  // Set up partitioned metric_events table
-  const meResult = await migrationClient`
-    SELECT relkind FROM pg_class WHERE relname = 'metric_events'
-  `;
-
-  if (meResult.length > 0 && meResult[0].relkind !== "p") {
-    await migrationClient`DROP TABLE IF EXISTS metric_events CASCADE`;
-  }
-
-  // Ensure metric_phase enum exists
-  const metricPhaseCheck = await migrationClient`
-    SELECT 1 FROM pg_type WHERE typname = 'metric_phase'
-  `;
-  if (metricPhaseCheck.length === 0) {
-    await migrationClient.unsafe(`CREATE TYPE metric_phase AS ENUM ('start', 'complete', 'fail', 'cancel', 'record')`);
-  }
-
-  if (meResult.length === 0 || meResult[0].relkind !== "p") {
-    // Keep column list aligned with packages/db/src/schema.ts metric_events.
-    await migrationClient.unsafe(`
-      CREATE TABLE IF NOT EXISTS metric_events (
-        id UUID DEFAULT gen_random_uuid(),
-        app_id UUID NOT NULL,
-        session_id UUID NOT NULL,
-        user_id VARCHAR(255),
-        api_key_id UUID,
-        metric_slug VARCHAR(255) NOT NULL,
-        phase metric_phase NOT NULL,
-        tracking_id UUID,
-        duration_ms INTEGER,
-        error TEXT,
-        attributes JSONB,
-        environment environment,
-        os_version VARCHAR(50),
-        app_version VARCHAR(50),
-        sdk_name VARCHAR(50),
-        sdk_version VARCHAR(50),
-        device_model VARCHAR(100),
-        build_number VARCHAR(50),
-        country_code VARCHAR(2),
-        is_dev BOOLEAN NOT NULL DEFAULT FALSE,
-        client_event_id UUID,
-        "timestamp" TIMESTAMPTZ NOT NULL,
-        received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      ) PARTITION BY RANGE ("timestamp");
-    `);
-  }
-
-  // Set up partitioned funnel_events table
-  const feResult = await migrationClient`
-    SELECT relkind FROM pg_class WHERE relname = 'funnel_events'
-  `;
-
-  if (feResult.length > 0 && feResult[0].relkind !== "p") {
-    await migrationClient`DROP TABLE IF EXISTS funnel_events CASCADE`;
-  }
-
-  if (feResult.length === 0 || feResult[0].relkind !== "p") {
-    // Keep column list aligned with packages/db/src/schema.ts funnel_events.
-    await migrationClient.unsafe(`
-      CREATE TABLE IF NOT EXISTS funnel_events (
-        id UUID DEFAULT gen_random_uuid(),
-        app_id UUID NOT NULL,
-        session_id UUID NOT NULL,
-        user_id VARCHAR(255),
-        api_key_id UUID,
-        step_name VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
-        screen_name VARCHAR(255),
-        custom_attributes JSONB,
-        environment environment,
-        os_version VARCHAR(50),
-        app_version VARCHAR(50),
-        sdk_name VARCHAR(50),
-        sdk_version VARCHAR(50),
-        device_model VARCHAR(100),
-        build_number VARCHAR(50),
-        country_code VARCHAR(2),
-        is_dev BOOLEAN NOT NULL DEFAULT FALSE,
-        client_event_id UUID,
-        "timestamp" TIMESTAMPTZ NOT NULL,
-        received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      ) PARTITION BY RANGE ("timestamp");
-    `);
-  }
-
-  // Create partitions using shared utility
-  await ensurePartitions(migrationClient, 1);
-  await ensureMetricEventPartitions(migrationClient, 1);
-  await ensureFunnelEventPartitions(migrationClient, 1);
-
-  await migrationClient.end();
-  migrationClient = null;
 }
 
 export const testEmailService = new TestEmailService();

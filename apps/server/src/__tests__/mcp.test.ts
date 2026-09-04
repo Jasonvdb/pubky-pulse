@@ -12,6 +12,7 @@ import {
   createAgentKey,
   TEST_BUNDLE_ID,
   TEST_SESSION_ID,
+  TEST_DB_URL,
 } from "./setup.js";
 
 let app: FastifyInstance;
@@ -1024,7 +1025,7 @@ describe("MCP endpoint", () => {
 
   describe("issues", () => {
     async function createMcpIssue(agentKey: string, projectId: string) {
-      const client = (await import("postgres")).default("postgres://localhost:5432/pubky_pulse_test", { max: 1 });
+      const client = (await import("postgres")).default(TEST_DB_URL, { max: 1 });
       const appRows = await client`SELECT id FROM apps WHERE project_id = ${projectId} AND deleted_at IS NULL LIMIT 1`;
       const appId = appRows[0].id;
       const [issue] = await client`
@@ -1159,7 +1160,7 @@ describe("MCP endpoint", () => {
       const issueId = await createMcpIssue(key, project.id);
 
       // Seed three occurrences directly
-      const client = (await import("postgres")).default("postgres://localhost:5432/pubky_pulse_test", { max: 1 });
+      const client = (await import("postgres")).default(TEST_DB_URL, { max: 1 });
       const now = Date.now();
       for (let i = 0; i < 3; i++) {
         await client`
@@ -1204,7 +1205,7 @@ describe("MCP endpoint", () => {
 
   describe("feedback", () => {
     async function seedFeedback(projectId: string, appId: string, message = "MCP test feedback"): Promise<string> {
-      const client = (await import("postgres")).default("postgres://localhost:5432/pubky_pulse_test", { max: 1 });
+      const client = (await import("postgres")).default(TEST_DB_URL, { max: 1 });
       const [row] = await client`
         INSERT INTO feedback (project_id, app_id, message, status, is_dev)
         VALUES (${projectId}, ${appId}, ${message}, 'new', false)

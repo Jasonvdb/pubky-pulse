@@ -23,7 +23,23 @@ Use Node.js 20+, PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).
 - `pnpm build`: compile workspaces and build the production web bundle.
 - `pnpm test`: run all Vitest suites.
 - `pnpm test:coverage`: collect V8 coverage for the server.
-- `pnpm db:generate`: generate Drizzle migrations after schema changes.
+- `pnpm db:generate <snake_case_name>`: generate a named Drizzle migration after schema changes.
+- `pnpm db:check`: fail if `schema.ts` has changes with no matching migration; needs no database and runs in CI.
+
+### Database migrations
+
+Edit `packages/db/src/schema.ts`, run `pnpm db:generate <snake_case_name>`, read the SQL it writes into `packages/db/drizzle/`, then `pnpm db:migrate` and `pnpm test`. The name is required and must match `^[a-z][a-z0-9_]*$`; a bare `pnpm db:generate` exits with usage rather than inventing one.
+
+Rules:
+
+- Never add and remove columns of the same table, or tables, or enums, in a single migration. That is the only diff drizzle-kit prompts on ("created or renamed?"), and on a non-TTY the prompt hangs forever, so `db:generate` refuses it up front. Split it into two migrations — add and backfill first, drop second — which is also the production-safe way to rename.
+- Never hand-edit `packages/db/drizzle/meta/*`. Those snapshots are what the next diff is computed against.
+- `pnpm db:generate <name> --custom` writes an empty migration for SQL drizzle cannot express. Use it only for that, and only when `schema.ts` has no pending changes; the command refuses otherwise, because `--custom` writes a fresh snapshot while discarding the diff.
+- Never edit a committed migration once it has been deployed. The drizzle migrator only applies migrations newer than the last one it recorded, so the edit is silently skipped on every database that already ran it.
+
+`events`, `metric_events` and `funnel_events` are created `PARTITION BY RANGE ("timestamp")` in the baseline migration, while `schema.ts` declares them as ordinary tables because drizzle cannot express partitioning. So they take no primary key and no unique index that omits `timestamp`, no `.concurrently()` on their indexes (Postgres rejects concurrent index builds on a partitioned table), and no foreign keys from other tables pointing at them. Declare their indexes on the parent in `schema.ts` only — Postgres propagates a parent index to every existing and future partition, so per-partition indexes are always wrong.
+
+A database migrated before the partitioned baseline cannot be brought forward in place; `pnpm db:migrate` fails loudly on it. Drop and recreate it (`dropdb <name> && createdb <name>`, then `pnpm db:migrate`). `pnpm dev:unsafe-reset` only truncates and will not fix it.
 
 ## Coding Style & Naming Conventions
 
@@ -31,7 +47,7 @@ TypeScript is strict and ESM-based. Use two-space indentation, double quotes, se
 
 ## Testing Guidelines
 
-Name tests `*.test.ts` and use Vitest `describe`/`it` blocks with behavioral descriptions. Server tests require `postgres://localhost:5432/pubky_pulse_test`; create it with `createdb pubky_pulse_test`. Add regression tests for route, job, schema, and permission changes.
+Name tests `*.test.ts` and use Vitest `describe`/`it` blocks with behavioral descriptions. Server tests connect to `TEST_DATABASE_URL`, defaulting to `postgres://localhost:5432/pubky_pulse_test`; create it with `createdb pubky_pulse_test`. The database name must end in `_test` or the test setup refuses to run. Add regression tests for route, job, schema, and permission changes.
 
 ## Commit & Pull Request Guidelines
 

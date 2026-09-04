@@ -75,7 +75,7 @@ packages/db        Drizzle schema, baseline migration, seeds, partition utilitie
 deploy/            Ubuntu VPS setup scripts and nginx snippets
 ```
 
-`packages/db` carries a single baseline migration rather than a chain of incremental ones, so a fresh instance is one `pnpm db:migrate` away. That same step converts the three high-volume tables to partitioned ones and creates partitions for the current month and the next two; a background job keeps the window rolling forward.
+`packages/db` carries a single baseline migration rather than a chain of incremental ones, so a fresh instance is one `pnpm db:migrate` away. That same step creates event partitions for the current month and the next two; a background job keeps the window rolling forward.
 
 The MCP server is not a separate process. It lives inside `apps/server` as a Streamable HTTP handler on `POST /mcp`, authenticated with the same agent keys as the REST API and backed by the same service layer — so a tool and its equivalent endpoint cannot drift apart.
 
@@ -112,7 +112,7 @@ Sign-in is restricted to the email domains you configure. `PULSE_ALLOWED_EMAIL_D
 
 `pnpm dev:seed` gives you a working account, team, project, app and API keys, and prints them; with no `RESEND_API_KEY` set, the sign-in code for the dashboard is printed to the API server console and written to `.dev-verification-code` instead of being mailed. To get data to look at, `pnpm dev:seed-events`, `pnpm dev:seed-issues` and `pnpm dev:seed-aggregates` generate synthetic events, error clusters and stats rollups.
 
-Tests need their own database. `apps/server` test setup hardcodes `postgres://localhost:5432/pubky_pulse_test`, so create it under exactly that name and keep Postgres reachable on the default port as your local OS user:
+Tests need their own database. `apps/server` test setup connects to `TEST_DATABASE_URL`, defaulting to `postgres://localhost:5432/pubky_pulse_test`, so either create it under exactly that name and keep Postgres reachable on the default port as your local OS user, or point `TEST_DATABASE_URL` elsewhere. Either way the database name has to end in `_test`:
 
 ```bash
 createdb pubky_pulse_test

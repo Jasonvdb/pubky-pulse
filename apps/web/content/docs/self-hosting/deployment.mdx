@@ -238,7 +238,7 @@ DATABASE_URL='postgresql://pubky_pulse:yourpassword@localhost:5432/pubky_pulse' 
 pm2 restart all
 ```
 
-The `DATABASE_URL` prefix is required for `pnpm db:migrate` because migrations run from `packages/db` and do not auto-load the root `.env` file.
+`pnpm db:migrate` loads the repo-root `.env` itself, so the `DATABASE_URL` prefix above is only there to override it. Drop the prefix if the root `.env` already points at the right database.
 
 ## Verification
 

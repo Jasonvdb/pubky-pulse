@@ -7,6 +7,7 @@
     "build": "pnpm -r build",
     "db:generate": "pnpm --filter @pubky-pulse/db generate",
     "db:migrate": "pnpm --filter @pubky-pulse/db migrate",
+    "db:check": "pnpm --filter @pubky-pulse/db check",
     "dev:seed": "pnpm --filter @pubky-pulse/db dev:seed",
     "dev:seed-events": "pnpm --filter @pubky-pulse/db dev:seed-events",
     "dev:seed-issues": "pnpm --filter @pubky-pulse/db dev:seed-issues",

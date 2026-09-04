@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/node": "^25.4.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.13",
     "vitest": "^4.0.18"
   }
 }

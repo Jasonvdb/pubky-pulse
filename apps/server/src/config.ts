@@ -1,5 +1,6 @@
 import { config as dotenvConfig } from "dotenv";
 import { resolve } from "node:path";
+import { parseIdentityConfig, type IdentityConfig } from "@pubky-pulse/shared";
 
 dotenvConfig({ path: resolve(import.meta.dirname, "../../../.env") });
 
@@ -17,6 +18,38 @@ function resolveAttachmentsSigningSecret(): string {
   }
   return process.env.JWT_SECRET || "dev-secret-change-me";
 }
+
+/**
+ * Identity configuration is required in every environment, including tests and
+ * local development: there is no default company domain, team, or owner. An
+ * invalid or missing value fails startup here, before any route can accept a
+ * request against a half-configured access model.
+ *
+ * It takes the environment as an argument rather than reading `process.env`
+ * itself so this exact wiring — parse, then throw with the offending variable
+ * named — is testable from an explicit record. Testing it by re-importing the
+ * module would not work: the `dotenvConfig` call above loads the repo-root
+ * `.env`, so a developer's local file could quietly supply a variable the test
+ * meant to delete, and the case would pass in CI while failing locally.
+ */
+export function resolveIdentityConfig(env: NodeJS.ProcessEnv): IdentityConfig {
+  const result = parseIdentityConfig({
+    PULSE_ALLOWED_EMAIL_DOMAINS: env.PULSE_ALLOWED_EMAIL_DOMAINS,
+    PULSE_DEFAULT_TEAM_NAME: env.PULSE_DEFAULT_TEAM_NAME,
+    PULSE_DEFAULT_TEAM_SLUG: env.PULSE_DEFAULT_TEAM_SLUG,
+    PULSE_TEAM_OWNER_EMAIL: env.PULSE_TEAM_OWNER_EMAIL,
+  });
+  if (!result.ok) {
+    throw new Error(
+      `Invalid identity configuration: ${result.error}. ` +
+        "PULSE_ALLOWED_EMAIL_DOMAINS, PULSE_DEFAULT_TEAM_NAME, PULSE_DEFAULT_TEAM_SLUG " +
+        "and PULSE_TEAM_OWNER_EMAIL must all be set — see .env.example."
+    );
+  }
+  return result.value;
+}
+
+const identity = resolveIdentityConfig(process.env);
 
 export const config = {
   port: Number(process.env.PORT || 4000),
@@ -38,4 +71,10 @@ export const config = {
     (isProduction ? "/opt/pubky-pulse-attachments" : "./data/attachments"),
   attachmentsSigningSecret: resolveAttachmentsSigningSecret(),
   attachmentsInternalUri: process.env.PULSE_ATTACHMENTS_INTERNAL_URI || "",
+  // Identity: exact email domains allowed to authenticate, plus the singleton
+  // team and its sole owner. Server-side only — never expose as NEXT_PUBLIC_*.
+  allowedEmailDomains: identity.allowedEmailDomains,
+  defaultTeamName: identity.defaultTeamName,
+  defaultTeamSlug: identity.defaultTeamSlug,
+  teamOwnerEmail: identity.teamOwnerEmail,
 };

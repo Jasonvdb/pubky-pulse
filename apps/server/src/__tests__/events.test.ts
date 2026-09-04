@@ -6,8 +6,7 @@ import {
   seedTestData,
   getToken,
   getTokenAndTeamId,
-  createAgentKey,
-  createUserAndGetToken,
+  createForeignTeam,
   TEST_CLIENT_KEY,
   TEST_AGENT_KEY,
   TEST_BUNDLE_ID,
@@ -357,23 +356,36 @@ describe("GET /v1/events/:id", () => {
   });
 
   it("denies cross-team access to event", async () => {
-    // Ingest event with team A's key
-    await ingestEvents([{ level: "info", message: "Team A event", session_id: TEST_SESSION_ID }]);
+    // The far side of the boundary is seeded directly: an agent key can no
+    // longer be minted into a team of its own, because signing in always joins
+    // the one configured team.
+    const foreign = await createForeignTeam();
 
-    const listRes = await queryEvents();
-    const eventId = listRes.json().events[0].id;
-
-    // Create second user (gets own team)
-    const { token: otherToken, teamId: otherTeamId } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
-    const otherAgentKey = await createAgentKey(app, otherToken, otherTeamId, ["events:read"]);
-
-    // Team B's agent key should not see Team A's event
+    // The configured team's agent key has events:read, and the event genuinely
+    // exists — it is out of team, so it must read as absent.
     const res = await app.inject({
       method: "GET",
-      url: `/v1/events/${eventId}`,
-      headers: { authorization: `Bearer ${otherAgentKey}` },
+      url: `/v1/events/${foreign.eventId}`,
+      headers: { authorization: `Bearer ${TEST_AGENT_KEY}` },
     });
 
     expect(res.statusCode).toBe(404);
+  });
+
+  it("rejects an agent key whose creator is not a member of the configured team", async () => {
+    const foreign = await createForeignTeam();
+
+    // Not a 404 and not a 403: per-request revalidation reloads the key's
+    // creator, finds no singleton membership, and refuses the credential
+    // outright — even for the key's own team's event.
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/events/${foreign.eventId}`,
+      headers: { authorization: `Bearer ${foreign.apiKeySecret}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+    // Pins the reason: the key itself resolves, its creator does not.
+    expect(res.json().error).toMatch(/creator/i);
   });
 });

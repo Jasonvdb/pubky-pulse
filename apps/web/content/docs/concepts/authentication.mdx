@@ -1,9 +1,24 @@
 ---
-title: Authentication & API Keys
-description: Passwordless email auth, client vs agent API keys, permissions, and team-based access control.
+title: Authentication & Access Control
+description: Domain-restricted passwordless auth, the single configured team, project ownership, API keys, permissions, and credential visibility.
 ---
 
-Pubky Pulse uses passwordless email verification for human users and API keys for programmatic access. All resources are scoped to teams with role-based access control.
+Pubky Pulse uses passwordless email verification for human users and API keys for programmatic access. A deployment has exactly one team, only people on the email domains you configure can sign in, and **writes** to a project require being one of its owners.
+
+## Configured Identity
+
+Four server environment variables define who may use an instance. All four are required in every environment, there are no defaults, and the server refuses to start if any is missing or invalid:
+
+| Variable | Purpose |
+|---|---|
+| `PULSE_ALLOWED_EMAIL_DOMAINS` | Comma-separated email domains allowed to sign in |
+| `PULSE_DEFAULT_TEAM_NAME` | Display name of the one team every allowed user joins |
+| `PULSE_DEFAULT_TEAM_SLUG` | That team's stable identifier |
+| `PULSE_TEAM_OWNER_EMAIL` | The sole team owner and recovery identity |
+
+Domain matching is exact and case-insensitive. With only `example.com` configured, `user@sub.example.com` and `user@notexample.com` are both rejected -- list a subdomain separately if you want it. The owner's domain must itself be in the allowlist.
+
+On startup the server finds or creates the team with the configured slug and name, ensures the configured owner exists as its only `owner`, and fails loudly rather than creating a second team or renaming an existing one. See [Configuration](/docs/self-hosting/configuration) for the full reference.
 
 ## Passwordless Email Authentication
 
@@ -12,9 +27,45 @@ There are no passwords or separate registration flows. Authentication works in t
 1. **Send a verification code** -- `POST /v1/auth/send-code` with your email address. The server sends a 6-digit code.
 2. **Verify the code** -- `POST /v1/auth/verify-code` with the email and code. The server returns a JWT.
 
-If the email has never been seen before, an account is automatically created on first verification.
+If the email has never been seen before, an account is created on first verification and attached to the configured team -- as `owner` when it matches `PULSE_TEAM_OWNER_EMAIL`, otherwise as `member`. There is no invitation flow and no way to add someone from outside the configured domains.
+
+Every entry point into the login flow checks the domain independently, before doing anything else. A disallowed address gets `403` from `POST /v1/auth/send-code` with no verification row inserted, no rate-limit slot consumed and no email sent. `POST /v1/auth/verify-code` and `POST /v1/auth/agent-login` repeat the check before consuming a code, so a code issued before a policy change -- or inserted by hand -- cannot be redeemed afterwards.
 
 The JWT is identity-only (contains `sub` and `email`), has **no expiry** (web sessions never expire until sign-out), and is set as an HTTP cookie. Cross-subdomain auth is supported via the `COOKIE_DOMAIN` environment variable.
+
+### Per-request revalidation
+
+Nothing inside a JWT is trusted beyond its signature and subject. On every authenticated request the server reloads the user row and their team membership from the database and re-checks the **currently stored** email against the domain allowlist. A session is rejected with `401` the moment its user is gone, its email domain is no longer configured, or its membership is missing -- so withdrawing access takes effect on the next request rather than at an expiry that never comes.
+
+Agent keys get the same treatment plus one step: the key's creator (`created_by`) is loaded and revalidated too. A key whose creator was removed, or whose creator's domain is no longer allowed, stops working immediately -- no revocation sweep required.
+
+Client and import keys are the deliberate exception. They validate their own active/expiry/app scope only, because SDK ingestion must keep working without a human attached to each request.
+
+## The Team
+
+Every allowed user belongs to the same configured team. There is one role pair:
+
+| Role | Who | Authority |
+|---|---|---|
+| `owner` | Exactly one person, `PULSE_TEAM_OWNER_EMAIL` | Recovery: repair any project's owner list, revoke any key, read the team audit log |
+| `member` | Everybody else | Read everything in the team; write only in projects they own |
+
+There is no `admin` role, no team creation, renaming, deletion or leaving, no role changes, no member removal, and no team switching. The team record and its roster are read-only over the API -- see the [Teams API reference](/docs/api-reference/teams).
+
+Team ownership is **not** a write bypass. The team owner reads everything and can repair any project's owner list, but to make an ordinary change to a project they must first add themselves as one of its owners.
+
+## Project Ownership
+
+Reads are team-wide; writes are per project.
+
+- Every team member can read every active project in the team and all of its data.
+- Every project has one or more **equal owners**. Any owner may add any other team member as an owner, or remove an owner including themselves.
+- The last owner can never be removed -- that returns `409` and changes nothing.
+- Whoever creates a project becomes its first owner, atomically with the project row. For an agent key that is the human who created the key, never the key itself.
+- Ordinary project-scoped writes require ownership: project settings and deletion, apps, metric and funnel definitions, issue triage and merging, feedback triage and deletion, questionnaires and their responses, attachment deletion, project jobs, and client/import key management.
+- Non-owners keep full read access and may still **comment** on issues, feedback and questionnaire responses, and edit or delete comments they wrote themselves.
+
+Every project response carries `owners` and an `access_level` of `owner` or `viewer` for the caller. Clients must use that value rather than inferring authority from a team role. See the [Projects API reference](/docs/api-reference/projects).
 
 ## API Keys
 
@@ -26,17 +77,40 @@ API keys are used by SDKs, MCP clients, and automated systems to interact with t
 | Agent | `pulse_agent_` | MCP clients, automation | Querying data and managing resources |
 | Import | `pulse_import_` | Bulk import scripts | Historical data import via `POST /v1/import` (app-scoped) |
 
+### Agent keys inherit their creator's access
+
+An agent key is not a principal of its own -- it acts for the person who created it. A write through an agent key is allowed only when **all** of the following hold:
+
+```text
+key is active
+AND key has the route's explicit permission
+AND the creator is an active team member on an allowed email domain
+AND the creator currently owns the target project
+AND the operation is one agents are allowed to perform
+```
+
+This is an intersection, never a union: holding `projects:write` does not substitute for ownership, and ownership does not substitute for the permission. Because ownership is re-read on every request, adding or removing the creator from a project changes what their key can do on its very next call -- the key is never re-issued or reconnected.
+
 ### Storage
 
-API key secrets are stored as plaintext in the `secret` column of the `api_keys` table so they can be retrieved at any time from the **API Keys** page in the dashboard. Protect your database the same way you would protect any other production secret store.
+API key secrets are stored as plaintext in the `secret` column of the `api_keys` table so they can be retrieved from the **API Keys** page in the dashboard by whoever is entitled to them. Protect your database the same way you would protect any other production secret store.
 
-When an app is created, a client key is automatically generated. The key is returned in the `client_secret` field of the app response and is always accessible via the API Keys page.
+When an app is created, a client key is automatically generated and returned in the `client_secret` field of the app response.
 
-### Key Management
+### Credential visibility
 
-API keys are managed by users through the dashboard or the API (`POST /v1/auth/keys`). Key management operations (create, update, delete) require user authentication -- agent keys cannot manage other keys.
+Authorization decides what a key query loads, not what is stripped from the response afterwards:
 
-Each key records who created it via the `created_by` field (linked to a user). Keys support soft deletion and optional expiration (`expires_in_days`).
+- You see and manage the **agent keys you created** -- nobody else's, the team owner's included.
+- You see and manage the **client and import keys of apps in projects you own**.
+- The team owner additionally sees *metadata* for every key in the team and may revoke any of them as a recovery action, but never reads a secret they are not otherwise entitled to and never edits a key as though it were theirs.
+- A single-key `GET` is exactly as strict as the list, so knowing a key's UUID never reveals its secret.
+
+A secret you are not entitled to serializes as `null` -- never omitted, never replaced by another key's value. App and project responses return `client_secret: null` to non-owners on the same rule. Clients should render `null` as unavailable metadata, not as an empty credential to copy.
+
+`POST /v1/auth/default-agent-key` finds or creates a key belonging to **the calling user**, so two colleagues never receive each other's agent secret.
+
+Each key records who created it via `created_by`. Keys support soft deletion and optional expiration (`expires_in_days`).
 
 ## Permissions
 
@@ -45,17 +119,17 @@ Each API key has a `permissions` array that controls what it can do. Permissions
 | Permission | Client | Agent | Import | Description |
 |---|---|---|---|---|
 | `events:write` | Yes | -- | Yes | Ingest events and identity claims |
-| `users:write` | Yes | Yes | Yes | Claim anonymous users and set user properties |
+| `users:write` | Yes | -- | Yes | Claim anonymous users and set user properties (SDK ingestion only -- agent keys cannot hold it) |
 | `events:read` | -- | Yes | -- | Query events |
 | `funnels:read` | -- | Yes | -- | Read funnel definitions and analytics |
-| `funnels:write` | -- | Yes | -- | Create and update funnel definitions |
+| `funnels:write` | -- | Yes | -- | Create, update and delete funnel definitions |
 | `apps:read` | -- | Yes | -- | List and get apps |
 | `apps:write` | -- | Yes | -- | Create and update apps |
 | `projects:read` | -- | Yes | -- | List and get projects |
 | `projects:write` | -- | Yes | -- | Create and update projects |
 | `metrics:read` | -- | Yes | -- | Read metric definitions and query metrics |
-| `metrics:write` | -- | Yes | -- | Create and update metric definitions |
-| `audit_logs:read` | -- | Yes | -- | View audit log entries |
+| `metrics:write` | -- | Yes | -- | Create, update and delete metric definitions |
+| `audit_logs:read` | -- | Yes | -- | View audit log entries (the key's creator must be the team owner) |
 | `jobs:read` | -- | Yes | -- | List and get background job runs |
 | `jobs:write` | -- | Yes | -- | Trigger and cancel background jobs |
 | `issues:read` | -- | Yes | -- | List and get issues and comments |
@@ -67,49 +141,47 @@ Each API key has a `permissions` array that controls what it can do. Permissions
 
 **Default permissions**: Keys are created with all permissions allowed for their type. Custom permissions can be specified at creation time.
 
-Routes enforce permissions via the `requirePermission()` middleware. Users authenticated with a JWT bypass permission checks -- their access is governed by team role instead.
+Routes enforce permissions via the `requirePermission()` middleware. A JWT user carries no permission array, so that check does not apply to them -- but it grants no write authority either. Project ownership is checked independently for every project-scoped mutation, whether the caller is a person or a key.
 
-### Restrictions
+### Human-only operations
 
-Certain operations are user-only regardless of API key permissions:
+These are refused with `403` for **every** agent key, even one whose creator owns the project and whose permissions are complete:
 
-- Deleting apps and projects (agent keys receive 403)
-- Managing API keys (create, update, delete)
-- Team management (members, invitations, settings)
+- changing a project's owner list;
+- deleting a project, an app, a feedback item, a questionnaire, a questionnaire response, or an attachment;
+- deleting a comment written by anyone other than that exact key;
+- listing, updating or revoking API keys. Creating an **import** key for an app in an owned project is the one exception, and its secret is returned only in that create response.
 
-## Team Roles
+Agents *may*, with ownership and the right permission: create and update projects, apps, metric/funnel definitions and questionnaires; delete metric and funnel definitions; merge issues and change issue, feedback and questionnaire-response status; trigger and cancel project jobs; and create comments plus edit or delete comments that exact key wrote.
 
-Users belong to teams with one of three roles:
+## Comments
 
-| Role | Level | Can Manage |
-|---|---|---|
-| `owner` | 3 (highest) | Everything, including promoting others to owner |
-| `admin` | 2 | Members, invitations, resources |
-| `member` | 1 | Read access, limited write access |
+Comments are the one exception to the ownership rule, so that a colleague who does not own a project can still collaborate on it:
 
-Role hierarchy is strictly enforced: you can only manage users with a lower role than your own. The last owner of a team cannot be demoted or removed.
+- any team member may comment on any issue, feedback item or questionnaire response they can read, and may edit or delete their own comments;
+- a human project owner may **delete** any comment in their project for moderation, but may never **edit** someone else's;
+- an agent key may edit or delete only comments that exact key authored -- not its creator's human comments, and not another key's, even under the same creator.
 
-Users can belong to multiple teams. The dashboard includes a team switcher when you have more than one team; agent keys are scoped to a single team, so an agent working across teams needs one key per team.
+The exception replaces only the ownership check. Authentication, team membership, resource containment and the key's explicit permission (`issues:write`, `feedback:write`, `questionnaires:write`) all still apply.
 
-## Team Invitations
+## Response Codes
 
-New members are added via email invitations, not directly:
+| Code | Meaning |
+|---|---|
+| `401` | No credential, an invalid one, an identity that no longer passes the domain/membership check, or an agent key whose creator does not |
+| `403` | You can see the resource but lack ownership, the explicit key permission, the required principal type, or recovery authority |
+| `404` | The resource does not exist, is soft-deleted, belongs to another team, or does not belong to the parent named in the URL |
+| `409` | Removing that owner would leave the project with none |
 
-1. An admin or owner sends an invitation via `POST /teams/:teamId/invitations`
-2. The invitee receives an email with a token-based accept link
-3. The invitee visits the link, authenticates (or creates an account), and joins the team
-
-Invitations expire after **7 days** and can be re-sent (which regenerates the token). The public route `GET /invites/:token` shows invitation details without requiring authentication.
-
-When a member is removed from a team, their agent API keys for that team are automatically revoked.
+Cross-team and mismatched-parent resources always read as `404`, so error codes cannot be used to probe for things you cannot see.
 
 ## Auth Flow Summary
 
 | Actor | Auth Method | Access Control |
 |---|---|---|
-| Dashboard user | JWT (email verification) | Team role (owner > admin > member) |
-| SDK (client) | `pulse_client_` API key | `permissions` array on the key |
-| MCP client / automation (agent) | `pulse_agent_` API key | `permissions` array on the key |
+| Dashboard user | JWT (email verification, allowed domain) | Team-wide reads; writes need project ownership |
+| SDK (client) | `pulse_client_` API key | `permissions` array on the key, scoped to its app |
+| MCP client / automation (agent) | `pulse_agent_` API key | `permissions` array plus its creator's current project ownership |
 | Bulk import script | `pulse_import_` API key | `permissions` array on the key (app-scoped) |
 
 For agent authentication details, see the [MCP setup guide](/docs/mcp/setup). For API details, see the [authentication API reference](/docs/api-reference/authentication).

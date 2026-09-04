@@ -1,15 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import type { FastifyInstance } from "fastify";
+import postgres from "postgres";
 import {
   setupTestDb,
   buildApp,
   truncateAll,
   seedTestData,
   getTokenAndTeamId,
+  createUserAndGetToken,
+  addTeamMember,
   createAgentKey,
+  TEST_DB_URL,
 } from "./setup.js";
 
 let app: FastifyInstance;
+let client: postgres.Sql;
 let token: string;
 let teamId: string;
 let projectId: string;
@@ -17,9 +22,11 @@ let projectId: string;
 beforeAll(async () => {
   await setupTestDb();
   app = await buildApp();
+  client = postgres(TEST_DB_URL, { max: 1 });
 }, 60_000);
 
 afterAll(async () => {
+  await client.end();
   await app.close();
 });
 
@@ -108,6 +115,23 @@ describe("Job Routes", () => {
 
       expect(res.statusCode).toBe(200);
     });
+
+    it("lets an ordinary member read the team's run history", async () => {
+      // The run list is an aggregate read over projects the member can already
+      // read, so it is not owner-only. It is also not a mutation path — the
+      // trigger test below proves that half separately.
+      const member = await createUserAndGetToken(app, "jobs-reader@pulse.pubky.org");
+      await addTeamMember(teamId, member.userId, "member");
+
+      const res = await app.inject({
+        method: "GET",
+        url: `/v1/teams/${teamId}/jobs`,
+        headers: { authorization: `Bearer ${member.token}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().job_runs).toBeInstanceOf(Array);
+    });
   });
 
   describe("POST /v1/teams/:teamId/jobs/trigger", () => {
@@ -128,6 +152,22 @@ describe("Job Routes", () => {
       expect(body.job_run.team_id).toBe(teamId);
       expect(body.job_run.project_id).toBe(projectId);
       expect(["pending", "running", "completed"]).toContain(body.job_run.status);
+    });
+
+    it("still refuses a trigger from a member who does not own the project", async () => {
+      // Opening the run *list* to every member must not open triggering with
+      // it: a write into someone else's project stays a 403.
+      const member = await createUserAndGetToken(app, "jobs-viewer@pulse.pubky.org");
+      await addTeamMember(teamId, member.userId, "member");
+
+      const res = await app.inject({
+        method: "POST",
+        url: `/v1/teams/${teamId}/jobs/trigger`,
+        headers: { authorization: `Bearer ${member.token}` },
+        payload: { job_type: "stats_aggregate_daily", project_id: projectId },
+      });
+
+      expect(res.statusCode).toBe(403);
     });
 
     it("rejects system job types", async () => {
@@ -205,6 +245,49 @@ describe("Job Routes", () => {
       });
       expect(second.statusCode).toBe(409);
       expect(second.json().error).toContain("already running or pending");
+    });
+
+    it("rejects a parameter the job type does not declare", async () => {
+      // Nothing validated the params bag before, so any key at all reached the
+      // handler. Only `JOB_TYPE_META[job_type].params` names are accepted.
+      const res = await app.inject({
+        method: "POST",
+        url: `/v1/teams/${teamId}/jobs/trigger`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          job_type: "stats_aggregate_daily",
+          project_id: projectId,
+          params: { not_a_real_param: "x" },
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toContain("not_a_real_param");
+      const rows = await client`SELECT id FROM job_runs WHERE project_id = ${projectId}`;
+      expect(rows).toHaveLength(0);
+    });
+
+    it("keeps declared params but pins project_id to the authorized project", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: `/v1/teams/${teamId}/jobs/trigger`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          job_type: "stats_aggregate_daily",
+          project_id: projectId,
+          params: { start: "2026-01-01", end: "2026-01-02", project_id: null },
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const [row] = await client`
+        SELECT params FROM job_runs WHERE id = ${res.json().job_run.id}
+      `;
+      expect(row.params).toMatchObject({
+        start: "2026-01-01",
+        end: "2026-01-02",
+        project_id: projectId,
+      });
     });
 
     it("supports notify flag", async () => {
@@ -317,6 +400,25 @@ describe("Job Routes", () => {
 
       // Should be 400 since the job already completed
       expect([400, 200]).toContain(res.statusCode);
+    });
+
+    it("returns 404 for a run with no team and no project", async () => {
+      // A scheduled system run carries neither, so it has no project ownership
+      // to authorize against and is not addressable here at all — the same
+      // answer GET /v1/jobs/:runId gives for a system run.
+      const [run] = await client`
+        INSERT INTO job_runs (job_type, status, team_id, project_id, triggered_by)
+        VALUES ('db_pruning', 'running', ${null}, ${null}, 'schedule')
+        RETURNING id
+      `;
+
+      const res = await app.inject({
+        method: "POST",
+        url: `/v1/jobs/${run.id}/cancel`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(res.statusCode).toBe(404);
     });
   });
 });

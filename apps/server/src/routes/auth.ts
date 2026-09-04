@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and, inArray, isNull, gte, lt, sql } from "drizzle-orm";
+import { eq, and, inArray, isNull, or, gte, lt, sql } from "drizzle-orm";
 import { users, teams, teamMembers, apiKeys, apps, emailVerificationCodes } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 import { API_KEY_PREFIX, DEFAULT_API_KEY_PERMISSIONS, validatePermissionsForKeyType, generateApiKeySecret, generateVerificationCode, hashVerificationCode } from "@pubky-pulse/shared";
 import type { ApiKeyType } from "@pubky-pulse/shared";
 import type {
@@ -13,13 +14,16 @@ import type {
   Permission,
   UserPreferences,
 } from "@pubky-pulse/shared";
-import { mergeUserPreferences, NOTIFICATION_TYPES, NOTIFICATION_CHANNELS, SPARKLINE_WINDOW_DAYS, MAGNITUDE_WINDOW_HOURS } from "@pubky-pulse/shared";
+import { mergeUserPreferences, isEmailDomainAllowed, normalizeEmail, NOTIFICATION_TYPES, NOTIFICATION_CHANNELS, SPARKLINE_WINDOW_DAYS, MAGNITUDE_WINDOW_HOURS } from "@pubky-pulse/shared";
 import type { NotificationChannel } from "@pubky-pulse/shared";
-import { requireAuth, hasTeamAccess, getAuthTeamIds, getUserTeamMemberships, assertTeamRole } from "../middleware/auth.js";
-import type { UserJwtPayload } from "../types.js";
+import { requireAuth, hasTeamAccess, getAuthTeamIds, getUserTeamMemberships } from "../middleware/auth.js";
+import type { UserContext, UserJwtPayload } from "../types.js";
 import { serializeApiKey } from "../utils/serialize.js";
+import { applyProjectWrite, resolveAppInProject } from "../utils/project-access.js";
+import { getOwnedProjectIds } from "../utils/project-owners.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { config } from "../config.js";
+import { deriveInitialDisplayName, findSingletonTeam } from "../services/bootstrap-team.js";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -112,11 +116,32 @@ function sanitizeUserPreferences(input: unknown): Partial<UserPreferences> {
   return out;
 }
 
-function generateSlugFromName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+/**
+ * Normalize a submitted address and check it against the configured domain
+ * allowlist.
+ *
+ * Every entry point into the login flow runs this independently, before it
+ * touches rate-limit state, inserts a code, sends mail, or consumes a code — so
+ * a code that was inserted while a domain was still allowed (or inserted by
+ * hand) cannot be redeemed afterwards.
+ */
+type EmailPolicyResult =
+  | { ok: true; email: string }
+  | { ok: false; status: 400 | 403; error: string };
+
+function checkEmailPolicy(raw: unknown): EmailPolicyResult {
+  if (!raw || typeof raw !== "string") {
+    return { ok: false, status: 400, error: "Valid email is required" };
+  }
+  const email = normalizeEmail(raw);
+  if (!email) {
+    return { ok: false, status: 400, error: "Valid email is required" };
+  }
+  if (!isEmailDomainAllowed(email, config.allowedEmailDomains)) {
+    // The address itself is never echoed back into the response or the logs.
+    return { ok: false, status: 403, error: "This email domain is not permitted to sign in" };
+  }
+  return { ok: true, email };
 }
 
 /** Consume a verification code: validates, marks used, returns true. Returns false if invalid/expired. */
@@ -148,63 +173,159 @@ async function consumeVerificationCode(db: Parameters<typeof getUserTeamMembersh
 
 type MembershipTeam = Awaited<ReturnType<typeof getUserTeamMemberships>>[0];
 
-/** Find existing user or create new user + default team. Returns user, whether new, and team memberships. */
+/**
+ * Find or create the user for an already-normalized, already-allowed address,
+ * then idempotently attach them to the configured singleton team.
+ *
+ * There are no per-user teams any more: every allowed person joins the one
+ * configured team, as `owner` when their address is the configured team owner
+ * and as `member` otherwise. An existing membership is left alone — the
+ * bootstrap owns role reconciliation — so this only ever repairs a *missing*
+ * membership, which is what makes an allowed user whose row predates the
+ * lockdown usable again on their next sign-in.
+ *
+ * No credential is generated here. Personal default agent keys stay lazily
+ * created by `POST /default-agent-key` once the person actually authenticates.
+ */
 async function findOrCreateUser(db: Parameters<typeof getUserTeamMemberships>[0], email: string): Promise<{
   user: { id: string; email: string; name: string; preferences: UserPreferences | null; created_at: Date; updated_at: Date };
   isNewUser: boolean;
   membershipTeams: MembershipTeam[];
 }> {
+  const team = await findSingletonTeam(db);
+  if (!team) {
+    throw new Error(
+      `Configured team "${config.defaultTeamSlug}" does not exist. Run the singleton-team bootstrap before serving traffic.`
+    );
+  }
+
   const [existingUser] = await db
     .select()
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
-  if (existingUser) {
-    return {
-      user: existingUser,
-      isNewUser: false,
-      membershipTeams: await getUserTeamMemberships(db, existingUser.id),
-    };
-  }
+  const user =
+    existingUser ??
+    (
+      await db
+        .insert(users)
+        .values({ email, name: deriveInitialDisplayName(email) })
+        .returning()
+    )[0];
 
-  const localPart = email.split("@")[0];
-  const name = localPart.charAt(0).toUpperCase() + localPart.slice(1);
-
-  const [newUser] = await db
-    .insert(users)
-    .values({ email, name })
-    .returning();
-
-  const slug = generateSlugFromName(name) || "team";
-  const [team] = await db
-    .insert(teams)
-    .values({ name: `${name}'s Team`, slug: `${slug}-${newUser.id.slice(0, 8)}` })
-    .returning();
-
-  await db.insert(teamMembers).values({
-    team_id: team.id,
-    user_id: newUser.id,
-    role: "owner",
-  });
-
-  // Auto-create a default agent key so MCP setup docs can pre-fill it
-  const defaultKeySecret = generateApiKeySecret("agent");
-  await db.insert(apiKeys).values({
-    secret: defaultKeySecret,
-    key_type: "agent",
-    team_id: team.id,
-    name: "Default Agent Key",
-    created_by: newUser.id,
-    permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
-  });
+  await db
+    .insert(teamMembers)
+    .values({
+      team_id: team.id,
+      user_id: user.id,
+      role: email === config.teamOwnerEmail ? "owner" : "member",
+    })
+    .onConflictDoNothing();
 
   return {
-    user: newUser,
-    isNewUser: true,
-    membershipTeams: [{ id: team.id, name: team.name, slug: team.slug, role: "owner" as const, default_agent_key: defaultKeySecret }],
+    user,
+    isNewUser: !existingUser,
+    membershipTeams: await getUserTeamMemberships(db, user.id),
   };
 }
+
+/* -------------------------------------------------------------------------
+ * API key visibility
+ *
+ * Authorization decides what is *loaded*, not what is stripped out afterwards.
+ * One predicate, `isKeyEntitled`, answers both "may this person read the
+ * secret" and "may this person update or revoke this key as its owner",
+ * because those are the same authority:
+ *
+ *   - agent keys you created yourself, and
+ *   - client/import keys belonging to an app in a project you currently own.
+ *
+ * The singleton team owner is widened on exactly two axes and no others: they
+ * may *see* every team key's metadata, and they may *revoke* any key as a
+ * recovery action. They never gain a secret they are not otherwise entitled to
+ * and never gain the update.
+ * ---------------------------------------------------------------------- */
+
+/** Everything the key predicates need about the caller, resolved once per request. */
+interface KeyAccess {
+  user_id: string;
+  is_team_owner: boolean;
+  /** Every project this person currently owns; a client/import key follows its app's project. */
+  owned_project_ids: Set<string>;
+}
+
+/** Everything the key predicates need about a key row. */
+interface KeyFacts {
+  key_type: string;
+  created_by: string | null;
+  /** The project of the key's app, joined in. Null for team-scoped agent keys. */
+  app_project_id: string | null;
+}
+
+async function resolveKeyAccess(db: Db, auth: UserContext): Promise<KeyAccess> {
+  return {
+    user_id: auth.user_id,
+    is_team_owner: auth.is_team_owner,
+    owned_project_ids: await getOwnedProjectIds(db, auth.user_id),
+  };
+}
+
+/** Entitlement: own agent keys, plus client/import keys of owned projects. */
+function isKeyEntitled(access: KeyAccess, key: KeyFacts): boolean {
+  if (key.key_type === "agent") return key.created_by === access.user_id;
+  if (key.key_type === "client" || key.key_type === "import") {
+    return key.app_project_id !== null && access.owned_project_ids.has(key.app_project_id);
+  }
+  return false;
+}
+
+/** Metadata visibility: entitlement, widened by the team owner's recovery view. */
+function isKeyVisible(access: KeyAccess, key: KeyFacts): boolean {
+  return access.is_team_owner || isKeyEntitled(access, key);
+}
+
+/**
+ * The SQL form of `isKeyEntitled`, so an ordinary member's list never selects
+ * a row they are not entitled to. Requires `apps` to be joined for
+ * `apps.project_id`.
+ */
+function entitledKeysFilter(access: KeyAccess) {
+  const ownedProjectIds = [...access.owned_project_ids];
+  return or(
+    and(eq(apiKeys.key_type, "agent"), eq(apiKeys.created_by, access.user_id)),
+    ownedProjectIds.length > 0
+      ? and(
+          inArray(apiKeys.key_type, ["client", "import"]),
+          inArray(apps.project_id, ownedProjectIds),
+        )
+      : undefined,
+  );
+}
+
+/**
+ * The columns every key response needs, plus the two joined facts the
+ * predicates above run on. Shared by list, single-get, update and revoke so
+ * that all four decide visibility from exactly the same row shape — a single
+ * route selecting less is how a stricter list ends up with a laxer detail.
+ */
+const KEY_COLUMNS = {
+  id: apiKeys.id,
+  secret: apiKeys.secret,
+  key_type: apiKeys.key_type,
+  app_id: apiKeys.app_id,
+  team_id: apiKeys.team_id,
+  name: apiKeys.name,
+  created_by: apiKeys.created_by,
+  permissions: apiKeys.permissions,
+  created_at: apiKeys.created_at,
+  updated_at: apiKeys.updated_at,
+  last_used_at: apiKeys.last_used_at,
+  expires_at: apiKeys.expires_at,
+  app_name: apps.name,
+  created_by_email: users.email,
+  app_project_id: apps.project_id,
+};
 
 export async function authRoutes(app: FastifyInstance) {
   // Prevent browsers/CDNs from caching auth responses
@@ -214,11 +335,14 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Send verification code
   app.post<{ Body: SendCodeRequest }>("/send-code", async (request, reply) => {
-    const { email } = request.body;
-
-    if (!email || typeof email !== "string" || !email.includes("@")) {
-      return reply.code(400).send({ error: "Valid email is required" });
+    // The domain check comes first, before the rate-limit read, the code
+    // insert, and the send: a disallowed address must leave no verification
+    // row, consume no rate-limit slot, and trigger no email.
+    const policy = checkEmailPolicy(request.body?.email);
+    if (!policy.ok) {
+      return reply.code(policy.status).send({ error: policy.error });
     }
+    const email = policy.email;
 
     // Rate limit: max 5 codes per email per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -270,11 +394,20 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Verify code and authenticate (web dashboard flow — returns JWT)
   app.post<{ Body: VerifyCodeRequest }>("/verify-code", async (request, reply) => {
-    const { email, code } = request.body;
+    const { email: rawEmail, code } = request.body;
 
-    if (!email || !code) {
+    if (!rawEmail || !code) {
       return reply.code(400).send({ error: "email and code required" });
     }
+
+    // Independent of the /send-code check on purpose: a code that predates a
+    // policy change, or one inserted directly into the database, must not be
+    // redeemable.
+    const policy = checkEmailPolicy(rawEmail);
+    if (!policy.ok) {
+      return reply.code(policy.status).send({ error: policy.error });
+    }
+    const email = policy.email;
 
     const valid = await consumeVerificationCode(app.db, email, code);
     if (!valid) {
@@ -292,12 +425,22 @@ export async function authRoutes(app: FastifyInstance) {
 
     reply.setCookie("token", token, COOKIE_OPTIONS);
 
-    if (isNewUser && membershipTeams.length > 0) {
-      const teamId = membershipTeams[0].id;
-      const userAuth = { type: "user" as const, user_id: user.id, email: user.email, team_memberships: [{ team_id: teamId, role: "owner" as const }] };
-      logAuditEvent(app.db, userAuth, { team_id: teamId, action: "create", resource_type: "user", resource_id: user.id });
-      logAuditEvent(app.db, userAuth, { team_id: teamId, action: "create", resource_type: "team", resource_id: teamId });
-      logAuditEvent(app.db, userAuth, { team_id: teamId, action: "create", resource_type: "team_member", resource_id: user.id, metadata: { role: "owner" } });
+    // No team is created on sign-in any more, so only the user and their
+    // membership are audited — and the membership is what a reviewer needs to
+    // see, since it is the moment a person gained access to the team.
+    const singletonMembership = membershipTeams.find((t) => t.slug === config.defaultTeamSlug);
+    if (isNewUser && singletonMembership) {
+      const teamId = singletonMembership.id;
+      const actor = {
+        type: "user" as const,
+        user_id: user.id,
+        email: user.email,
+        team_id: teamId,
+        is_team_owner: singletonMembership.role === "owner",
+        team_memberships: [{ team_id: teamId, role: singletonMembership.role }],
+      };
+      logAuditEvent(app.db, actor, { team_id: teamId, action: "create", resource_type: "user", resource_id: user.id });
+      logAuditEvent(app.db, actor, { team_id: teamId, action: "create", resource_type: "team_member", resource_id: user.id, metadata: { role: singletonMembership.role } });
     }
 
     const statusCode = isNewUser ? 201 : 200;
@@ -440,33 +583,46 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "No access to this team" });
       }
 
-      // Check for existing agent key
-      const [existing] = await app.db
-        .select({ secret: apiKeys.secret })
-        .from(apiKeys)
-        .where(and(
-          eq(apiKeys.team_id, team_id),
-          eq(apiKeys.key_type, "agent"),
-          isNull(apiKeys.deleted_at),
-        ))
-        .orderBy(apiKeys.created_at)
-        .limit(1);
+      // Scoped to `created_by = this user`. Without that predicate this
+      // returned the team's oldest agent key, i.e. handed one colleague's
+      // agent secret to every other member of the team.
+      //
+      // Find-or-create runs inside a transaction guarded by an advisory lock on
+      // (team, user) so two concurrent calls — the dashboard opening MCP setup
+      // in two tabs, say — cannot both miss and both insert a key.
+      const lockKey = `default-agent-key:${team_id}:${auth.user_id}`;
 
-      if (existing) {
-        return { secret: existing.secret, created: false };
-      }
+      const result = await app.db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`);
 
-      const secret = generateApiKeySecret("agent");
-      await app.db.insert(apiKeys).values({
-        secret,
-        key_type: "agent",
-        team_id,
-        name: "Default Agent Key",
-        created_by: auth.user_id,
-        permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
+        const [existing] = await tx
+          .select({ secret: apiKeys.secret })
+          .from(apiKeys)
+          .where(and(
+            eq(apiKeys.team_id, team_id),
+            eq(apiKeys.key_type, "agent"),
+            eq(apiKeys.created_by, auth.user_id),
+            isNull(apiKeys.deleted_at),
+          ))
+          .orderBy(apiKeys.created_at)
+          .limit(1);
+
+        if (existing) return { secret: existing.secret, created: false };
+
+        const secret = generateApiKeySecret("agent");
+        await tx.insert(apiKeys).values({
+          secret,
+          key_type: "agent",
+          team_id,
+          name: "Default Agent Key",
+          created_by: auth.user_id,
+          permissions: DEFAULT_API_KEY_PERMISSIONS.agent,
+        });
+
+        return { secret, created: true };
       });
 
-      return reply.code(201).send({ secret, created: true });
+      return reply.code(result.created ? 201 : 200).send(result);
     }
   );
 
@@ -492,32 +648,28 @@ export async function authRoutes(app: FastifyInstance) {
         return { api_keys: [] };
       }
 
+      const access = await resolveKeyAccess(app.db, auth);
+
       const rows = await app.db
-        .select({
-          id: apiKeys.id,
-          secret: apiKeys.secret,
-          key_type: apiKeys.key_type,
-          app_id: apiKeys.app_id,
-          team_id: apiKeys.team_id,
-          name: apiKeys.name,
-          created_by: apiKeys.created_by,
-          permissions: apiKeys.permissions,
-          created_at: apiKeys.created_at,
-          updated_at: apiKeys.updated_at,
-          last_used_at: apiKeys.last_used_at,
-          expires_at: apiKeys.expires_at,
-          app_name: apps.name,
-          created_by_email: users.email,
-        })
+        .select(KEY_COLUMNS)
         .from(apiKeys)
         .leftJoin(apps, eq(apiKeys.app_id, apps.id))
         .leftJoin(users, eq(apiKeys.created_by, users.id))
         .where(
-          and(inArray(apiKeys.team_id, teamIds), isNull(apiKeys.deleted_at))
+          and(
+            inArray(apiKeys.team_id, teamIds),
+            isNull(apiKeys.deleted_at),
+            // The team owner's list carries every team key's metadata for
+            // recovery; everyone else's query never even loads a row they are
+            // not entitled to. Either way the secret is decided per row below.
+            access.is_team_owner ? undefined : entitledKeysFilter(access),
+          )
         );
 
       return {
-        api_keys: rows.map(serializeApiKey),
+        api_keys: rows.map((row) =>
+          serializeApiKey(row, { canReadSecret: isKeyEntitled(access, row) })
+        ),
       };
     }
   );
@@ -532,19 +684,26 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "Only users can view API keys" });
       }
 
+      const access = await resolveKeyAccess(app.db, auth);
+
       const [key] = await app.db
-        .select()
+        .select(KEY_COLUMNS)
         .from(apiKeys)
+        .leftJoin(apps, eq(apiKeys.app_id, apps.id))
+        .leftJoin(users, eq(apiKeys.created_by, users.id))
         .where(
           and(eq(apiKeys.id, request.params.id), isNull(apiKeys.deleted_at))
         )
         .limit(1);
 
-      if (!key || !hasTeamAccess(auth, key.team_id)) {
+      // Single-key visibility is exactly the list's, so knowing a key's UUID
+      // never reveals a secret. A key the caller may not see is reported as
+      // one that does not exist — a 403 here would confirm it does.
+      if (!key || !hasTeamAccess(auth, key.team_id) || !isKeyVisible(access, key)) {
         return reply.code(404).send({ error: "API key not found" });
       }
 
-      return { api_key: serializeApiKey(key) };
+      return { api_key: serializeApiKey(key, { canReadSecret: isKeyEntitled(access, key) }) };
     }
   );
 
@@ -564,27 +723,29 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "At least one field to update is required" });
       }
 
+      const access = await resolveKeyAccess(app.db, auth);
+
       const [key] = await app.db
-        .select({
-          id: apiKeys.id,
-          team_id: apiKeys.team_id,
-          key_type: apiKeys.key_type,
-          name: apiKeys.name,
-          permissions: apiKeys.permissions,
-        })
+        .select(KEY_COLUMNS)
         .from(apiKeys)
+        .leftJoin(apps, eq(apiKeys.app_id, apps.id))
+        .leftJoin(users, eq(apiKeys.created_by, users.id))
         .where(
           and(eq(apiKeys.id, request.params.id), isNull(apiKeys.deleted_at))
         )
         .limit(1);
 
-      if (!key || !hasTeamAccess(auth, key.team_id)) {
+      if (!key || !hasTeamAccess(auth, key.team_id) || !isKeyVisible(access, key)) {
         return reply.code(404).send({ error: "API key not found" });
       }
 
-      const roleError = assertTeamRole(auth, key.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
+      // The team owner can see this key and can revoke it, but recovery
+      // authority is not an ownership claim: it never edits a key as though it
+      // were theirs.
+      if (!isKeyEntitled(access, key)) {
+        return reply.code(403).send({
+          error: "Requires ownership of this key or of its app's project",
+        });
       }
 
       if (permissions) {
@@ -617,7 +778,8 @@ export async function authRoutes(app: FastifyInstance) {
         });
       }
 
-      return { api_key: serializeApiKey(updated) };
+      // Only an entitled caller reaches this line, so the secret is theirs.
+      return { api_key: serializeApiKey(updated, { canReadSecret: true }) };
     }
   );
 
@@ -631,21 +793,24 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "Only users can delete API keys" });
       }
 
+      const access = await resolveKeyAccess(app.db, auth);
+
       const [key] = await app.db
-        .select()
+        .select(KEY_COLUMNS)
         .from(apiKeys)
+        .leftJoin(apps, eq(apiKeys.app_id, apps.id))
+        .leftJoin(users, eq(apiKeys.created_by, users.id))
         .where(
           and(eq(apiKeys.id, request.params.id), isNull(apiKeys.deleted_at))
         )
         .limit(1);
 
-      if (!key || !hasTeamAccess(auth, key.team_id)) {
+      // Revocation is the one action the team owner's recovery authority
+      // performs, so visibility is the whole check here: an entitled caller
+      // revokes their own key, and the team owner may revoke any team key
+      // without ever being able to read or edit it.
+      if (!key || !hasTeamAccess(auth, key.team_id) || !isKeyVisible(access, key)) {
         return reply.code(404).send({ error: "API key not found" });
-      }
-
-      const deleteKeyRoleError = assertTeamRole(auth, key.team_id, "admin");
-      if (deleteKeyRoleError) {
-        return reply.code(403).send({ error: deleteKeyRoleError });
       }
 
       await app.db
@@ -672,7 +837,9 @@ export async function authRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const auth = request.auth;
 
-      // Agent keys can create import keys; all other key types require user auth
+      // Agent keys can create import keys; every other key type requires user
+      // auth. A client or import key can therefore never enter this route —
+      // nor any other key-management route, all of which are user-only.
       if (auth.type === "api_key") {
         if (auth.key_type !== "agent") {
           return reply.code(403).send({ error: "Only users or agent keys can create API keys" });
@@ -708,33 +875,35 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "Agent keys require a team_id or app_id" });
       }
 
-      // Resolve team from app or body
+      // Resolve the team from the app or the body. There is no team-role gate
+      // on creation any more: an agent key belongs to the person who creates
+      // it and carries only that person's access, so any member may mint their
+      // own. What is gated is minting a credential *for a project* — see below.
       let resolvedTeamId: string;
 
       if (app_id) {
-        const [appRecord] = await app.db
-          .select()
-          .from(apps)
-          .where(and(eq(apps.id, app_id), isNull(apps.deleted_at)))
-          .limit(1);
+        // The app is resolved together with the project that contains it, so a
+        // key can never be minted against an app the caller cannot reach; a
+        // cross-team app id stays indistinguishable from a missing one.
+        const contained = await resolveAppInProject(app, { appId: app_id }, auth, reply);
+        if (!contained) return;
 
-        if (!appRecord || !hasTeamAccess(auth, appRecord.team_id)) {
-          return reply.code(404).send({ error: "App not found" });
+        // A client or import key is a credential for that app's project, so
+        // minting one is an ordinary project write: the project's owner list
+        // decides, and an agent additionally needs `apps:write` and its
+        // creator's current ownership. An agent key scoped to an app is not a
+        // project credential — it carries only its creator's own access — so
+        // it needs nothing beyond the team membership proved above.
+        if (key_type === "client" || key_type === "import") {
+          if (!applyProjectWrite(contained, auth, reply, { permission: "apps:write" })) return;
         }
-        resolvedTeamId = appRecord.team_id;
+
+        resolvedTeamId = contained.project.team_id;
       } else {
         if (!hasTeamAccess(auth, team_id!)) {
           return reply.code(403).send({ error: "Not a member of this team" });
         }
         resolvedTeamId = team_id!;
-      }
-
-      // Role check only applies to user auth (agent keys use permission-based auth)
-      if (auth.type === "user") {
-        const keyRoleError = assertTeamRole(auth, resolvedTeamId, "admin");
-        if (keyRoleError) {
-          return reply.code(403).send({ error: keyRoleError });
-        }
       }
 
       const permissions = requestedPermissions ?? DEFAULT_API_KEY_PERMISSIONS[key_type];
@@ -773,19 +942,31 @@ export async function authRoutes(app: FastifyInstance) {
         metadata: { key_type, name },
       });
 
+      // The one response that carries a freshly minted secret. An agent that
+      // created an import key sees it here and nowhere else: it cannot list,
+      // read, update or revoke keys afterwards.
       return reply.code(201).send({
-        api_key: serializeApiKey(apiKey),
+        api_key: serializeApiKey(apiKey, { canReadSecret: true }),
       });
     }
   );
 
   // Agent login — verify code + provision agent API key in one step (no JWT)
   app.post<{ Body: AgentLoginRequest }>("/agent-login", async (request, reply) => {
-    const { email, code, team_id } = request.body;
+    const { email: rawEmail, code, team_id } = request.body;
 
-    if (!email || !code) {
+    if (!rawEmail || !code) {
       return reply.code(400).send({ error: "email and code required" });
     }
+
+    // This route consumes codes and creates users exactly like /verify-code, so
+    // it enforces exactly the same domain policy. Skipping it here would leave
+    // the entire lockdown bypassable through the agent bootstrap flow.
+    const policy = checkEmailPolicy(rawEmail);
+    if (!policy.ok) {
+      return reply.code(policy.status).send({ error: policy.error });
+    }
+    const email = policy.email;
 
     const valid = await consumeVerificationCode(app.db, email, code);
     if (!valid) {
@@ -821,6 +1002,8 @@ export async function authRoutes(app: FastifyInstance) {
       type: "user" as const,
       user_id: agentUser.id,
       email: agentUser.email,
+      team_id: targetTeam.id,
+      is_team_owner: targetTeam.role === "owner",
       team_memberships: [{ team_id: targetTeam.id, role: targetTeam.role }],
     };
 

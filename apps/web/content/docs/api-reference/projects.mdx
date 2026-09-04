@@ -1,13 +1,28 @@
 ---
 title: Projects
-description: CRUD endpoints for managing projects — create, list, get, update, and delete projects within teams.
+description: Endpoints for managing projects and their owner lists — create, list, get, update, delete, and add or remove project owners.
 ---
 
-Create, list, get, update, and delete projects. Projects group related apps across platforms (e.g., a "MyApp" project containing iOS, Android, and web apps).
+Create, list, get, update, and delete projects, and manage who owns them. Projects group related apps across platforms (e.g., a "MyApp" project containing iOS, Android, and web apps).
+
+## Reads and writes
+
+Every member of the team can **read** every active project. **Writing** to a project requires being one of its owners.
+
+Every project response therefore carries two access fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `owners` | array | `{ user_id, name, email }` for each owner. Visible to every team member. |
+| `access_level` | string | `owner` or `viewer` — the caller's own effective access to this project. |
+
+For an agent key, `access_level` describes the human who created the key, because that is whose ownership authorizes its writes. Use this field rather than inferring authority from a team role. A write attempted as a `viewer` returns `403 Requires project ownership` and changes nothing.
+
+`client_secret` on a nested app is `null` unless the caller owns the project — including for the team owner, who does not gain secrets by being the team owner. See [Authentication & Access Control](/docs/concepts/authentication).
 
 ## GET /v1/projects
 
-List all projects the caller has access to.
+List all projects in the team. Every team member sees every project, owned or not.
 
 **Auth required:** Yes (`projects:read` permission or JWT)
 
@@ -37,6 +52,10 @@ List all projects the caller has access to.
       "effective_attachment_project_quota_bytes": 5368709120,
       "issue_alert_frequency": null,
       "effective_issue_alert_frequency": "daily",
+      "owners": [
+        { "user_id": "uuid", "name": "Owner", "email": "owner@example.com" }
+      ],
+      "access_level": "owner",
       "created_at": "2024-01-01T00:00:00.000Z"
     }
   ]
@@ -69,6 +88,10 @@ Get a single project with its apps.
   "effective_attachment_project_quota_bytes": 5368709120,
   "issue_alert_frequency": null,
   "effective_issue_alert_frequency": "daily",
+  "owners": [
+    { "user_id": "uuid", "name": "Owner", "email": "owner@example.com" }
+  ],
+  "access_level": "viewer",
   "created_at": "2024-01-01T00:00:00.000Z",
   "apps": [
     {
@@ -78,18 +101,22 @@ Get a single project with its apps.
       "name": "iOS App",
       "platform": "apple",
       "bundle_id": "com.example.myapp",
-      "client_secret": "pulse_client_abc123...",
+      "client_secret": null,
       "created_at": "2024-01-01T00:00:00.000Z"
     }
   ]
 }
 ```
 
+`client_secret` is `null` here because `access_level` is `viewer`. An owner receives the real value.
+
 ## POST /v1/projects
 
-Create a new project within a team.
+Create a new project. **Any team member may create one**, and the creator becomes its first owner — the project row and the first owner row are inserted in a single transaction, so a project is never left ownerless.
 
-**Auth required:** Yes (`projects:write` permission or JWT, admin role required)
+**Auth required:** Yes (`projects:write` permission or JWT)
+
+For an agent key the first owner is the key's creator, never the key. Client and import keys have no human actor and receive `403`.
 
 ```json
 // Request
@@ -113,6 +140,10 @@ Create a new project within a team.
   "effective_retention_days_events": 90,
   "effective_retention_days_metrics": 365,
   "effective_retention_days_funnels": 365,
+  "owners": [
+    { "user_id": "uuid", "name": "Creator", "email": "creator@example.com" }
+  ],
+  "access_level": "owner",
   "created_at": "2024-01-01T00:00:00.000Z"
 }
 ```
@@ -138,7 +169,7 @@ Returns `409` if an active project with the same slug already exists.
 
 Update a project's name, color, or data retention policies.
 
-**Auth required:** Yes (`projects:write` permission or JWT, admin role required)
+**Auth required:** Yes (`projects:write` permission or JWT) **and project ownership.** A viewer receives `403`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -173,6 +204,10 @@ At least one field must be provided.
   "effective_retention_days_events": 60,
   "effective_retention_days_metrics": 365,
   "effective_retention_days_funnels": 365,
+  "owners": [
+    { "user_id": "uuid", "name": "Owner", "email": "owner@example.com" }
+  ],
+  "access_level": "owner",
   "created_at": "2024-01-01T00:00:00.000Z"
 }
 ```
@@ -181,7 +216,9 @@ At least one field must be provided.
 
 Soft-delete a project and cascade to its apps, API keys, metric definitions, and funnel definitions.
 
-**Auth required:** Yes (JWT only, admin role required. Agent keys receive 403.)
+**Auth required:** Yes (JWT only — agent keys receive `403`) **and project ownership.**
+
+One recovery exception: the team owner may delete a project that has **no owners at all**, so an orphaned project can still be cleaned up. Team ownership is not a general delete bypass — for a project that still has owners, the team owner must add themselves as an owner first.
 
 ```json
 // Response (200)
@@ -189,3 +226,79 @@ Soft-delete a project and cascade to its apps, API keys, metric definitions, and
   "deleted": true
 }
 ```
+
+## Project Owners
+
+A project's owners are equal peers: any of them may add or remove any other, including themselves, as long as one owner remains. Two rules sit on top.
+
+**Owner-list changes are human-only.** An agent key inherits its creator's project access for ordinary writes but can never change who holds that access, so all three routes below reject agent, client and import keys with `403`.
+
+**The team owner has recovery authority here** even without owning the project, so an ownerless project can be re-owned. That authority is scoped to this list and confers no ordinary project write.
+
+All three routes return the same body: the full owner list plus the caller's resulting `access_level`.
+
+### GET /v1/projects/:projectId/owners
+
+Read a project's owners. Every team member may read it — that is how a viewer discovers who can act on the project.
+
+**Auth required:** Yes (`projects:read` permission or JWT)
+
+```json
+// Response (200)
+{
+  "owners": [
+    { "user_id": "uuid", "name": "Owner", "email": "owner@example.com" },
+    { "user_id": "uuid", "name": "Co-owner", "email": "co-owner@example.com" }
+  ],
+  "access_level": "owner"
+}
+```
+
+### PUT /v1/projects/:projectId/owners/:userId
+
+Add an existing team member as an owner. **Idempotent** — re-adding a current owner is a successful no-op, so a retried request never turns into an error the client has to interpret.
+
+**Auth required:** Yes (JWT only) **and project ownership**, or team-owner recovery.
+
+No request body. Returns `404 User not found in this team` when `:userId` is not on the roster: there is no outside-user invitation path, and a `404` here keeps the endpoint from being used to probe for user IDs.
+
+```json
+// Response (200)
+{
+  "owners": [
+    { "user_id": "uuid", "name": "Owner", "email": "owner@example.com" },
+    { "user_id": "uuid", "name": "New Owner", "email": "new-owner@example.com" }
+  ],
+  "access_level": "owner"
+}
+```
+
+The new owner's existing sessions and agent keys gain write access on their **next request**. Nothing has to be re-issued.
+
+### DELETE /v1/projects/:projectId/owners/:userId
+
+Remove an owner, including yourself.
+
+**Auth required:** Yes (JWT only) **and project ownership**, or team-owner recovery.
+
+| Status | Meaning |
+|---|---|
+| `200` | Removed. The response carries the remaining owners and your resulting `access_level` — which is `viewer` if you removed yourself. |
+| `404` | That user is not an owner of this project. |
+| `409` | A project must keep at least one owner. Nothing was changed. |
+
+Counting and deleting happen together under a database lock, so two concurrent removals cannot both succeed and leave the project with zero owners.
+
+```json
+// Response (200)
+{
+  "owners": [
+    { "user_id": "uuid", "name": "Owner", "email": "owner@example.com" }
+  ],
+  "access_level": "viewer"
+}
+```
+
+The removed owner's existing sessions and agent keys lose write access on their next request; reads keep working.
+
+Owner additions and removals are recorded in the [team audit log](/docs/api-reference/teams) as `project_owner` entries.

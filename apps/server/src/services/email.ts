@@ -1,13 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-export interface TeamInvitationEmailParams {
-  team_name: string;
-  invited_by_name: string;
-  role: string;
-  accept_url: string;
-}
-
 export interface JobAlertEmailParams {
   job_type: string;
   status: string;
@@ -37,7 +30,6 @@ export interface GenericNotificationParams {
 
 export interface EmailService {
   sendVerificationCode(email: string, code: string): Promise<void>;
-  sendTeamInvitation(email: string, params: TeamInvitationEmailParams): Promise<void>;
   sendJobAlert(email: string, params: JobAlertEmailParams): Promise<void>;
   sendIssueDigest(email: string, params: IssueDigestEmailParams): Promise<void>;
   /** Plain notification email for types without a richer template (e.g. feedback.new). */
@@ -56,7 +48,6 @@ export function jobStatusEmoji(status: string): string {
 /** Project root — 4 levels up from apps/server/src/services/ */
 const PROJECT_ROOT = resolve(import.meta.dirname, "../../../..");
 const DEV_CODE_PATH = resolve(PROJECT_ROOT, ".dev-verification-code");
-const DEV_INVITATION_PATH = resolve(PROJECT_ROOT, ".dev-invitation-link");
 
 export class ConsoleEmailService implements EmailService {
   async sendVerificationCode(email: string, code: string): Promise<void> {
@@ -67,25 +58,6 @@ export class ConsoleEmailService implements EmailService {
       writeFileSync(DEV_CODE_PATH, JSON.stringify({ email, code, timestamp: new Date().toISOString() }) + "\n");
     } catch {
       // Non-critical — don't break auth if file write fails
-    }
-  }
-
-  async sendTeamInvitation(email: string, params: TeamInvitationEmailParams): Promise<void> {
-    console.log(`\n========================================`);
-    console.log(`  Team invitation for ${email}`);
-    console.log(`  Team: ${params.team_name} | Role: ${params.role}`);
-    console.log(`  Invited by: ${params.invited_by_name}`);
-    console.log(`  Accept: ${params.accept_url}`);
-    console.log(`========================================\n`);
-    try {
-      writeFileSync(DEV_INVITATION_PATH, JSON.stringify({
-        email,
-        team_name: params.team_name,
-        accept_url: params.accept_url,
-        timestamp: new Date().toISOString(),
-      }) + "\n");
-    } catch {
-      // Non-critical
     }
   }
 
@@ -147,14 +119,6 @@ export class ResendEmailService implements EmailService {
       `<p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0;">${code}</p>`,
       `<p>Pass this code to your AI agent to authenticate it, or enter it in the dashboard to sign in.</p>`,
       `<p style="color:#888;font-size:13px;">This code expires in 10 minutes.</p>`,
-    ].join(""));
-  }
-
-  async sendTeamInvitation(email: string, params: TeamInvitationEmailParams): Promise<void> {
-    await this.sendEmail(email, `You've been invited to join ${params.team_name} on Pubky Pulse`, [
-      `<p><strong>${escapeHtml(params.invited_by_name)}</strong> invited you to join <strong>${escapeHtml(params.team_name)}</strong> as <strong>${escapeHtml(params.role)}</strong>.</p>`,
-      `<p><a href="${escapeHtml(params.accept_url)}" style="display:inline-block;padding:12px 24px;background:#e8590c;color:#fff;text-decoration:none;border-radius:6px;">Accept Invitation</a></p>`,
-      `<p style="color:#888;font-size:13px;">This invitation expires in 7 days.</p>`,
     ].join(""));
   }
 

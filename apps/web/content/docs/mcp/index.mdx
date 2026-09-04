@@ -34,7 +34,11 @@ See [Setup](/docs/mcp/setup) for the equivalent config in every other supported 
 
 It uses the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) in stateless JSON mode — each request is independent, no session management needed.
 
-Agents authenticate with a `pulse_agent_*` API key passed as a Bearer token. The endpoint forwards each tool call to the corresponding REST route internally, so all existing permission checks and validation apply.
+Agents authenticate with a `pulse_agent_*` API key passed as a Bearer token. The endpoint forwards each tool call to the corresponding REST route internally, so REST stays the single enforcement boundary — every permission, ownership and validation check applies identically whether a call arrives over MCP or HTTP.
+
+## Access model
+
+Reads are wide and writes are narrow. A key reads every project in the configured team, but an ordinary write additionally requires the **human who created the key** to currently own the target project — and that is re-read on every request, so adding or removing them takes effect on the next tool call with no key re-issued. `create-project` makes the creator the new project's first owner. Changing an owner list, and deleting projects, apps, feedback, questionnaires, responses, attachments or another author's comment, are human-only and always return `403` to an agent. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow) for the full rule.
 
 The endpoint needs only a URL and an API key pasted into your editor's config file once — no package to install, no periodic updates, and no interactive login flow.
 

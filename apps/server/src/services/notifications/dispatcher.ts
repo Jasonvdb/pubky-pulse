@@ -4,8 +4,10 @@ import type { Db } from "@pubky-pulse/db";
 import {
   NOTIFICATION_CHANNELS,
   isChannelEnabled,
+  isEmailDomainAllowed,
   type NotificationChannel,
 } from "@pubky-pulse/shared";
+import { config } from "../../config.js";
 import type { JobRunner } from "../job-runner.js";
 import type {
   ChannelAdapter,
@@ -47,10 +49,21 @@ export class NotificationDispatcher {
     if (input.userIds.length === 0) return result;
 
     const uniqueUserIds = Array.from(new Set(input.userIds));
-    const userRows = await this.opts.db
+    const candidateRows = await this.opts.db
       .select({ id: users.id, email: users.email, preferences: users.preferences })
       .from(users)
       .where(inArray(users.id, uniqueUserIds));
+
+    // The delivery chokepoint for the email-domain allowlist. HTTP requests
+    // revalidate the stored address on every call (`revalidateUserIdentity`),
+    // but notifications are produced by jobs and by unauthenticated ingest, so
+    // a user whose domain was dropped from PULSE_ALLOWED_EMAIL_DOMAINS would
+    // otherwise keep receiving internal project data. Filtering before the
+    // inbox insert means such a user gets no notification row and therefore no
+    // delivery job either.
+    const userRows = candidateRows.filter((u) =>
+      isEmailDomainAllowed(u.email, config.allowedEmailDomains),
+    );
     if (userRows.length === 0) return result;
 
     const inboxRows = await this.opts.db
@@ -163,6 +176,14 @@ export class NotificationDispatcher {
       .limit(1);
 
     if (!user) return { status: "skipped", reason: "user missing" };
+
+    // Re-checked here as well as at enqueue time: a delivery row can sit in the
+    // queue (or be retried) long after it was created, and the domain may have
+    // been revoked in between. The recipient address is only ever read here, so
+    // this is the last point at which the policy can still be enforced.
+    if (!isEmailDomainAllowed(user.email, config.allowedEmailDomains)) {
+      return { status: "skipped", reason: "recipient email domain is not allowed" };
+    }
 
     const adapter = this.adapters.get(delivery.channel as NotificationChannel);
     if (!adapter) return { status: "skipped", reason: `no adapter for channel '${delivery.channel}'` };

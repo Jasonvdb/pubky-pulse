@@ -27,7 +27,7 @@ Get a metric definition by slug.
 
 ## create-metric
 
-Create a metric definition. Definitions are optional — metric events are ingested and queryable by slug either way — but defining a metric gives you a human-readable name and documentation in the dashboard. Requires `metrics:write` permission.
+Create a metric definition. Definitions are optional — metric events are ingested and queryable by slug either way — but defining a metric gives you a human-readable name and documentation in the dashboard. Requires `metrics:write` permission **and** project ownership.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -43,7 +43,7 @@ Slugs must match the pattern `[a-z0-9-]+`.
 
 ## update-metric
 
-Update a metric definition. Requires `metrics:write` permission.
+Update a metric definition. Requires `metrics:write` permission **and** project ownership.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -57,7 +57,7 @@ Update a metric definition. Requires `metrics:write` permission.
 
 ## delete-metric
 
-Soft-delete a metric definition. Existing metric events are not removed. Requires `metrics:write` permission.
+Soft-delete a metric definition. Existing metric events are not removed. Requires `metrics:write` permission **and** project ownership. Deleting a metric definition is one of the destructive operations agent keys *are* allowed to perform.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

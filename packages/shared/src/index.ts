@@ -5,6 +5,7 @@ export * from "./api.js";
 export * from "./constants.js";
 export * from "./crypto.js";
 export * from "./identity.js";
+export * from "./identity-config.js";
 export * from "./metrics.js";
 export * from "./audit.js";
 export * from "./time.js";

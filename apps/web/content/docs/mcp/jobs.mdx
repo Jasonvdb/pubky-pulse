@@ -32,7 +32,7 @@ Get details of a specific job run, including progress percentage and result.
 
 ## trigger-job
 
-Trigger a background job. Requires `jobs:write` permission.
+Trigger a background job. Requires `jobs:write` permission **and** that the human who created this key currently owns the target project. Every triggerable job type is project-scoped, so a `project_id` is always resolved and checked; a refusal is `403 Requires project ownership`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -47,6 +47,8 @@ Attempting to trigger a duplicate (same type + project already running/pending) 
 ## cancel-job
 
 Cancel a running job. Only works on jobs with `running` status. Cancellation is cooperative — the job handler checks for cancellation and returns early.
+
+Requires `jobs:write` **and** ownership of the project the run belongs to. Triggering and cancelling project jobs are among the destructive operations agent keys *are* allowed to perform. Listing and inspecting runs needs only team membership plus `jobs:read`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

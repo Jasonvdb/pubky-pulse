@@ -23,7 +23,6 @@ coverage/
 # logs
 *.log
 .dev-verification-code
-.dev-invitation-link
 firebase-debug.log
 
 # Next.js
@@ -37,6 +36,9 @@ out/
 # Attachments storage (dev/test)
 data/
 apps/server/data/
+
+# production deployment notes (contain live secrets — never commit)
+PRODUCTION.md
 
 # project notes
 CLAUDE.md

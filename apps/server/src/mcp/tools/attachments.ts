@@ -56,7 +56,8 @@ export function registerAttachmentsTools(
     "delete-attachment",
     {
       description:
-        "Soft-delete an event attachment. Hard-deleted from disk 7 days later by the attachment_cleanup job. Use once a bug is confirmed resolved to free the project's storage quota.",
+        "⚠️ Human-only — agent keys get 403 whatever their permissions and whoever created them; deleting an attachment is one of the deliberately human-only destructive operations. " +
+        "Soft-deletes an event attachment, hard-deleted from disk 7 days later by the attachment_cleanup job, freeing the project's storage quota.",
       inputSchema: {
         attachment_id: z.string().uuid().describe("The attachment id"),
       },

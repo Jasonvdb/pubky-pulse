@@ -7,6 +7,10 @@ import Concept from '../../_snippets/feedback.mdx';
 
 <Concept />
 
+## Access
+
+Reading feedback spans every project in the configured team. Changing a feedback item's status requires the human who created this key to currently own the project, re-read on every request; a refusal is `403 Requires project ownership`. Commenting is the exception and needs only `feedback:write`. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow).
+
 ## list-feedback
 
 List user feedback for a project, sorted by most recent first.
@@ -41,11 +45,15 @@ Update the status of a feedback submission. Statuses: `new` → `in_review` → 
 | `feedback_id` | UUID | Yes | The feedback ID |
 | `status` | string | Yes | `new`, `in_review`, `addressed`, or `dismissed` |
 
-There is intentionally no `delete-feedback` tool — soft-delete is user-only and agent keys receive a 403 from the delete endpoint. To remove feedback from the queue, transition it to `dismissed`.
+Requires `feedback:write` **and** project ownership.
+
+There is intentionally no `delete-feedback` tool — deleting a feedback item is human-only, and an agent key receives `403` from the delete endpoint even when its creator owns the project. To remove feedback from the queue, transition it to `dismissed`.
 
 ## add-feedback-comment
 
-Add a comment to a feedback submission. Use this to log investigations, link to issues, or document why you marked it `addressed` or `dismissed`. Markdown is supported. Agent comments are authored under the API key's name.
+Add a comment to a feedback submission. Use this to log investigations, link to issues, or document why you marked it `addressed` or `dismissed`. Markdown is supported. Agent comments are authored under the API key's name, and only that exact key can later edit or delete them.
+
+Requires `feedback:write` only — project ownership is **not** required.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

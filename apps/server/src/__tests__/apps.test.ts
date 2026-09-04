@@ -6,7 +6,7 @@ import {
   truncateAll,
   seedTestData,
   getToken,
-  createUserAndGetToken,
+  createForeignTeam,
   TEST_USER,
   TEST_AGENT_KEY,
   TEST_CLIENT_KEY,
@@ -104,12 +104,16 @@ describe("GET /v1/apps/:id", () => {
   });
 
   it("returns 404 for app in another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
+    // A second sign-in no longer produces a team of its own, so the far side of
+    // the boundary is seeded directly. The caller is a full member of the one
+    // configured team and still must not see an app outside it.
+    const foreign = await createForeignTeam();
+    const token = await getToken(app);
 
     const res = await app.inject({
       method: "GET",
-      url: `/v1/apps/${testData.appId}`,
-      headers: { authorization: `Bearer ${otherToken}` },
+      url: `/v1/apps/${foreign.appId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
 
     expect(res.statusCode).toBe(404);
@@ -494,15 +498,23 @@ describe("DELETE /v1/apps/:id", () => {
   });
 
   it("returns 404 for app belonging to another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
+    const foreign = await createForeignTeam();
+    const token = await getToken(app);
 
     const res = await app.inject({
       method: "DELETE",
-      url: `/v1/apps/${testData.appId}`,
-      headers: { authorization: `Bearer ${otherToken}` },
+      url: `/v1/apps/${foreign.appId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
 
     expect(res.statusCode).toBe(404);
+
+    // The refusal must also be a no-op: a 404 that still soft-deleted the row
+    // would be worse than a 403.
+    const client = postgres(TEST_DB_URL, { max: 1 });
+    const [row] = await client`SELECT deleted_at FROM apps WHERE id = ${foreign.appId}`;
+    await client.end();
+    expect(row.deleted_at).toBeNull();
   });
 
   it("rejects client key (no apps:write permission)", async () => {

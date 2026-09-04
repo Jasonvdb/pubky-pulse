@@ -11,6 +11,12 @@ import { resolveProject } from "../utils/project.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
 import { normalizeLimit, encodeKeysetCursor, decodeKeysetCursor } from "../utils/pagination.js";
 import { resolveCommentAuthor } from "../utils/comment-author.js";
+import { enforceCommentPolicy } from "../utils/comment-policy.js";
+import {
+  applyProjectWrite,
+  resolveIssueCommentInProject,
+  resolveIssueInProject,
+} from "../utils/project-access.js";
 
 function serializeIssue(
   row: typeof issues.$inferSelect,
@@ -280,9 +286,8 @@ export async function issuesRoutes(app: FastifyInstance) {
     "/issues/:issueId",
     { preHandler: requirePermission("issues:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, issueId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { status, resolved_at_version } = request.body;
 
@@ -294,15 +299,17 @@ export async function issuesRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: `Invalid status. Must be one of: ${ISSUE_STATUSES.join(", ")}` });
       }
 
-      const [issue] = await app.db
-        .select()
-        .from(issues)
-        .where(and(eq(issues.id, issueId), eq(issues.project_id, projectId)))
-        .limit(1);
-
-      if (!issue) {
-        return reply.code(404).send({ error: "Issue not found" });
-      }
+      // Triage is an ordinary project write. The issue and the project that
+      // contains it resolve in one query, so authorization is applied to the
+      // issue's *actual* project: an issue id borrowed from another project
+      // drops out of the join and answers 404 rather than being retriaged
+      // under a project the caller does own. Agent-supported (handoff §2),
+      // subject to `issues:write` and its creator's current ownership.
+      const contained = await resolveIssueInProject(app, { projectId, issueId }, auth, reply);
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "issues:write" })) return;
+      const issue = contained.resource;
+      const project = contained.project;
 
       // Validate transition
       const allowed = VALID_TRANSITIONS[issue.status];
@@ -367,9 +374,8 @@ export async function issuesRoutes(app: FastifyInstance) {
     "/issues/:issueId/merge",
     { preHandler: requirePermission("issues:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, issueId: targetId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { source_issue_id: sourceId } = request.body;
 
@@ -381,11 +387,18 @@ export async function issuesRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "Cannot merge an issue into itself" });
       }
 
-      // Verify both exist in the same project
-      const [target] = await app.db.select().from(issues).where(and(eq(issues.id, targetId), eq(issues.project_id, projectId))).limit(1);
+      // A merge destroys the source, so it is authorized against the project
+      // that actually contains the *target*, resolved with it in one query.
+      const contained = await resolveIssueInProject(app, { projectId, issueId: targetId }, auth, reply);
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "issues:write" })) return;
+      const target = contained.resource;
+      const project = contained.project;
+
+      // The source is pinned to the same project, so neither id can pull a row
+      // out of a project the caller does not own.
       const [source] = await app.db.select().from(issues).where(and(eq(issues.id, sourceId), eq(issues.project_id, projectId))).limit(1);
 
-      if (!target) return reply.code(404).send({ error: "Target issue not found" });
       if (!source) return reply.code(404).send({ error: "Source issue not found in this project" });
 
       // Move fingerprints from source to target
@@ -484,24 +497,22 @@ export async function issuesRoutes(app: FastifyInstance) {
     "/issues/:issueId/comments",
     { preHandler: requirePermission("issues:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, issueId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { body } = request.body;
       if (!body || !body.trim()) {
         return reply.code(400).send({ error: "body is required" });
       }
 
-      const [issue] = await app.db
-        .select({ id: issues.id })
-        .from(issues)
-        .where(and(eq(issues.id, issueId), eq(issues.project_id, projectId)))
-        .limit(1);
+      const contained = await resolveIssueInProject(app, { projectId, issueId }, auth, reply);
+      if (!contained) return;
+      // Commenting is the one project write a read-only team member may
+      // perform, so it goes through the comment policy rather than
+      // `applyProjectWrite`. Containment and `issues:write` still apply.
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "create" })) return;
 
-      if (!issue) return reply.code(404).send({ error: "Issue not found" });
-
-      const author = await resolveCommentAuthor(app.db, request.auth);
+      const author = await resolveCommentAuthor(app.db, auth);
 
       const [created] = await app.db
         .insert(issueComments)
@@ -531,35 +542,29 @@ export async function issuesRoutes(app: FastifyInstance) {
     "/issues/:issueId/comments/:commentId",
     { preHandler: requirePermission("issues:write") },
     async (request, reply) => {
+      const auth = request.auth;
       const { projectId, issueId, commentId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
 
       const { body } = request.body;
       if (!body || !body.trim()) {
         return reply.code(400).send({ error: "body is required" });
       }
 
-      const [comment] = await app.db
-        .select()
-        .from(issueComments)
-        .where(
-          and(
-            eq(issueComments.id, commentId),
-            eq(issueComments.issue_id, issueId),
-            isNull(issueComments.deleted_at),
-          )
-        )
-        .limit(1);
-
-      if (!comment) return reply.code(404).send({ error: "Comment not found" });
-
-      // Only original author can edit
-      const auth = request.auth;
-      const actorId = auth.type === "user" ? auth.user_id : auth.key_id;
-      if (comment.author_id !== actorId) {
-        return reply.code(403).send({ error: "Only the original author can edit this comment" });
-      }
+      // comment -> issue -> project in one query: the comment must belong to the
+      // issue named in the URL, and that issue to the project named in the URL.
+      // Filtering by `issue_id` alone (as this route used to) let a Project-A
+      // URL reach a Project-B comment.
+      const contained = await resolveIssueCommentInProject(
+        app,
+        { projectId, issueId, commentId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      const comment = contained.resource;
+      // Editing is author-only for everyone: a project owner moderates by
+      // deleting, never by rewriting someone else's words.
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "edit", comment })) return;
 
       const [updated] = await app.db
         .update(issueComments)
@@ -576,37 +581,21 @@ export async function issuesRoutes(app: FastifyInstance) {
     "/issues/:issueId/comments/:commentId",
     { preHandler: requirePermission("issues:write") },
     async (request, reply) => {
-      const { projectId, issueId, commentId } = request.params;
-      const project = await resolveProject(app, projectId, request.auth, reply);
-      if (!project) return;
-
-      const [comment] = await app.db
-        .select()
-        .from(issueComments)
-        .where(
-          and(
-            eq(issueComments.id, commentId),
-            eq(issueComments.issue_id, issueId),
-            isNull(issueComments.deleted_at),
-          )
-        )
-        .limit(1);
-
-      if (!comment) return reply.code(404).send({ error: "Comment not found" });
-
-      // Original author or team admin/owner can delete
       const auth = request.auth;
-      const actorId = auth.type === "user" ? auth.user_id : auth.key_id;
-      if (comment.author_id !== actorId) {
-        // Check if user has admin/owner role on the team
-        if (auth.type !== "user") {
-          return reply.code(403).send({ error: "Only the original author or a team admin can delete this comment" });
-        }
-        const membership = auth.team_memberships?.find((t) => t.team_id === project.team_id);
-        if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-          return reply.code(403).send({ error: "Only the original author or a team admin can delete this comment" });
-        }
-      }
+      const { projectId, issueId, commentId } = request.params;
+
+      const contained = await resolveIssueCommentInProject(
+        app,
+        { projectId, issueId, commentId },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      const comment = contained.resource;
+      // The author always may; a *human project owner* may also delete another
+      // author's comment for moderation. Team role no longer confers that, and
+      // an agent never moderates — not even one whose creator owns the project.
+      if (!enforceCommentPolicy(auth, contained, reply, { action: "delete", comment })) return;
 
       await app.db
         .update(issueComments)

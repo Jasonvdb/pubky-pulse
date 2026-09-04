@@ -34,7 +34,6 @@ Each notification has a `type` that determines its formatters and which channels
 | `feedback.new` | A user submitted feedback in one of the team's apps. | `in_app`, `email` | Both |
 | `questionnaire.response_new` | A user submitted a questionnaire response in one of the team's apps. Defaults skew to in-app only because responses can be high-volume — email is opt-in. | `in_app`, `email` | `in_app` only (email off by default) |
 | `job.completed` | A manual job run triggered with `notify: true` finished — only the triggering user is notified, never the whole team. | `in_app`, `email` | Both |
-| `team.invitation` | Listed for documentation but **not** routed through the dispatcher. Sent transactionally via `EmailService` directly because the recipient may not yet be a user. | — | — |
 
 Adding a new type is three steps: append to `NOTIFICATION_TYPES`, add an entry to `NOTIFICATION_TYPE_META` with default channel state, and wire a producer call site to `dispatcher.enqueue(...)`.
 
@@ -62,12 +61,9 @@ System job failures (`db_pruning`, `partition_creation`, `attachment_cleanup`, `
 
 ## Transactional Email Stays Direct Too
 
-Two flows bypass the dispatcher because the recipient may not yet have a `users` row:
+One flow bypasses the dispatcher because the recipient may not yet have a `users` row: **verification codes**, sent via `EmailService.sendVerificationCode` straight from the `/v1/auth/send-code` route — and only after the address has passed the configured-domain check, so a disallowed address never triggers an email.
 
-- **Verification codes** — sent via `EmailService.sendVerificationCode` straight from the `/v1/auth/send-code` route.
-- **Team invitations** — sent via `EmailService.sendTeamInvitation` from the team-invite flow.
-
-Both reach the email channel directly and are never written to a notifications inbox.
+It reaches the email channel directly and is never written to a notifications inbox.
 
 ## Background Jobs
 

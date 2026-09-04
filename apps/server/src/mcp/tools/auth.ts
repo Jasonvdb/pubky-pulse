@@ -16,7 +16,8 @@ export function registerAuthTools(server: McpServer, app: FastifyInstance, agent
     description:
       "Create an import API key for bulk-importing historical events into an app. " +
       "The key is shown once — save it immediately. " +
-      "Use with POST /v1/import to send up to 1000 events per batch with no timestamp restrictions.",
+      "Use with POST /v1/import to send up to 1000 events per batch with no timestamp restrictions. " +
+      "Requires apps:write permission AND that the human who created this key currently owns the app's project. Import keys are the only key type an agent may create; listing, updating and revoking keys is human-only.",
     inputSchema: {
       app_id: z.string().uuid().describe("The app ID to scope the import key to"),
       name: z.string().optional().describe("Display name for the key (default: 'Import Key')"),

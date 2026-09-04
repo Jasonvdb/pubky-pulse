@@ -1,6 +1,7 @@
 "use client";
 
-import type { QuestionnaireSpec } from "@pubky-pulse/shared";
+import type { ProjectAccessLevel, QuestionnaireSpec } from "@pubky-pulse/shared";
+import { AccessLevelBadge } from "@/components/badges/access-level-badge";
 import { ProjectDot } from "@/lib/project-color";
 import { QuestionnaireCardGrid } from "./questionnaire-card-grid";
 
@@ -38,6 +39,13 @@ export function bucketByProject(
 interface ProjectQuestionnairesSectionProps {
   projectName: string;
   projectColor: string | null | undefined;
+  /**
+   * This person's access to the project, when it is known. Only the
+   * read-only case is badged: "you can change this" is the ordinary state
+   * and a badge on every heading would be noise, while the group you
+   * cannot act on is worth calling out.
+   */
+  accessLevel?: ProjectAccessLevel;
   bucket: ProjectQuestionnairesBucket;
   projectColors: Map<string, string>;
   startIndex: number;
@@ -46,6 +54,7 @@ interface ProjectQuestionnairesSectionProps {
 export function ProjectQuestionnairesSection({
   projectName,
   projectColor,
+  accessLevel,
   bucket,
   projectColors,
   startIndex,
@@ -58,6 +67,7 @@ export function ProjectQuestionnairesSection({
         <div className="flex items-center gap-2 min-w-0">
           <ProjectDot color={projectColor} size={10} />
           <h2 className="text-sm font-semibold truncate">{projectName}</h2>
+          {accessLevel === "viewer" && <AccessLevelBadge level="viewer" size="xs" />}
         </div>
         <div className="text-xs text-muted-foreground tabular-nums">
           <span className="text-foreground font-medium">{definitionLabel}</span>

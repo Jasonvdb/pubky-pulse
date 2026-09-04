@@ -1,11 +1,35 @@
 import type { FastifyInstance } from "fastify";
 import { and, eq, gte, lte, desc, lt, or } from "drizzle-orm";
-import { auditLogs } from "@pubky-pulse/db";
+import { auditLogs, teamMembers } from "@pubky-pulse/db";
+import type { Db } from "@pubky-pulse/db";
 import { AUDIT_ACTIONS, parseTimeParam } from "@pubky-pulse/shared";
 import type { AuditLogsQueryParams, AuditAction } from "@pubky-pulse/shared";
-import { requirePermission, assertTeamRole, hasTeamAccess } from "../middleware/auth.js";
+import { requirePermission, hasTeamAccess } from "../middleware/auth.js";
+import { resolveActorUserId } from "../utils/project-access.js";
 import { serializeAuditLog } from "../utils/serialize.js";
 import { normalizeLimit } from "../utils/pagination.js";
+import type { AuthContext } from "../types.js";
+
+/**
+ * Whether the human behind this request is the team's owner.
+ *
+ * Resolved from the database rather than from the request context so that an
+ * agent key is measured by its *creator's* current role: the key inherits its
+ * creator's authority and must lose the trail the moment that person stops
+ * being the owner. A client/import key has no human actor and fails closed.
+ */
+async function isTeamOwnerActor(db: Db, auth: AuthContext, teamId: string): Promise<boolean> {
+  const actorUserId = resolveActorUserId(auth);
+  if (!actorUserId) return false;
+
+  const [membership] = await db
+    .select({ role: teamMembers.role })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.team_id, teamId), eq(teamMembers.user_id, actorUserId)))
+    .limit(1);
+
+  return membership?.role === "owner";
+}
 
 export async function auditLogsRoutes(app: FastifyInstance) {
   app.get<{ Params: { teamId: string }; Querystring: AuditLogsQueryParams }>(
@@ -20,12 +44,14 @@ export async function auditLogsRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "Not a member of this team" });
       }
 
-      // Users need admin role minimum
-      if (auth.type === "user") {
-        const roleError = assertTeamRole(auth, teamId, "admin");
-        if (roleError) {
-          return reply.code(403).send({ error: roleError });
-        }
+      // The team-wide trail is the one read reserved for the team owner: it
+      // spans every project and names who did what, so it is a recovery and
+      // oversight surface rather than a colleague-visible one. An agent reads
+      // it only when its creator is the team owner, on top of the
+      // `audit_logs:read` permission already required above — the agent
+      // inherits its creator's authority and never more.
+      if (!(await isTeamOwnerActor(app.db, auth, teamId))) {
+        return reply.code(403).send({ error: "Requires team owner role" });
       }
 
       const limit = normalizeLimit(limitStr);

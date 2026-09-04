@@ -3,8 +3,8 @@ import { and, eq, gte, lte, desc, lt, or } from "drizzle-orm";
 import { jobRuns } from "@pubky-pulse/db";
 import { JOB_TYPES, JOB_TYPE_META, parseTimeParam } from "@pubky-pulse/shared";
 import type { JobRunsQueryParams, JobType } from "@pubky-pulse/shared";
-import { requirePermission, assertTeamRole, hasTeamAccess } from "../middleware/auth.js";
-import { resolveProject } from "../utils/project.js";
+import { requirePermission, hasTeamAccess } from "../middleware/auth.js";
+import { applyProjectWrite, enforceProjectWrite, resolveJobRunAccess } from "../utils/project-access.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { serializeJobRun } from "../utils/serialize.js";
 import { normalizeLimit } from "../utils/pagination.js";
@@ -19,13 +19,12 @@ export async function jobsRoutes(app: FastifyInstance) {
       const { teamId } = request.params;
       const { job_type, status, project_id, since, until, cursor, limit: limitStr } = request.query;
 
+      // Any member of the singleton team may read the team's run history: it
+      // is an aggregate *read* over projects they can already read, and it is
+      // not a path to mutate anything — trigger and cancel below still require
+      // ownership of the run's project. API keys still need `jobs:read`.
       if (!hasTeamAccess(auth, teamId)) {
         return reply.code(403).send({ error: "Not a member of this team" });
-      }
-
-      if (auth.type === "user") {
-        const roleError = assertTeamRole(auth, teamId, "admin");
-        if (roleError) return reply.code(403).send({ error: roleError });
       }
 
       const limit = normalizeLimit(limitStr);
@@ -90,11 +89,6 @@ export async function jobsRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "Not a member of this team" });
       }
 
-      if (auth.type === "user") {
-        const roleError = assertTeamRole(auth, teamId, "admin");
-        if (roleError) return reply.code(403).send({ error: roleError });
-      }
-
       if (!job_type || !JOB_TYPES.includes(job_type as JobType)) {
         return reply.code(400).send({ error: `Invalid job_type. Must be one of: ${JOB_TYPES.join(", ")}` });
       }
@@ -104,13 +98,41 @@ export async function jobsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: `Cannot trigger system job "${job_type}" via API` });
       }
 
-      if (meta.scope === "project" && !project_id) {
+      // Nothing validated the parameter bag before, so a caller could smuggle
+      // any key at all into a handler's params. Only the names the job type
+      // declares are accepted; an unknown one is a 400 rather than a silently
+      // ignored field.
+      const submittedParams = params ?? {};
+      const declaredParams = new Set(meta.params.map((p) => p.name));
+      for (const key of Object.keys(submittedParams)) {
+        if (!declaredParams.has(key)) {
+          return reply
+            .code(400)
+            .send({ error: `Unknown parameter "${key}" for job type "${job_type}"` });
+        }
+      }
+
+      // `JOB_TYPE_META.scope` is only "system" | "project" and system jobs are
+      // refused above, so every triggerable job is project-scoped and must name
+      // its project. There is no team-wide maintenance trigger to special-case.
+      if (!project_id) {
         return reply.code(400).send({ error: "project_id is required for project-scoped jobs" });
       }
 
-      if (project_id) {
-        const project = await resolveProject(app, project_id, auth, reply);
-        if (!project) return;
+      // Triggering a job writes to one project's data, so it is an ordinary
+      // project write: the project's owner list decides, not team role. An
+      // agent key additionally needs `jobs:write` and its creator's current
+      // ownership.
+      const access = await enforceProjectWrite(app, project_id, auth, reply, {
+        permission: "jobs:write",
+      });
+      if (!access) return;
+
+      // The run is recorded under the team from the URL, so the project must
+      // actually belong to that team or the run would be filed against a team
+      // that does not contain it.
+      if (access.project.team_id !== teamId) {
+        return reply.code(404).send({ error: "Project not found" });
       }
 
       // Check for duplicate running/pending job
@@ -141,10 +163,19 @@ export async function jobsRoutes(app: FastifyInstance) {
           ? `manual:user:${auth.user_id}`
           : `manual:api_key:${auth.key_id}`;
 
-      // Merge project_id into params so job handlers can access it uniformly
+      // Merge project_id into params so job handlers can access it uniformly.
+      // The authorized `project_id` is written LAST: `params.project_id` is
+      // what the stats aggregators read as their target, and they
+      // DELETE-then-INSERT the rollup tables for it — a foreign id there would
+      // re-aggregate another project's history, and a null/absent one would fan
+      // out across every project (which is what the *scheduled* path relies on,
+      // and exactly why a request must never be able to ask for it). Stripping
+      // the caller's own `project_id` keeps the value that was authorized above
+      // as the only one that can reach a handler.
+      const { project_id: _callerProjectId, ...safeParams } = submittedParams;
       const jobParams = {
-        ...(project_id ? { project_id } : {}),
-        ...params,
+        ...safeParams,
+        project_id,
       };
 
       const run = await app.jobRunner.trigger(job_type, {
@@ -207,19 +238,18 @@ export async function jobsByIdRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { runId } = request.params;
 
-      const [run] = await app.db
-        .select()
-        .from(jobRuns)
-        .where(eq(jobRuns.id, runId))
-        .limit(1);
+      // Cancelling is a write on the run's own project, resolved through the
+      // containment resolver so a run id from another project cannot be
+      // cancelled by substituting it: an unreachable run, or one whose project
+      // or team the caller cannot see, is a 404. Every run the trigger route
+      // creates is project-scoped, so a run with no project (a scheduled
+      // system run, or a team-scoped run) carries no project ownership and is
+      // refused here.
+      const access = await resolveJobRunAccess(app, { runId }, request.auth, reply);
+      if (!access) return;
+      if (!applyProjectWrite(access, request.auth, reply, { permission: "jobs:write" })) return;
 
-      if (!run) {
-        return reply.code(404).send({ error: "Job run not found" });
-      }
-
-      if (run.team_id && !hasTeamAccess(request.auth, run.team_id)) {
-        return reply.code(404).send({ error: "Job run not found" });
-      }
+      const run = access.resource;
 
       if (run.status !== "running") {
         return reply.code(400).send({ error: `Cannot cancel a job with status "${run.status}"` });

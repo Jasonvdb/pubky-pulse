@@ -13,10 +13,15 @@ import type {
   MetricStatsParams,
   MetricStatsEntry,
 } from "@pubky-pulse/shared";
-import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
+import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
 import { resolveProject, resolveProjectAppIds } from "../utils/project.js";
+import {
+  applyProjectWrite,
+  enforceProjectWrite,
+  resolveMetricDefinitionInProject,
+} from "../utils/project-access.js";
 import { encodeKeysetCursor, decodeKeysetCursor } from "../utils/pagination.js";
 
 function serializeMetricDefinition(row: typeof metricDefinitions.$inferSelect) {
@@ -189,17 +194,16 @@ export async function metricsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: slugError });
       }
 
-      const project = await resolveProject(app, projectId, auth, reply);
-      if (!project) return;
-
-      if (!hasTeamAccess(auth, project.team_id)) {
-        return reply.code(403).send({ error: "Not a member of this team" });
-      }
-
-      const roleError = assertTeamRole(auth, project.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
-      }
+      // A metric definition is project configuration, so creating one is an
+      // ordinary project write: the project's owner list decides, not team
+      // role. 404 when the project is invisible, 403 when it is visible but
+      // unowned; an agent key also needs `metrics:write` and its creator's
+      // current ownership.
+      const access = await enforceProjectWrite(app, projectId, auth, reply, {
+        permission: "metrics:write",
+      });
+      if (!access) return;
+      const project = access.project;
 
       // Resurrect soft-deleted metric with same slug (preserves UUID and event history)
       const [existing] = await app.db
@@ -280,30 +284,17 @@ export async function metricsRoutes(app: FastifyInstance) {
       const { projectId, slug } = request.params;
       const { name, description, documentation, schema_definition, aggregation_rules } = request.body;
 
-      const teamIds = getAuthTeamIds(auth);
-      const [metric] = await app.db
-        .select()
-        .from(metricDefinitions)
-        .innerJoin(projects, eq(projects.id, metricDefinitions.project_id))
-        .where(
-          and(
-            eq(metricDefinitions.project_id, projectId),
-            eq(metricDefinitions.slug, slug),
-            isNull(metricDefinitions.deleted_at),
-            inArray(projects.team_id, teamIds),
-            isNull(projects.deleted_at),
-          ),
-        )
-        .limit(1);
-
-      if (!metric) {
-        return reply.code(404).send({ error: "Metric not found" });
-      }
-
-      const roleError = assertTeamRole(auth, metric.projects.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
-      }
+      // Resolve the definition together with the project that contains it, in
+      // one query, and authorize the write against that project.
+      const contained = await resolveMetricDefinitionInProject(
+        app,
+        { projectId, slug },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "metrics:write" })) return;
+      const metric = contained.resource;
 
       const updates: Partial<typeof metricDefinitions.$inferInsert> = {};
       if (name !== undefined) updates.name = name;
@@ -319,17 +310,17 @@ export async function metricsRoutes(app: FastifyInstance) {
       const [updated] = await app.db
         .update(metricDefinitions)
         .set(updates)
-        .where(eq(metricDefinitions.id, metric.metric_definitions.id))
+        .where(eq(metricDefinitions.id, metric.id))
         .returning();
 
       const changes: Record<string, { before?: unknown; after?: unknown }> = {};
-      if (name !== undefined) changes.name = { before: metric.metric_definitions.name, after: name };
+      if (name !== undefined) changes.name = { before: metric.name, after: name };
       if (Object.keys(changes).length > 0) {
         logAuditEvent(app.db, auth, {
-          team_id: metric.projects.team_id,
+          team_id: contained.project.team_id,
           action: "update",
           resource_type: "metric_definition",
-          resource_id: metric.metric_definitions.id,
+          resource_id: metric.id,
           changes,
         });
       }
@@ -346,41 +337,28 @@ export async function metricsRoutes(app: FastifyInstance) {
       const auth = request.auth;
       const { projectId, slug } = request.params;
 
-      const teamIds = getAuthTeamIds(auth);
-      const [metric] = await app.db
-        .select()
-        .from(metricDefinitions)
-        .innerJoin(projects, eq(projects.id, metricDefinitions.project_id))
-        .where(
-          and(
-            eq(metricDefinitions.project_id, projectId),
-            eq(metricDefinitions.slug, slug),
-            isNull(metricDefinitions.deleted_at),
-            inArray(projects.team_id, teamIds),
-            isNull(projects.deleted_at),
-          ),
-        )
-        .limit(1);
-
-      if (!metric) {
-        return reply.code(404).send({ error: "Metric not found" });
-      }
-
-      const roleError = assertTeamRole(auth, metric.projects.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
-      }
+      // Deleting a metric definition is agent-supported (handoff §2), so no
+      // human-only option here: an owning agent with `metrics:write` may do it.
+      const contained = await resolveMetricDefinitionInProject(
+        app,
+        { projectId, slug },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "metrics:write" })) return;
+      const metric = contained.resource;
 
       await app.db
         .update(metricDefinitions)
         .set({ deleted_at: new Date() })
-        .where(eq(metricDefinitions.id, metric.metric_definitions.id));
+        .where(eq(metricDefinitions.id, metric.id));
 
       logAuditEvent(app.db, auth, {
-        team_id: metric.projects.team_id,
+        team_id: contained.project.team_id,
         action: "delete",
         resource_type: "metric_definition",
-        resource_id: metric.metric_definitions.id,
+        resource_id: metric.id,
         metadata: { slug },
       });
 

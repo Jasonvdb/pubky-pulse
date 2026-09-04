@@ -12,7 +12,6 @@ import {
   requirePermission,
   getAuthTeamIds,
   hasTeamAccess,
-  assertTeamRole,
 } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { config } from "../config.js";
@@ -27,6 +26,7 @@ import {
   resolveAttachmentLimits,
 } from "../utils/attachment-quota.js";
 import { normalizeLimit } from "../utils/pagination.js";
+import { applyProjectWrite, resolveAttachmentAccess } from "../utils/project-access.js";
 
 function toSummary(row: typeof eventAttachments.$inferSelect): AttachmentSummary {
   return {
@@ -220,29 +220,33 @@ export async function attachmentsRoutes(app: FastifyInstance) {
     { preHandler: [requirePermission("events:write")] },
     async (request, reply) => {
       const auth = request.auth;
-      const [row] = await app.db
-        .select()
-        .from(eventAttachments)
-        .where(eq(eventAttachments.id, request.params.id))
-        .limit(1);
-      if (!row || row.deleted_at) {
-        return reply.code(404).send({ error: "Attachment not found" });
+
+      // The attachment is resolved together with the app and project that
+      // contain it, so the write is authorized against that project rather
+      // than against the caller's team. Deleting an attachment is human
+      // project-owner only (handoff §2): an agent key is refused even when its
+      // creator owns the project, and an ingestion key — which has no human
+      // actor at all — can upload attachments but never delete one.
+      const contained = await resolveAttachmentAccess(
+        app,
+        { attachmentId: request.params.id },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (
+        !applyProjectWrite(contained, auth, reply, {
+          permission: "events:write",
+          humanOnly: true,
+        })
+      ) {
+        return;
       }
-      const [projectRow] = await app.db
-        .select({ team_id: projects.team_id })
-        .from(projects)
-        .where(eq(projects.id, row.project_id))
-        .limit(1);
-      if (!projectRow || !hasTeamAccess(auth, projectRow.team_id)) {
-        return reply.code(404).send({ error: "Attachment not found" });
-      }
-      const roleErr = assertTeamRole(auth, projectRow.team_id, "member");
-      if (roleErr) return reply.code(403).send({ error: roleErr });
 
       await app.db
         .update(eventAttachments)
         .set({ deleted_at: new Date() })
-        .where(eq(eventAttachments.id, row.id));
+        .where(eq(eventAttachments.id, contained.resource.id));
       return { ok: true };
     }
   );

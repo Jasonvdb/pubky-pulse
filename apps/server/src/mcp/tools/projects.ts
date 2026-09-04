@@ -13,7 +13,10 @@ import { callApi, buildQuery } from "../helpers.js";
 
 export function registerProjectsTools(server: McpServer, app: FastifyInstance, agentKey: string): void {
   server.registerTool("list-projects", {
-    description: "List all projects accessible to this agent. Optionally filter by team_id.",
+    description:
+      "List every project in the team this agent key can read — reads are team-wide, not limited to the projects its creator owns. " +
+      "Each row carries `owners` and `access_level` (`owner` | `viewer`) for the human who created this key: `viewer` means reads work but ordinary writes to that project will be refused with 403. " +
+      "Optionally filter by team_id.",
     inputSchema: {
       team_id: z.string().uuid().optional().describe("Filter by team ID"),
     },
@@ -25,7 +28,9 @@ export function registerProjectsTools(server: McpServer, app: FastifyInstance, a
   });
 
   server.registerTool("get-project", {
-    description: "Get a project by ID, including its list of apps.",
+    description:
+      "Get a project by ID, including its list of apps, its `owners`, and the `access_level` (`owner` | `viewer`) of the human who created this key. " +
+      "Readable for every project in the team.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
     },
@@ -35,7 +40,8 @@ export function registerProjectsTools(server: McpServer, app: FastifyInstance, a
 
   server.registerTool("create-project", {
     description:
-      "Create a new project. Requires projects:write permission and admin role.",
+      "Create a new project. Requires projects:write permission. " +
+      "The human who created this agent key becomes the project's first owner (the key itself never owns anything), so writes to the new project are authorized from the next call onwards.",
     inputSchema: {
       team_id: z.string().uuid().describe("The team to create the project in"),
       name: z.string().describe("Project name"),
@@ -56,7 +62,10 @@ export function registerProjectsTools(server: McpServer, app: FastifyInstance, a
   });
 
   server.registerTool("update-project", {
-    description: "Update a project's name, color, data retention policies, or attachment quotas. Requires projects:write permission.",
+    description:
+      "Update a project's name, color, data retention policies, or attachment quotas. " +
+      "Requires projects:write permission AND that the human who created this key currently owns this project — a 403 `Requires project ownership` means they must be added to the project's owner list by a human (no new key needed). " +
+      "Deleting a project is human-only and has no MCP tool.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       name: z.string().optional().describe("New project name"),

@@ -7,7 +7,7 @@ import Concept from '../../_snippets/audit-log.mdx';
 
 <Concept />
 
-Requires `audit_logs:read` permission.
+Requires `audit_logs:read` permission **and** that the human who created this key is the team owner. The team-wide trail spans every project and names who did what, so it is reserved for the one configured team owner; every other creator gets `403`.
 
 ## list-audit-logs
 
@@ -16,7 +16,7 @@ List audit log entries for a team. Supports filtering by resource type, actor, a
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `team_id` | UUID | Yes | The team ID |
-| `resource_type` | string | No | Filter by resource type: `app`, `project`, `api_key`, `team`, `team_member`, `invitation`, `metric_definition`, `funnel_definition`, `user`, `job_run`, `issue` |
+| `resource_type` | string | No | Filter by resource type: `app`, `project`, `project_owner`, `api_key`, `team`, `team_member`, `metric_definition`, `funnel_definition`, `user`, `job_run`, `issue`, `feedback`, `questionnaire`, `questionnaire_response` |
 | `resource_id` | UUID | No | Filter by resource ID |
 | `actor_id` | UUID | No | Filter by actor ID |
 | `action` | string | No | `create`, `update`, or `delete` |

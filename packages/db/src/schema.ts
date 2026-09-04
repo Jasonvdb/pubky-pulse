@@ -16,7 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 // Enums
-export const teamRoleEnum = pgEnum("team_role", ["owner", "admin", "member"]);
+export const teamRoleEnum = pgEnum("team_role", ["owner", "member"]);
 export const apiKeyTypeEnum = pgEnum("api_key_type", ["client", "agent", "server", "import"]);
 export const appPlatformEnum = pgEnum("app_platform", ["apple", "android", "web", "backend"]);
 export const environmentEnum = pgEnum("environment", ["ios", "ipados", "macos", "watchos", "android", "web", "backend"]);
@@ -129,6 +129,28 @@ export const projects = pgTable(
   (table) => [
     index("projects_team_id_idx").on(table.team_id),
     uniqueIndex("projects_team_slug_idx").on(table.team_id, table.slug),
+  ]
+);
+
+// Project owners — a project has one or more equal owners. Ordinary
+// project-scoped writes require membership in this set; team membership alone
+// only grants read access.
+export const projectOwners = pgTable(
+  "project_owners",
+  {
+    project_id: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    added_at: timestamp("added_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("project_owners_project_user_idx").on(table.project_id, table.user_id),
+    index("project_owners_user_id_idx").on(table.user_id),
   ]
 );
 
@@ -323,33 +345,6 @@ export const appUserApps = pgTable(
   (table) => [
     uniqueIndex("app_user_apps_user_app_idx").on(table.app_user_id, table.app_id),
     index("app_user_apps_app_id_idx").on(table.app_id),
-  ]
-);
-
-// Team Invitations
-export const teamInvitations = pgTable(
-  "team_invitations",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    team_id: uuid("team_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    email: varchar("email", { length: 255 }).notNull(),
-    role: teamRoleEnum("role").notNull().default("member"),
-    token: uuid("token").notNull().defaultRandom(),
-    invited_by_user_id: uuid("invited_by_user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
-    accepted_at: timestamp("accepted_at", { withTimezone: true }),
-    created_at: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("team_invitations_team_email_idx").on(table.team_id, table.email),
-    uniqueIndex("team_invitations_token_idx").on(table.token),
-    index("team_invitations_email_idx").on(table.email),
   ]
 );
 

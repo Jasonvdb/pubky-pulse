@@ -35,10 +35,23 @@ export interface TeamMembership {
   role: TeamRole;
 }
 
+/**
+ * A human identity, rebuilt from the database on every request rather than
+ * decoded from the JWT — see `revalidateUserIdentity` in `middleware/auth.ts`.
+ */
 export interface UserContext {
   type: "user";
   user_id: string;
+  /** The email stored on the user row right now, not the one inside the JWT. */
   email: string;
+  /** The configured singleton team this request was revalidated against. */
+  team_id: string;
+  /** True when this user is the configured sole team-level owner. */
+  is_team_owner: boolean;
+  /**
+   * Stays an array because every route filters with `inArray(...)` against
+   * `getAuthTeamIds`. It holds exactly the singleton membership.
+   */
   team_memberships: TeamMembership[];
 }
 

@@ -19,7 +19,21 @@ Projects are team-scoped and identified by a unique slug. They provide a shared 
 
 Each project also has a required `#RRGGBB` hex **color** used throughout the dashboard to distinguish projects at a glance. If you omit the color on creation, the server auto-picks one from a 20-entry palette, avoiding colors already in use by other non-deleted projects in the same team. You can change the color any time via `PATCH /v1/projects/:id` or the MCP `update-project` tool.
 
-Projects are managed through the [dashboard](/docs/concepts/authentication), [MCP](/docs/mcp/projects), or the [API](/docs/api-reference/projects).
+Projects are managed through the dashboard, [MCP](/docs/mcp/projects), or the [API](/docs/api-reference/projects).
+
+### Ownership
+
+A project is the unit of write access. Every team member can **read** every project in the team; **changing** one requires being one of its owners.
+
+- A project has one or more **equal owners**. There is no permanent creator role: whoever creates the project becomes its first owner, and from then on any owner can add or remove any other, including themselves.
+- Owners are chosen from the existing team roster. There is no way to invite someone from outside the configured email domains.
+- The **last owner can never be removed** — the attempt returns `409` and changes nothing.
+- The **team owner** can repair any project's owner list, so an ownerless project can be recovered. That is recovery authority only: to make an ordinary change they must add themselves as an owner first.
+- An **agent key** inherits the project access of the person who created it, re-read on every request. Adding or removing that person from a project changes what their key can do on its very next call, with no key re-issued.
+
+Every project response carries `owners` and an `access_level` of `owner` or `viewer` for the caller, and the dashboard hides or disables write controls for a `viewer`. The server is authoritative — a stale page that attempts a forbidden write gets `403`. Non-owners keep full read access and can still comment on issues, feedback and questionnaire responses.
+
+Ownership covers project settings and deletion, apps, metric and funnel definitions, issue triage and merging, feedback triage and deletion, questionnaires and responses, attachment deletion, project jobs, and client/import key management. See [Authentication & Access Control](/docs/concepts/authentication) for the full policy.
 
 ### Data Retention
 
@@ -86,7 +100,9 @@ Bundle IDs are **immutable after creation**. The update endpoint only accepts a 
 
 ## Auto-Created Client Key
 
-When you create an app, Pubky Pulse automatically generates a client API key (`pulse_client_` prefix) as a row in the `api_keys` table, scoped to that app. The key is returned in the app creation response so you can configure your SDK immediately, and remains viewable at any time from the **API Keys** page in the dashboard.
+When you create an app, Pubky Pulse automatically generates a client API key (`pulse_client_` prefix) as a row in the `api_keys` table, scoped to that app. The key is returned in the app creation response so you can configure your SDK immediately, and remains viewable from the **API Keys** page in the dashboard by anyone who owns the app's project.
+
+A client secret is a project credential, so it is shown only to that project's owners. Everyone else — including the team owner — receives `client_secret: null` on app and project responses. A `null` means "you may not see this", not "there is no key".
 
 ## Latest App Version
 

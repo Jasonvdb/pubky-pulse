@@ -7,6 +7,10 @@ import Concept from '../../_snippets/attachments.mdx';
 
 <Concept />
 
+## Access
+
+Listing and downloading attachments spans every project in the configured team. **Deleting one is human-only**: `delete-attachment` returns `403` for every agent key, even one whose creator owns the project. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow).
+
 ## list-attachments
 
 List event attachments. Filter by event, issue, or project.
@@ -34,7 +38,9 @@ Returns the attachment metadata plus a `download_url` that expires in 60 seconds
 
 ## delete-attachment
 
-Soft-delete an event attachment. Hard-deleted from disk 7 days later by the `attachment_cleanup` job. Use once a bug is confirmed resolved to free the project's storage quota.
+⚠️ **Human-only — agent calls receive `403`.** Attachment deletion is one of the destructive actions reserved for people; ask a project owner to do it from the dashboard or the REST API.
+
+Soft-deletes an event attachment, which is hard-deleted from disk 7 days later by the `attachment_cleanup` job. Used once a bug is confirmed resolved, to free the project's storage quota.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

@@ -12,14 +12,15 @@ import { EmptyState } from "./empty-state";
 import { timeAgo } from "./time-ago";
 
 export function RecentAuditPanel() {
-  const { currentTeam, currentRole } = useTeam();
+  const { currentTeam, isTeamOwner } = useTeam();
   const teamId = currentTeam?.id;
 
   const filters: AuditLogsQueryParams = { limit: 5 };
-  const isAdmin = currentRole === "owner" || currentRole === "admin";
-  const { auditLogs, isLoading } = useAuditLogs(isAdmin ? teamId : undefined, filters);
+  // The team-wide trail is the team owner's oversight surface; the server
+  // returns 403 to everyone else, so there is nothing to render for them.
+  const { auditLogs, isLoading } = useAuditLogs(isTeamOwner ? teamId : undefined, filters);
 
-  if (!isAdmin) return null;
+  if (!isTeamOwner) return null;
 
   return (
     <DashboardSection eyebrow="Trail" title="Recent Activity" viewAllHref="/dashboard/audit-log">

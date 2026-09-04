@@ -1,25 +1,17 @@
 import type { AppPlatform } from "./events.js";
 
-export type TeamRole = "owner" | "admin" | "member";
+/**
+ * The deployment runs one configured team. Its configured owner holds the
+ * team-level recovery authority; everybody else is an ordinary member.
+ *
+ * There is deliberately no role hierarchy any more: with two values a
+ * "minimum role" comparison only ever means "is this the team owner", and the
+ * old ranking invited routes to be gated on a rank rather than on the thing
+ * they actually need — project ownership, which lives in `project_owners`.
+ */
+export type TeamRole = "owner" | "member";
 
-export const VALID_TEAM_ROLES: TeamRole[] = ["owner", "admin", "member"];
-
-/** Numeric hierarchy for role comparisons — higher = more privileged. */
-export const TEAM_ROLE_HIERARCHY: Record<TeamRole, number> = {
-  owner: 3,
-  admin: 2,
-  member: 1,
-} as const;
-
-/** Returns true if `actorRole` outranks `targetRole`. */
-export function canManageRole(actorRole: TeamRole, targetRole: TeamRole): boolean {
-  return TEAM_ROLE_HIERARCHY[actorRole] > TEAM_ROLE_HIERARCHY[targetRole];
-}
-
-/** Returns true if `role` meets the minimum required level. */
-export function meetsMinimumRole(role: TeamRole, minimumRole: TeamRole): boolean {
-  return TEAM_ROLE_HIERARCHY[role] >= TEAM_ROLE_HIERARCHY[minimumRole];
-}
+export const VALID_TEAM_ROLES: TeamRole[] = ["owner", "member"];
 
 export type ApiKeyType = "client" | "agent" | "import";
 
@@ -68,15 +60,25 @@ export const VALID_PERMISSIONS: Permission[] = [
   "questionnaires:write",
 ];
 
+/**
+ * `users:write` is deliberately absent from both agent lists.
+ *
+ * The only route requiring it is `POST /v1/identity/properties`, which is SDK
+ * ingestion: it takes its target app from the credential rather than from the
+ * request, so there is no named project an ownership check could apply to, and
+ * it therefore refuses anything that is not a client or import key. Granting an
+ * agent a permission whose single route always answers `403` would advertise a
+ * capability the product does not have.
+ */
 export const ALLOWED_PERMISSIONS_BY_KEY_TYPE: Record<ApiKeyType, Permission[]> = {
   client: ["events:write", "users:write"],
-  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
+  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
   import: ["events:write", "users:write"],
 };
 
 export const DEFAULT_API_KEY_PERMISSIONS: Record<ApiKeyType, Permission[]> = {
   client: ["events:write", "users:write"],
-  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
+  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
   import: ["events:write", "users:write"],
 };
 

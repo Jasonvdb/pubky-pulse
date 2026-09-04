@@ -69,7 +69,8 @@ export function registerQuestionnaireTools(
 
   server.registerTool("create-questionnaire", {
     description:
-      "Create a new questionnaire definition. The slug becomes immutable after creation — the SDK references it to fetch + present the survey. Schema validates inline (every question id must match /^[a-z0-9_]{1,32}$/, choice options 2–20 entries, rating scale fixed at 5, NPS implicit 0–10).",
+      "Create a new questionnaire definition. The slug becomes immutable after creation — the SDK references it to fetch + present the survey. Schema validates inline (every question id must match /^[a-z0-9_]{1,32}$/, choice options 2–20 entries, rating scale fixed at 5, NPS implicit 0–10). " +
+      "Requires questionnaires:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       slug: z.string().min(1).max(64).describe("URL-safe slug, immutable after creation"),
@@ -89,7 +90,8 @@ export function registerQuestionnaireTools(
 
   server.registerTool("update-questionnaire", {
     description:
-      "Update a questionnaire's name, description, schema, app_id pinning, or is_active flag. Slug is immutable. Editing the schema is allowed at any time — each response stores its own schema_snapshot so historical data still renders correctly.",
+      "Update a questionnaire's name, description, schema, app_id pinning, or is_active flag. Slug is immutable. Editing the schema is allowed at any time — each response stores its own schema_snapshot so historical data still renders correctly. " +
+      "Requires questionnaires:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       questionnaire_id: z.string().uuid().describe("The questionnaire ID"),
@@ -109,7 +111,8 @@ export function registerQuestionnaireTools(
 
   server.registerTool("delete-questionnaire", {
     description:
-      "⚠️ User-only — agent keys get 403. Soft-deletes a questionnaire. Existing responses are preserved (questionnaire_id has ON DELETE RESTRICT) but the questionnaire stops accepting new responses immediately.",
+      "⚠️ Human-only — agent keys get 403 whatever their permissions and whoever created them; deleting a questionnaire is one of the deliberately human-only destructive operations. " +
+      "Soft-deletes a questionnaire. Existing responses are preserved (questionnaire_id has ON DELETE RESTRICT) but the questionnaire stops accepting new responses immediately. Deleting an individual response is human-only too, and has no MCP tool.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       questionnaire_id: z.string().uuid().describe("The questionnaire ID"),
@@ -159,7 +162,8 @@ export function registerQuestionnaireTools(
 
   server.registerTool("update-questionnaire-response-status", {
     description:
-      "Update the status of a response (new → in_review → addressed → dismissed; any transition allowed). Used to triage responses without comment-thread churn.",
+      "Update the status of a response (new → in_review → addressed → dismissed; any transition allowed). Used to triage responses without comment-thread churn. " +
+      "Agent keys ARE allowed to re-triage responses: requires questionnaires:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       questionnaire_id: z.string().uuid().describe("The questionnaire ID"),
@@ -175,7 +179,9 @@ export function registerQuestionnaireTools(
   });
 
   server.registerTool("add-questionnaire-response-comment", {
-    description: "Add a comment to a response. Use to log investigations or flag insights for teammates.",
+    description:
+      "Add a comment to a response. Use to log investigations or flag insights for teammates. " +
+      "Commenting is the one exception to project ownership: questionnaires:write on a readable project is enough, even when this key's creator does not own it. The comment is authored by this exact key, so only this key (or a human project owner, for deletion) can later change it.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       questionnaire_id: z.string().uuid().describe("The questionnaire ID"),

@@ -87,7 +87,7 @@ try {
 
 - `list-attachments` — filter by event, issue, or project.
 - `get-attachment` — metadata plus a 60-second signed download URL.
-- `delete-attachment` — soft-delete to free quota.
+- `delete-attachment` — **human-only**; every agent call returns `403`. Ask a project owner to delete from the dashboard or the REST API.
 - `get-project-attachment-usage` — check quota headroom before recommending re-runs.
 
 Downloads use short-lived (60s) HMAC-signed URLs. In production the server uses nginx `X-Accel-Redirect` to stream the bytes directly from disk — the Node process never holds the file in memory.
@@ -96,7 +96,7 @@ Downloads use short-lived (60s) HMAC-signed URLs. In production the server uses 
 
 - **Linked to events**: attachments point at the event via `client_event_id` (dedup key) and `event_id` (resolved once the event lands).
 - **Linked to issues**: the issue-scan job sets `issue_id` on attachments whose events are in an issue. This way attachments survive event retention pruning as long as the issue is still open.
-- **Soft delete + grace**: `DELETE /v1/attachments/:id` (or the dashboard, or the `delete-attachment` MCP tool) sets `deleted_at`. The `attachment_cleanup` daily job hard-deletes rows after 7 days.
+- **Soft delete + grace**: `DELETE /v1/attachments/:id` (or the dashboard) sets `deleted_at`. Deletion requires a human owner of the project the attachment belongs to — see [Authentication & Access Control](/docs/concepts/authentication#human-only-operations). The `attachment_cleanup` daily job hard-deletes rows after 7 days.
 - **Orphan sweeps**: reservations that never receive bytes within 24 hours are removed. Files on disk with no matching row (interrupted uploads, manual deletions) are swept daily.
 
 ## Self-hosting notes

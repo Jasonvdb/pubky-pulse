@@ -5,7 +5,8 @@ import {
   truncateAll,
   seedTestData,
   getTokenAndTeamId,
-  createUserAndGetToken,
+  createForeignTeam,
+  addTeamMember,
   testEmailService,
   TEST_USER,
 } from "./setup.js";
@@ -49,7 +50,10 @@ describe("POST /v1/auth/agent-login", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.api_key).toMatch(/^pulse_agent_/);
-    expect(body.team.name).toBe("Newagent's Team");
+    // A new agent user joins the configured team rather than getting one of
+    // their own.
+    expect(body.team.id).toBe(testData.teamId);
+    expect(body.team.name).toBe("Test Team");
   });
 
   it("verifies code and returns agent key for existing user", async () => {
@@ -84,8 +88,9 @@ describe("POST /v1/auth/agent-login", () => {
       headers: { authorization: `Bearer ${agentKey}` },
     });
 
+    // The key belongs to the configured team, so it reads that team's projects.
     expect(projRes.statusCode).toBe(200);
-    expect(projRes.json().projects).toHaveLength(0);
+    expect(projRes.json().projects.length).toBeGreaterThanOrEqual(1);
   });
 
   it("rejects invalid code", async () => {
@@ -111,14 +116,12 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("requires team_id when user has multiple teams", async () => {
-    // Create user and add a second team
-    const { token } = await getTokenAndTeamId(app);
-    await app.inject({
-      method: "POST",
-      url: "/v1/teams",
-      headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Second Team", slug: "second-team" },
-    });
+    // Team creation is gone from the API, so the second membership is seeded
+    // directly. It is still reachable through agent-login because that flow
+    // resolves every membership the user holds, not only the configured one.
+    await getTokenAndTeamId(app);
+    const foreign = await createForeignTeam();
+    await addTeamMember(foreign.teamId, testData.userId, "member");
 
     const code = await sendCode(TEST_USER.email);
 
@@ -134,14 +137,10 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("returns agent key for specific team when team_id provided", async () => {
-    const { token } = await getTokenAndTeamId(app);
-    const teamRes = await app.inject({
-      method: "POST",
-      url: "/v1/teams",
-      headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Second Team", slug: "second-team" },
-    });
-    const secondTeamId = teamRes.json().id;
+    await getTokenAndTeamId(app);
+    const foreign = await createForeignTeam();
+    await addTeamMember(foreign.teamId, testData.userId, "member");
+    const secondTeamId = foreign.teamId;
 
     const code = await sendCode(TEST_USER.email);
 
@@ -156,13 +155,13 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("rejects non-member team_id", async () => {
-    const other = await createUserAndGetToken(app, "other@pulse.pubky.org");
+    const foreign = await createForeignTeam();
     const code = await sendCode(TEST_USER.email);
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: TEST_USER.email, code, team_id: other.teamId },
+      payload: { email: TEST_USER.email, code, team_id: foreign.teamId },
     });
 
     expect(res.statusCode).toBe(403);
@@ -190,14 +189,14 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
     expect(body.api_key).toMatch(/^pulse_agent_/);
     expect(body.team).toBeDefined();
 
-    // Step 3: Agent key works (no auto-provisioned projects)
+    // Step 3: Agent key works, reading the configured team's projects
     const projRes = await app.inject({
       method: "GET",
       url: "/v1/projects",
       headers: { authorization: `Bearer ${body.api_key}` },
     });
     expect(projRes.statusCode).toBe(200);
-    expect(projRes.json().projects).toHaveLength(0);
+    expect(projRes.json().projects.length).toBeGreaterThanOrEqual(1);
   });
 
   it("send-code → agent-login for existing user", async () => {
@@ -249,7 +248,7 @@ describe("GET /v1/auth/whoami", () => {
     const body = res.json();
     expect(body.type).toBe("api_key");
     expect(body.key_type).toBe("agent");
-    expect(body.team.name).toBe("Whoami's Team");
+    expect(body.team.name).toBe("Test Team");
     expect(body.permissions).toBeInstanceOf(Array);
     expect(body.permissions.length).toBeGreaterThan(0);
   });

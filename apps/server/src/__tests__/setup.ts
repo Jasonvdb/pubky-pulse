@@ -1,10 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";
-import cors from "@fastify/cors";
-import cookie from "@fastify/cookie";
-import jwt from "@fastify/jwt";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
@@ -16,32 +14,8 @@ const MIGRATIONS_FOLDER = resolve(
 import * as schema from "@pubky-pulse/db";
 import { createDatabaseConnection, ensurePartitions, ensureMetricEventPartitions, ensureFunnelEventPartitions } from "@pubky-pulse/db";
 import type { Permission, TeamRole } from "@pubky-pulse/shared";
-import { authRoutes } from "../routes/auth.js";
-import { ingestRoutes } from "../routes/ingest.js";
-import { feedbackIngestRoutes } from "../routes/feedback-ingest.js";
-import { questionnaireIngestRoutes } from "../routes/questionnaire-ingest.js";
-import { ingestAttachmentRoutes } from "../routes/ingest-attachment.js";
-import { attachmentsRoutes } from "../routes/attachments.js";
-import { importRoutes } from "../routes/import.js";
-import { eventsRoutes } from "../routes/events.js";
-import { appsRoutes } from "../routes/apps.js";
-import { projectsRoutes } from "../routes/projects.js";
-import { identityRoutes } from "../routes/identity.js";
-import { appUsersRoutes } from "../routes/app-users.js";
-import { teamsRoutes } from "../routes/teams.js";
-import { invitationRoutes } from "../routes/invitations.js";
-import { metricsRoutes, metricByIdRoutes, teamMetricsRoutes } from "../routes/metrics.js";
-import { funnelsRoutes, funnelByIdRoutes, teamFunnelsRoutes } from "../routes/funnels.js";
-import { auditLogsRoutes } from "../routes/audit-logs.js";
-import { userPropertiesRoutes } from "../routes/user-properties.js";
-import { jobsRoutes, jobsByIdRoutes } from "../routes/jobs.js";
-import { issuesRoutes, teamIssuesRoutes } from "../routes/issues.js";
-import { feedbackRoutes, teamFeedbackRoutes } from "../routes/feedback.js";
-import { questionnaireRoutes, teamQuestionnaireRoutes } from "../routes/questionnaires.js";
-import { statsRoutes, teamStatsRoutes } from "../routes/stats.js";
-import { notificationsRoutes } from "../routes/notifications.js";
-import { mcpRoute } from "../mcp/index.js";
-import { decompressPlugin } from "../middleware/decompress.js";
+import { buildServer } from "../app.js";
+import { bootstrapSingletonTeam } from "../services/bootstrap-team.js";
 import type { EmailService } from "../services/email.js";
 import { JobRunner } from "../services/job-runner.js";
 import type { JobContext, JobHandler } from "../services/job-runner.js";
@@ -75,19 +49,12 @@ export const TEST_USER = {
 export class TestEmailService implements EmailService {
   lastCode: string = "";
   lastEmail: string = "";
-  lastInvitationEmail: string = "";
-  lastInvitationParams: { team_name: string; invited_by_name: string; role: string; accept_url: string } | null = null;
   lastJobAlertEmail: string = "";
   lastJobAlertParams: { job_type: string; status: string; duration: string; error?: string } | null = null;
 
   async sendVerificationCode(email: string, code: string): Promise<void> {
     this.lastCode = code;
     this.lastEmail = email;
-  }
-
-  async sendTeamInvitation(email: string, params: { team_name: string; invited_by_name: string; role: string; accept_url: string }): Promise<void> {
-    this.lastInvitationEmail = email;
-    this.lastInvitationParams = params;
   }
 
   async sendJobAlert(email: string, params: { job_type: string; status: string; duration: string; error?: string }): Promise<void> {
@@ -300,51 +267,30 @@ export async function buildApp() {
   jobRunner.setNotificationDispatcher(notificationDispatcher);
   jobRunner.register("notification_deliver", notificationDeliverHandler(notificationDispatcher));
 
-  app.decorate("db", db);
-  app.decorate("databaseUrl", TEST_DB_URL);
-  app.decorate("emailService", testEmailService as EmailService);
-  app.decorate("jobRunner", jobRunner);
-  app.decorate("notificationDispatcher", notificationDispatcher);
-  await app.register(decompressPlugin);
-  await app.register(cookie);
-  await app.register(cors, { origin: true, credentials: true });
-  await app.register(jwt, { secret: "test-secret" });
+  // Plugins and routes come from the shared factory in src/app.ts so the test
+  // app can never register a different route set than src/index.ts. Only the
+  // test-specific wiring — database URL, stubbed email/job handlers, permissive
+  // CORS and the fixed JWT secret — stays here.
+  await buildServer({
+    app,
+    db,
+    databaseUrl: TEST_DB_URL,
+    emailService: testEmailService as EmailService,
+    jobRunner,
+    notificationDispatcher,
+    cors: { origin: true, credentials: true },
+    jwtSecret: "test-secret",
+  });
 
-  app.get("/health", async () => ({ status: "ok" }));
-  await app.register(authRoutes, { prefix: "/v1/auth" });
-  await app.register(ingestRoutes, { prefix: "/v1" });
-  await app.register(feedbackIngestRoutes, { prefix: "/v1" });
-  await app.register(questionnaireIngestRoutes, { prefix: "/v1" });
-  await app.register(ingestAttachmentRoutes, { prefix: "/v1" });
-  await app.register(attachmentsRoutes, { prefix: "/v1" });
-  await app.register(importRoutes, { prefix: "/v1" });
-  await app.register(eventsRoutes, { prefix: "/v1" });
-  await app.register(appsRoutes, { prefix: "/v1" });
-  await app.register(projectsRoutes, { prefix: "/v1" });
-  await app.register(identityRoutes, { prefix: "/v1" });
-  await app.register(appUsersRoutes, { prefix: "/v1" });
-  await app.register(teamsRoutes, { prefix: "/v1" });
-  await app.register(invitationRoutes, { prefix: "/v1" });
-  await app.register(metricsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(metricByIdRoutes, { prefix: "/v1" });
-  await app.register(teamMetricsRoutes, { prefix: "/v1" });
-  await app.register(funnelsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(funnelByIdRoutes, { prefix: "/v1" });
-  await app.register(teamFunnelsRoutes, { prefix: "/v1" });
-  await app.register(auditLogsRoutes, { prefix: "/v1/teams/:teamId" });
-  await app.register(userPropertiesRoutes, { prefix: "/v1" });
-  await app.register(jobsRoutes, { prefix: "/v1/teams/:teamId" });
-  await app.register(jobsByIdRoutes, { prefix: "/v1" });
-  await app.register(issuesRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamIssuesRoutes, { prefix: "/v1" });
-  await app.register(feedbackRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamFeedbackRoutes, { prefix: "/v1" });
-  await app.register(questionnaireRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamQuestionnaireRoutes, { prefix: "/v1" });
-  await app.register(statsRoutes, { prefix: "/v1/projects/:projectId" });
-  await app.register(teamStatsRoutes, { prefix: "/v1" });
-  await app.register(notificationsRoutes, { prefix: "/v1" });
-  await app.register(mcpRoute);
+  // Production runs the singleton-team bootstrap before app.listen; the test
+  // app runs it here so suites exercise the same identity path.
+  //
+  // It truncates first because suites share one database and run sequentially
+  // (`fileParallelism: false`): the previous file's rows are still present at
+  // this point, and a leftover extra active team is a startup invariant
+  // violation by design. Each suite's own beforeEach re-seeds from clean.
+  await truncateAll();
+  await bootstrapSingletonTeam(db);
 
   await app.ready();
   return app;
@@ -381,8 +327,8 @@ export async function truncateAll() {
   await client`DELETE FROM events`;
   await client`DELETE FROM api_keys`;
   await client`DELETE FROM apps`;
+  await client`DELETE FROM project_owners`;
   await client`DELETE FROM projects`;
-  await client`DELETE FROM team_invitations`;
   await client`DELETE FROM team_members`;
   await client`DELETE FROM teams`;
   await client`DELETE FROM email_verification_codes`;
@@ -414,6 +360,13 @@ export async function seedTestData() {
     INSERT INTO projects (team_id, name, slug, color)
     VALUES (${team.id}, 'Test Project', 'test-project', '#0ea5e9')
     RETURNING id
+  `;
+
+  // Every project needs at least one owner — ordinary project-scoped writes
+  // are authorized against project_owners, not team membership.
+  await client`
+    INSERT INTO project_owners (project_id, user_id)
+    VALUES (${project.id}, ${user.id})
   `;
 
   const [app] = await client`
@@ -457,6 +410,11 @@ export async function seedTestData() {
     RETURNING id
   `;
 
+  await client`
+    INSERT INTO project_owners (project_id, user_id)
+    VALUES (${backendProject.id}, ${user.id})
+  `;
+
   // Backend app (no bundle_id, in its own project)
   const [backendApp] = await client`
     INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
@@ -485,6 +443,11 @@ export async function seedTestData() {
     INSERT INTO projects (team_id, name, slug, color)
     VALUES (${team.id}, 'Test Android Project', 'test-android-project', '#a855f7')
     RETURNING id
+  `;
+
+  await client`
+    INSERT INTO project_owners (project_id, user_id)
+    VALUES (${androidProject.id}, ${user.id})
   `;
 
   // Android app
@@ -682,8 +645,12 @@ export async function createAgentKey(
 }
 
 /**
- * Directly inserts a team member via DB (bypasses invitation flow).
- * Useful for tests that need members without going through email invitations.
+ * Directly upserts a team member via DB.
+ * Useful for tests that need a member at a specific role.
+ *
+ * It upserts rather than inserts because signing in now attaches the user to
+ * the configured singleton team automatically, so callers that log a user in
+ * and then place them at a specific role are adjusting an existing row.
  */
 export async function addTeamMember(
   teamId: string,
@@ -694,8 +661,175 @@ export async function addTeamMember(
   await client`
     INSERT INTO team_members (team_id, user_id, role)
     VALUES (${teamId}, ${userId}, ${role})
+    ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role
   `;
   await client.end();
+}
+
+/**
+ * Creates a second, non-configured team with its own owner, project, app,
+ * agent key, event and feedback item, entirely in the database.
+ *
+ * Signing in can no longer produce a team of one's own — every allowed user
+ * joins the configured singleton team — so suites that assert a boundary
+ * between teams (API keys, agent keys, team-scoped queries) build the far side
+ * of that boundary here instead. The rows are deliberately unreachable through
+ * the human login flow, which is exactly the situation under test.
+ *
+ * The event, feedback and job-run rows exist so a boundary test can name real
+ * foreign data: a 404 for an id that never existed proves nothing about
+ * isolation. The job run is left `running` so a cross-team cancel attempt
+ * reaches the containment guard rather than stopping at a status check.
+ */
+export async function createForeignTeam(opts: {
+  email?: string;
+  teamName?: string;
+  teamSlug?: string;
+} = {}): Promise<{
+  teamId: string;
+  userId: string;
+  projectId: string;
+  appId: string;
+  apiKeyId: string;
+  apiKeySecret: string;
+  eventId: string;
+  feedbackId: string;
+  jobRunId: string;
+}> {
+  const suffix = randomUUID().slice(0, 8);
+  const {
+    email = `foreign-${suffix}@pulse.pubky.org`,
+    teamName = `Foreign Team ${suffix}`,
+    teamSlug = `foreign-team-${suffix}`,
+  } = opts;
+
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    const [user] = await client`
+      INSERT INTO users (email, name) VALUES (${email}, ${"Foreign User"}) RETURNING id
+    `;
+    const [team] = await client`
+      INSERT INTO teams (name, slug) VALUES (${teamName}, ${teamSlug}) RETURNING id
+    `;
+    await client`
+      INSERT INTO team_members (team_id, user_id, role) VALUES (${team.id}, ${user.id}, 'owner')
+    `;
+    const [project] = await client`
+      INSERT INTO projects (team_id, name, slug, color)
+      VALUES (${team.id}, ${`Foreign Project ${suffix}`}, ${`foreign-project-${suffix}`}, '#f97316')
+      RETURNING id
+    `;
+    await client`
+      INSERT INTO project_owners (project_id, user_id) VALUES (${project.id}, ${user.id})
+    `;
+    const [foreignApp] = await client`
+      INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
+      VALUES (${team.id}, ${project.id}, ${`Foreign App ${suffix}`}, 'apple', ${`dev.foreign.${suffix}`})
+      RETURNING id
+    `;
+    const apiKeySecret = `pulse_agent_${suffix.padEnd(8, "0").repeat(4)}`;
+    const [foreignKey] = await client`
+      INSERT INTO api_keys (secret, key_type, app_id, team_id, name, created_by, permissions)
+      VALUES (
+        ${apiKeySecret},
+        'agent',
+        ${null},
+        ${team.id},
+        'Foreign Agent Key',
+        ${user.id},
+        ${JSON.stringify(["events:read", "apps:read", "projects:read"])}::jsonb
+      )
+      RETURNING id
+    `;
+    // Real data inside the foreign app: `events` is partitioned by timestamp,
+    // so this uses now() to land in the partition the harness already created.
+    const [foreignEvent] = await client`
+      INSERT INTO events (app_id, session_id, level, message, timestamp)
+      VALUES (${foreignApp.id}, ${randomUUID()}, 'info', ${`Foreign event ${suffix}`}, now())
+      RETURNING id
+    `;
+    const [foreignFeedback] = await client`
+      INSERT INTO feedback (app_id, project_id, message)
+      VALUES (${foreignApp.id}, ${project.id}, ${`Foreign feedback ${suffix}`})
+      RETURNING id
+    `;
+    const [foreignJobRun] = await client`
+      INSERT INTO job_runs (job_type, status, team_id, project_id, triggered_by)
+      VALUES ('stats_aggregate_daily', 'running', ${team.id}, ${project.id}, 'foreign-team-fixture')
+      RETURNING id
+    `;
+    return {
+      teamId: team.id as string,
+      userId: user.id as string,
+      projectId: project.id as string,
+      appId: foreignApp.id as string,
+      apiKeyId: foreignKey.id as string,
+      apiKeySecret,
+      eventId: foreignEvent.id as string,
+      feedbackId: foreignFeedback.id as string,
+      jobRunId: foreignJobRun.id as string,
+    };
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Grants a user ownership of a project. Idempotent, matching the PUT
+ * /v1/projects/:projectId/owners/:userId contract, so an ACL suite can call it
+ * without first checking whether the row already exists.
+ */
+export async function addProjectOwner(projectId: string, userId: string): Promise<void> {
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    await client`
+      INSERT INTO project_owners (project_id, user_id)
+      VALUES (${projectId}, ${userId})
+      ON CONFLICT DO NOTHING
+    `;
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Creates a project and its first owner in one transaction, mirroring the
+ * invariant the create-project route must hold: a project is never visible
+ * without an owner. Returns the project id. The slug defaults to a unique value
+ * because slugs are unique per team.
+ */
+export async function createProjectWithOwner(
+  teamId: string,
+  ownerUserId: string,
+  opts: { name?: string; slug?: string; color?: string } = {},
+): Promise<string> {
+  const suffix = randomUUID().slice(0, 8);
+  const { name = `Test Project ${suffix}`, slug = `test-project-${suffix}`, color = "#0ea5e9" } = opts;
+  // `max: 1` pins every statement below to the same connection, so the explicit
+  // transaction control applies to them. postgres.js's `begin()` callback type
+  // is not tag-callable, hence BEGIN/COMMIT rather than `client.begin`.
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    await client`BEGIN`;
+    try {
+      const [project] = await client`
+        INSERT INTO projects (team_id, name, slug, color)
+        VALUES (${teamId}, ${name}, ${slug}, ${color})
+        RETURNING id
+      `;
+      await client`
+        INSERT INTO project_owners (project_id, user_id)
+        VALUES (${project.id}, ${ownerUserId})
+      `;
+      await client`COMMIT`;
+      return project.id as string;
+    } catch (err) {
+      await client`ROLLBACK`.catch(() => {});
+      throw err;
+    }
+  } finally {
+    await client.end();
+  }
 }
 
 /**

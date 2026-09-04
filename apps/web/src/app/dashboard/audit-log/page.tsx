@@ -39,13 +39,13 @@ import { TableSkeleton } from "@/components/ui/skeletons";
 // Mirrors AuditResourceType and AuditAction from @pubky-pulse/shared (runtime import
 // would pull in node:crypto via the barrel export, which Next.js can't bundle)
 const RESOURCE_TYPES: AuditResourceType[] = [
-  "app", "project", "api_key", "team", "team_member",
-  "invitation", "metric_definition", "user",
+  "app", "project", "project_owner", "api_key", "team", "team_member",
+  "metric_definition", "user",
 ];
 const ACTIONS: AuditAction[] = ["create", "update", "delete"];
 
 export default function AuditLogPage() {
-  const { currentTeam } = useTeam();
+  const { currentTeam, isTeamOwner } = useTeam();
 
   const filters = useUrlFilters({
     path: "/dashboard/audit-log",
@@ -76,7 +76,13 @@ export default function AuditLogPage() {
   if (filters.computedSince) queryFilters.since = filters.computedSince;
   if (filters.computedUntil) queryFilters.until = filters.computedUntil;
 
-  const { auditLogs, isLoading, isLoadingMore, hasMore, loadMore } = useAuditLogs(currentTeam?.id, queryFilters);
+  // The trail is the team owner's oversight surface; the server refuses it to
+  // everyone else, so members are told why rather than shown a table that will
+  // never fill in.
+  const { auditLogs, isLoading, isLoadingMore, hasMore, loadMore } = useAuditLogs(
+    isTeamOwner ? currentTeam?.id : undefined,
+    queryFilters,
+  );
 
   const timeRange = filters.get("time_range");
   const sinceInput = filters.get("since");
@@ -99,6 +105,15 @@ export default function AuditLogPage() {
 
   if (!currentTeam) {
     return <p className="text-sm text-muted-foreground">Loading team...</p>;
+  }
+
+  if (!isTeamOwner) {
+    return (
+      <p className="max-w-prose text-sm text-muted-foreground">
+        The team-wide audit trail is available to the team owner. Ask them if you
+        need to trace a change.
+      </p>
+    );
   }
 
   return (

@@ -14,12 +14,12 @@ REST reference for the core Pubky Pulse API, authenticated with the same `pulse_
 | [Import](/docs/api-reference/import) | `POST /v1/import` — bulk historical import with no timestamp restrictions |
 | [Events](/docs/api-reference/events) | Query events by app, level, date range, session, and more |
 | [Apps](/docs/api-reference/apps) | App CRUD, platforms, bundle IDs, and client keys |
-| [Projects](/docs/api-reference/projects) | Project CRUD, retention settings, and team scoping |
+| [Projects](/docs/api-reference/projects) | Project CRUD, retention settings, and the per-project owner list |
 | [Metrics](/docs/api-reference/metrics) | Metric definition CRUD and aggregation queries |
 | [Funnels](/docs/api-reference/funnels) | Funnel definition CRUD and open/closed analytics queries |
 | [Issues](/docs/api-reference/issues) | List, view, update, merge issues and manage comments |
 | [Attachments](/docs/api-reference/attachments) | Reserve, upload, list, download (signed URL), delete, and quota usage |
-| [Teams](/docs/api-reference/teams) | Team CRUD, invitations, and member roles |
+| [Team](/docs/api-reference/teams) | Read the single configured team, its roster, and the audit log |
 | [Identity](/docs/api-reference/identity) | Claim anonymous events for a known user ID and set user properties |
 | [Jobs](/docs/api-reference/jobs) | List, trigger, inspect, and cancel background job runs |
 | [Notifications](/docs/api-reference/notifications) | Per-user inbox: list, mark read, mark all read, soft-delete |
@@ -52,6 +52,15 @@ https://ingest.yourdomain.com/v1
 
 Both subdomains route to the same Fastify server on port 4000. The split exists for operational clarity and independent rate limiting.
 
+## Access model
+
+A deployment has exactly one team, and only email addresses on the configured domains can sign in at all. Within that team:
+
+- **reads are team-wide** — every member reads every project;
+- **writes are per project** — ordinary project-scoped mutations require being one of the project's owners, and a `viewer` receives `403`;
+- **agent keys inherit their creator's access**, re-read on every request, so an ownership change takes effect on the key's next call;
+- **some destructive operations are human-only** — see [Authentication & Access Control](/docs/concepts/authentication).
+
 ## Authentication
 
 Pubky Pulse supports two authentication methods:
@@ -77,7 +86,7 @@ There are three key types:
 | Type | Prefix | Purpose |
 |------|--------|---------|
 | Client | `pulse_client_` | SDK event ingestion (scoped to an app) |
-| Agent | `pulse_agent_` | MCP and programmatic read/write access (scoped to a team) |
+| Agent | `pulse_agent_` | MCP and programmatic read/write access; writes follow the key creator's project ownership |
 | Import | `pulse_import_` | Bulk historical data import via [`POST /v1/import`](/docs/api-reference/import) (scoped to an app) |
 
 ## Error Responses
@@ -96,10 +105,9 @@ Common HTTP status codes:
 |------|---------|
 | 400 | Bad request -- missing or invalid parameters |
 | 401 | Unauthorized -- missing or invalid credentials |
-| 403 | Forbidden -- insufficient permissions or role |
-| 404 | Not found -- resource does not exist or is not accessible |
-| 409 | Conflict -- duplicate resource (e.g., slug already exists) |
-| 410 | Gone -- invitation expired or already accepted |
+| 403 | Forbidden -- missing project ownership, key permission, principal type, or recovery authority |
+| 404 | Not found -- resource does not exist, is soft-deleted, is outside your team, or does not belong to the parent in the URL |
+| 409 | Conflict -- duplicate resource (e.g., slug already exists), or removing the final owner of a project |
 | 429 | Rate limited -- too many requests |
 
 ## Pagination

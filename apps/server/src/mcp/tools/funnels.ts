@@ -45,7 +45,8 @@ export function registerFunnelsTools(server: McpServer, app: FastifyInstance, ag
 
   server.registerTool("create-funnel", {
     description:
-      "Create a funnel definition with ordered steps. Each step has a name and event_filter (matching on step_name and/or screen_name). Max 20 steps. Requires funnels:write permission.",
+      "Create a funnel definition with ordered steps. Each step has a name and event_filter (matching on step_name and/or screen_name). Max 20 steps. " +
+      "Requires funnels:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       name: z.string().describe("Funnel name"),
@@ -68,7 +69,7 @@ export function registerFunnelsTools(server: McpServer, app: FastifyInstance, ag
   });
 
   server.registerTool("update-funnel", {
-    description: "Update a funnel definition. Requires funnels:write permission.",
+    description: "Update a funnel definition. Requires funnels:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       slug: z.string().describe("Funnel slug"),
@@ -91,7 +92,9 @@ export function registerFunnelsTools(server: McpServer, app: FastifyInstance, ag
   });
 
   server.registerTool("delete-funnel", {
-    description: "Soft-delete a funnel definition. Requires funnels:write permission.",
+    description:
+      "Soft-delete a funnel definition. Agent keys ARE allowed to delete funnel definitions. " +
+      "Requires funnels:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       slug: z.string().describe("Funnel slug to delete"),

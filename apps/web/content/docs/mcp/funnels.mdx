@@ -27,7 +27,7 @@ Get a funnel definition by slug, including its steps.
 
 ## create-funnel
 
-Create a funnel definition with ordered steps. Max 20 steps. Requires `funnels:write` permission.
+Create a funnel definition with ordered steps. Max 20 steps. Requires `funnels:write` permission **and** project ownership.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -60,7 +60,7 @@ Each step in the `steps` array:
 
 ## update-funnel
 
-Update a funnel definition. Requires `funnels:write` permission.
+Update a funnel definition. Requires `funnels:write` permission **and** project ownership.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -72,7 +72,7 @@ Update a funnel definition. Requires `funnels:write` permission.
 
 ## delete-funnel
 
-Soft-delete a funnel definition. Existing funnel events are not removed. Requires `funnels:write` permission.
+Soft-delete a funnel definition. Existing funnel events are not removed. Requires `funnels:write` permission **and** project ownership. Deleting a funnel definition is one of the destructive operations agent keys *are* allowed to perform.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

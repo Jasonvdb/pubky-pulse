@@ -96,7 +96,9 @@ export function registerIssuesTools(server: McpServer, app: FastifyInstance, age
   });
 
   server.registerTool("claim-issue", {
-    description: "Claim an issue by setting its status to in_progress. Use this when investigating or working on a fix.",
+    description:
+      "Claim an issue by setting its status to in_progress. Use this when investigating or working on a fix. " +
+      "Like every issue status change, it requires issues:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       issue_id: z.string().uuid().describe("The issue ID"),
@@ -110,7 +112,9 @@ export function registerIssuesTools(server: McpServer, app: FastifyInstance, age
   });
 
   server.registerTool("merge-issues", {
-    description: "Merge a source issue into a target issue. All occurrences, fingerprints, and comments are moved to the target. The source is deleted.",
+    description:
+      "Merge a source issue into a target issue. All occurrences, fingerprints, and comments are moved to the target. The source is deleted. " +
+      "Agent keys ARE allowed to merge issues: requires issues:write permission AND that the human who created this key currently owns the project.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       target_issue_id: z.string().uuid().describe("The target issue ID (survives the merge)"),
@@ -138,7 +142,9 @@ export function registerIssuesTools(server: McpServer, app: FastifyInstance, age
   });
 
   server.registerTool("add-issue-comment", {
-    description: "Add a comment to an issue. Use this to document investigations, fixes, or context for future reference.",
+    description:
+      "Add a comment to an issue. Use this to document investigations, fixes, or context for future reference. " +
+      "Commenting is the one exception to project ownership: issues:write on a readable project is enough, even when this key's creator does not own it. The comment is authored by this exact key, so no other key — not even one from the same creator — can edit or delete it.",
     inputSchema: {
       project_id: z.string().uuid().describe("The project ID"),
       issue_id: z.string().uuid().describe("The issue ID"),

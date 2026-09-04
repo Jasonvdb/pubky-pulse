@@ -6,6 +6,7 @@ import {
   buildApp,
   truncateAll,
   seedTestData,
+  getToken,
   TEST_CLIENT_KEY,
   TEST_AGENT_KEY,
   TEST_SESSION_ID,
@@ -419,14 +420,39 @@ describe("DELETE /v1/attachments/:id", () => {
     const { attachment_id } = response.json();
     await uploadBytes(attachment_id, buf);
 
-    // Soft delete via client key (which has events:write)
+    const token = await getToken(app);
+    const del = await app.inject({
+      method: "DELETE",
+      url: `/v1/attachments/${attachment_id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(del.statusCode).toBe(200);
+    const client = postgres(TEST_DB_URL, { max: 1 });
+    const [row] = await client`SELECT deleted_at FROM event_attachments WHERE id = ${attachment_id}`;
+    await client.end();
+    expect(row.deleted_at).not.toBeNull();
+  });
+
+  it("refuses the client key that uploaded it and leaves the row intact", async () => {
+    const { buf, response } = await reserveAttachment();
+    const { attachment_id } = response.json();
+    await uploadBytes(attachment_id, buf);
+
+    // An ingestion credential can upload an attachment but never delete one:
+    // deletion is human project-owner only, and a client key carries no human
+    // actor to own anything.
     const del = await app.inject({
       method: "DELETE",
       url: `/v1/attachments/${attachment_id}`,
       headers: { authorization: `Bearer ${TEST_CLIENT_KEY}` },
     });
-    // Client keys don't have team membership so role check fails; use the user flow instead.
-    expect([200, 403]).toContain(del.statusCode);
+
+    expect(del.statusCode).toBe(403);
+    const client = postgres(TEST_DB_URL, { max: 1 });
+    const [row] = await client`SELECT deleted_at FROM event_attachments WHERE id = ${attachment_id}`;
+    await client.end();
+    expect(row.deleted_at).toBeNull();
   });
 });
 

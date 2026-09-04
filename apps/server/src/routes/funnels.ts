@@ -10,10 +10,15 @@ import type {
   CompletionsCountQueryParams,
 } from "@pubky-pulse/shared";
 import { validateFunnelSlug, PG_UNIQUE_VIOLATION } from "@pubky-pulse/shared";
-import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
+import { requirePermission, getAuthTeamIds } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { dataModeToDrizzle } from "../utils/data-mode.js";
 import { resolveProject, resolveProjectAppIds } from "../utils/project.js";
+import {
+  applyProjectWrite,
+  enforceProjectWrite,
+  resolveFunnelDefinitionInProject,
+} from "../utils/project-access.js";
 
 const MAX_FUNNEL_STEPS = 20;
 
@@ -135,17 +140,16 @@ export async function funnelsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: stepsError });
       }
 
-      const project = await resolveProject(app, projectId, auth, reply);
-      if (!project) return;
-
-      if (!hasTeamAccess(auth, project.team_id)) {
-        return reply.code(403).send({ error: "Not a member of this team" });
-      }
-
-      const roleError = assertTeamRole(auth, project.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
-      }
+      // A funnel definition is project configuration, so creating one is an
+      // ordinary project write: the project's owner list decides, not team
+      // role. 404 when the project is invisible, 403 when it is visible but
+      // unowned; an agent key also needs `funnels:write` and its creator's
+      // current ownership.
+      const access = await enforceProjectWrite(app, projectId, auth, reply, {
+        permission: "funnels:write",
+      });
+      if (!access) return;
+      const project = access.project;
 
       // Resurrect soft-deleted funnel with same slug (preserves UUID and event history)
       const [existing] = await app.db
@@ -229,30 +233,17 @@ export async function funnelsRoutes(app: FastifyInstance) {
         }
       }
 
-      const teamIds = getAuthTeamIds(auth);
-      const [funnel] = await app.db
-        .select()
-        .from(funnelDefinitions)
-        .innerJoin(projects, eq(projects.id, funnelDefinitions.project_id))
-        .where(
-          and(
-            eq(funnelDefinitions.project_id, projectId),
-            eq(funnelDefinitions.slug, slug),
-            isNull(funnelDefinitions.deleted_at),
-            inArray(projects.team_id, teamIds),
-            isNull(projects.deleted_at),
-          ),
-        )
-        .limit(1);
-
-      if (!funnel) {
-        return reply.code(404).send({ error: "Funnel not found" });
-      }
-
-      const roleError = assertTeamRole(auth, funnel.projects.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
-      }
+      // Resolve the definition together with the project that contains it, in
+      // one query, and authorize the write against that project.
+      const contained = await resolveFunnelDefinitionInProject(
+        app,
+        { projectId, slug },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "funnels:write" })) return;
+      const funnel = contained.resource;
 
       const updates: Partial<typeof funnelDefinitions.$inferInsert> = {};
       if (name !== undefined) updates.name = name;
@@ -266,17 +257,17 @@ export async function funnelsRoutes(app: FastifyInstance) {
       const [updated] = await app.db
         .update(funnelDefinitions)
         .set(updates)
-        .where(eq(funnelDefinitions.id, funnel.funnel_definitions.id))
+        .where(eq(funnelDefinitions.id, funnel.id))
         .returning();
 
       const changes: Record<string, { before?: unknown; after?: unknown }> = {};
-      if (name !== undefined) changes.name = { before: funnel.funnel_definitions.name, after: name };
+      if (name !== undefined) changes.name = { before: funnel.name, after: name };
       if (Object.keys(changes).length > 0) {
         logAuditEvent(app.db, auth, {
-          team_id: funnel.projects.team_id,
+          team_id: contained.project.team_id,
           action: "update",
           resource_type: "funnel_definition",
-          resource_id: funnel.funnel_definitions.id,
+          resource_id: funnel.id,
           changes,
         });
       }
@@ -294,41 +285,28 @@ export async function funnelsRoutes(app: FastifyInstance) {
 
       const { projectId, slug } = request.params;
 
-      const teamIds = getAuthTeamIds(auth);
-      const [funnel] = await app.db
-        .select()
-        .from(funnelDefinitions)
-        .innerJoin(projects, eq(projects.id, funnelDefinitions.project_id))
-        .where(
-          and(
-            eq(funnelDefinitions.project_id, projectId),
-            eq(funnelDefinitions.slug, slug),
-            isNull(funnelDefinitions.deleted_at),
-            inArray(projects.team_id, teamIds),
-            isNull(projects.deleted_at),
-          ),
-        )
-        .limit(1);
-
-      if (!funnel) {
-        return reply.code(404).send({ error: "Funnel not found" });
-      }
-
-      const roleError = assertTeamRole(auth, funnel.projects.team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
-      }
+      // Deleting a funnel definition is agent-supported (handoff §2), so no
+      // human-only option here: an owning agent with `funnels:write` may do it.
+      const contained = await resolveFunnelDefinitionInProject(
+        app,
+        { projectId, slug },
+        auth,
+        reply,
+      );
+      if (!contained) return;
+      if (!applyProjectWrite(contained, auth, reply, { permission: "funnels:write" })) return;
+      const funnel = contained.resource;
 
       await app.db
         .update(funnelDefinitions)
         .set({ deleted_at: new Date() })
-        .where(eq(funnelDefinitions.id, funnel.funnel_definitions.id));
+        .where(eq(funnelDefinitions.id, funnel.id));
 
       logAuditEvent(app.db, auth, {
-        team_id: funnel.projects.team_id,
+        team_id: contained.project.team_id,
         action: "delete",
         resource_type: "funnel_definition",
-        resource_id: funnel.funnel_definitions.id,
+        resource_id: funnel.id,
         metadata: { slug },
       });
 

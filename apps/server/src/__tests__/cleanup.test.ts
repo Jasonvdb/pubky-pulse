@@ -257,25 +257,11 @@ describe("cleanupSoftDeletedResources", () => {
   });
 
   it("hard-deletes soft-deleted team and all its children after cutoff", async () => {
-    const { token, teamId } = await getTokenAndTeamId(app);
+    const { teamId } = await getTokenAndTeamId(app);
 
-    // Create second team so user has >1
-    await app.inject({
-      method: "POST",
-      url: "/v1/teams",
-      headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Backup Team", slug: "backup-team" },
-    });
-    const { token: freshToken } = await getTokenAndTeamId(app);
-
-    // Delete the team (soft-delete)
-    await app.inject({
-      method: "DELETE",
-      url: `/v1/teams/${teamId}`,
-      headers: { authorization: `Bearer ${freshToken}` },
-    });
-
-    // Backdate the soft-delete to 8 days ago
+    // No API soft-deletes a team any more — the configured singleton team is
+    // not deletable — so the cutoff state is written directly. What is under
+    // test is the cleanup job's cascade, not how a team came to be deleted.
     const client = postgres(TEST_DB_URL, { max: 1 });
     const eightDaysAgo = new Date();
     eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);

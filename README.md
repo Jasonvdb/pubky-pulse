@@ -24,7 +24,7 @@ Capability areas:
 - **Locale demand** — which languages and countries your users have, and which ones your app does not ship yet
 - **Stats rollups** — daily and hourly pre-aggregated counts that outlive raw-event retention
 - **Notifications** — in-app inbox and email, per user and per type
-- **Teams** — owner, admin and member roles with email invites
+- **Access control** — one configured team locked to your own email domains, with per-project owner lists deciding who can write
 - **Audit** — who created, updated or deleted what, queryable like any other resource
 - **Jobs** — 13 background job types on pg-boss, with scheduling, progress and cancellation
 - **Retention** — per-project retention windows plus an optional database size cap that drops the oldest partitions first
@@ -46,6 +46,8 @@ claude mcp add --transport http --scope user pubky-pulse \
 Then tell your agent what you want. It reads the `pubky-pulse://guide` resource on connect, so it knows the resource hierarchy and conventions, and it has 62 tools covering projects, apps, events, metrics, funnels, issues, feedback, questionnaires, attachments, jobs, audit logs, stats and identity. Ask it to create a project and an app, wire the SDK into your codebase, and from then on ask it questions instead of opening charts: what broke since the last release, which funnel step people abandon, what a specific user did in the ten minutes before the crash.
 
 Permissions are enforced per tool, not per connection: a key without `projects:write` gets an error from `create-project` and keeps working for everything else, so you can hand a read-only key to an agent you are still learning to trust.
+
+Reads are wide and writes are narrow. An agent key reads every project in the team, but an ordinary write also requires the *person who created the key* to currently own the target project — so an agent is never more powerful than the colleague it belongs to, and adding or removing that person from a project takes effect on the next call with no new key. Deleting projects, apps, feedback, questionnaires, responses and attachments, and changing a project's owner list, stay human-only.
 
 Three other key types exist alongside agent keys: `pulse_client_*` for SDKs sending data (scoped to one app's bundle ID), `pulse_import_*` for backfilling history, and a passwordless email code that signs you into the dashboard. Only agent keys reach MCP.
 
@@ -97,13 +99,16 @@ pnpm install
 
 createdb pubky_pulse
 cp .env.example .env          # set DATABASE_URL, JWT_SECRET, PORT, HOST, CORS_ORIGINS
+                              # plus the four required PULSE_* identity variables
 
 pnpm db:migrate               # tables plus the first event partitions
-pnpm dev:seed                 # admin user, team, project, app, API keys
+pnpm dev:seed                 # seed user, team, project (with an owner), app, API keys
 
 pnpm dev:server               # API on http://localhost:4000
 pnpm dev:web                  # dashboard and docs on http://localhost:3000
 ```
+
+Sign-in is restricted to the email domains you configure. `PULSE_ALLOWED_EMAIL_DOMAINS`, `PULSE_DEFAULT_TEAM_NAME`, `PULSE_DEFAULT_TEAM_SLUG` and `PULSE_TEAM_OWNER_EMAIL` are required in every environment including local development — there are no defaults, and the server refuses to start without them. The seed inserts its own team (`Default Team` / `default`, owned by `admin@pulse.pubky.org`), so point those four at that team and domain if you seed, otherwise the startup bootstrap finds two active teams and stops.
 
 `pnpm dev:seed` gives you a working account, team, project, app and API keys, and prints them; with no `RESEND_API_KEY` set, the sign-in code for the dashboard is printed to the API server console and written to `.dev-verification-code` instead of being mailed. To get data to look at, `pnpm dev:seed-events`, `pnpm dev:seed-issues` and `pnpm dev:seed-aggregates` generate synthetic events, error clusters and stats rollups.
 
@@ -123,7 +128,7 @@ CI pins pnpm 10.33.0 through corepack. Match it locally (`corepack prepare pnpm@
 
 The full walkthrough — system dependencies, PostgreSQL, nginx, SSL, environment variables, maintenance — is at [pulse.pubky.org/docs/self-hosting](https://pulse.pubky.org/docs/self-hosting).
 
-Configuration is environment variables only. Beyond `DATABASE_URL`, `JWT_SECRET`, `PORT`, `HOST` and `CORS_ORIGINS`, a production instance wants `PULSE_ATTACHMENTS_PATH` and `PULSE_ATTACHMENTS_SIGNING_SECRET` (the server refuses to start without the latter, and it must differ from `JWT_SECRET`), `API_PUBLIC_URL` and `WEB_APP_URL`, `COOKIE_DOMAIN`, `MAX_DATABASE_SIZE_GB` for the pruning safety net, and `RESEND_API_KEY` plus `EMAIL_FROM` if you want email out. `.env.example` documents each one. The dashboard is separate: its only variable, `NEXT_PUBLIC_API_URL`, goes in `apps/web/.env` (Next.js resolves env files relative to `apps/web`) and is inlined at build time, so set it before `pnpm build`.
+Configuration is environment variables only. Four of them decide who may use the instance at all — `PULSE_ALLOWED_EMAIL_DOMAINS`, `PULSE_DEFAULT_TEAM_NAME`, `PULSE_DEFAULT_TEAM_SLUG` and `PULSE_TEAM_OWNER_EMAIL` — and the server refuses to start if any is missing or invalid. Point them at a fresh database: the bootstrap adopts or creates the team with the configured slug and fails if another active team already exists. Beyond those and `DATABASE_URL`, `JWT_SECRET`, `PORT`, `HOST` and `CORS_ORIGINS`, a production instance wants `PULSE_ATTACHMENTS_PATH` and `PULSE_ATTACHMENTS_SIGNING_SECRET` (the server refuses to start without the latter, and it must differ from `JWT_SECRET`), `API_PUBLIC_URL` and `WEB_APP_URL`, `COOKIE_DOMAIN`, `MAX_DATABASE_SIZE_GB` for the pruning safety net, and `RESEND_API_KEY` plus `EMAIL_FROM` if you want email out. `.env.example` documents each one. The dashboard is separate: its only variable, `NEXT_PUBLIC_API_URL`, goes in `apps/web/.env` (Next.js resolves env files relative to `apps/web`) and is inlined at build time, so set it before `pnpm build`.
 
 The short version: `deploy/setup-ubuntu-vps.sh` provisions a fresh Ubuntu host (Node, PostgreSQL, nginx, pm2). The application lives in `/opt/pubky-pulse` and runs as two pm2 processes, `pulse-api` and `pulse-web`. Event attachments are written to `/opt/pubky-pulse-attachments`, outside the database — back that directory up alongside `pg_dump`, and exclude it from the dump itself.
 

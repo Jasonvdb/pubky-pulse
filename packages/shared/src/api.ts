@@ -34,7 +34,7 @@ export interface AuthTeamMembership {
   id: string;
   name: string;
   slug: string;
-  role: "owner" | "admin" | "member";
+  role: TeamRole;
   default_agent_key?: string;
 }
 
@@ -70,7 +70,11 @@ export interface CreateApiKeyRequest {
 }
 
 // Serialized API key (dates as ISO strings, excludes deleted_at)
-export type ApiKeyResponse = Omit<ApiKey, "created_at" | "updated_at" | "last_used_at" | "expires_at" | "deleted_at"> & {
+// `secret` is nullable here but not on the `ApiKey` domain type: the column is
+// NOT NULL in the database and always populated, and only serialization redacts
+// it for callers who are not entitled to read it.
+export type ApiKeyResponse = Omit<ApiKey, "created_at" | "updated_at" | "last_used_at" | "expires_at" | "deleted_at" | "secret"> & {
+  secret: string | null;
   created_at: string;
   updated_at: string;
   last_used_at: string | null;
@@ -192,6 +196,18 @@ export type AppResponse = Omit<
   latest_app_version_updated_at: string | null;
 };
 
+// Project ownership. A project has one or more equal owners; every team member
+// can read every project, but ordinary project-scoped writes require ownership.
+export interface ProjectOwnerResponse {
+  user_id: string;
+  name: string;
+  email: string;
+}
+
+// The caller's effective access to a project, resolved server-side. Clients must
+// use this rather than inferring ownership from team role.
+export type ProjectAccessLevel = "owner" | "viewer";
+
 // Projects (serialized)
 export type ProjectResponse = Omit<Project, "created_at" | "deleted_at"> & {
   created_at: string;
@@ -201,6 +217,8 @@ export type ProjectResponse = Omit<Project, "created_at" | "deleted_at"> & {
   effective_attachment_user_quota_bytes: number;
   effective_attachment_project_quota_bytes: number;
   effective_issue_alert_frequency: IssueAlertFrequency;
+  owners: ProjectOwnerResponse[];
+  access_level: ProjectAccessLevel;
 };
 export type ProjectDetailResponse = ProjectResponse & { apps: AppResponse[] };
 
@@ -305,66 +323,16 @@ export interface FunnelQueryResponse {
 }
 
 // Teams
-export interface CreateTeamRequest {
-  name: string;
-  slug: string;
-}
-
-export interface UpdateTeamRequest {
-  name?: string;
-}
-
-export interface AddTeamMemberRequest {
-  email: string;
-  role?: TeamRole;
-}
-
-export interface UpdateTeamMemberRoleRequest {
-  role: TeamRole;
-}
-
+//
+// The singleton team is read-only over the API: it is created and owned by
+// server configuration, so there are no create/update/delete, role-change,
+// member-removal or invitation contracts here.
 export interface TeamMemberResponse {
   user_id: string;
   email: string;
   name: string;
   role: TeamRole;
   joined_at: string;
-}
-
-// Team Invitations
-export interface CreateTeamInvitationRequest {
-  email: string;
-  role?: TeamRole;
-}
-
-export interface TeamInvitationResponse {
-  id: string;
-  team_id: string;
-  email: string;
-  role: TeamRole;
-  invited_by: { user_id: string; name: string; email: string };
-  expires_at: string;
-  accepted_at: string | null;
-  created_at: string;
-}
-
-export interface TeamInvitationPublicResponse {
-  team_name: string;
-  team_slug: string;
-  role: TeamRole;
-  email: string;
-  invited_by_name: string;
-  expires_at: string;
-}
-
-export interface AcceptInvitationRequest {
-  token: string;
-}
-
-export interface AcceptInvitationResponse {
-  team_id: string;
-  team_name: string;
-  role: TeamRole;
 }
 
 export interface TeamDetailResponse {
@@ -374,7 +342,6 @@ export interface TeamDetailResponse {
   created_at: string;
   updated_at: string;
   members: TeamMemberResponse[];
-  pending_invitations: TeamInvitationResponse[];
 }
 
 // App Users

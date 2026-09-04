@@ -1,35 +1,8 @@
 import Fastify from "fastify";
-import cors from "@fastify/cors";
-import cookie from "@fastify/cookie";
-import jwt from "@fastify/jwt";
 import { createDatabaseConnection } from "@pubky-pulse/db";
 import { config } from "./config.js";
-import { authRoutes } from "./routes/auth.js";
-import { ingestRoutes } from "./routes/ingest.js";
-import { feedbackIngestRoutes } from "./routes/feedback-ingest.js";
-import { questionnaireIngestRoutes } from "./routes/questionnaire-ingest.js";
-import { ingestAttachmentRoutes } from "./routes/ingest-attachment.js";
-import { attachmentsRoutes } from "./routes/attachments.js";
-import { importRoutes } from "./routes/import.js";
-import { eventsRoutes } from "./routes/events.js";
-import { appsRoutes } from "./routes/apps.js";
-import { projectsRoutes } from "./routes/projects.js";
-import { identityRoutes } from "./routes/identity.js";
-import { appUsersRoutes } from "./routes/app-users.js";
-import { teamsRoutes } from "./routes/teams.js";
-import { invitationRoutes } from "./routes/invitations.js";
-import { metricsRoutes, metricByIdRoutes, teamMetricsRoutes } from "./routes/metrics.js";
-import { funnelsRoutes, funnelByIdRoutes, teamFunnelsRoutes } from "./routes/funnels.js";
-import { auditLogsRoutes } from "./routes/audit-logs.js";
-import { userPropertiesRoutes } from "./routes/user-properties.js";
-import { jobsRoutes, jobsByIdRoutes } from "./routes/jobs.js";
-import { issuesRoutes, teamIssuesRoutes } from "./routes/issues.js";
-import { feedbackRoutes, teamFeedbackRoutes } from "./routes/feedback.js";
-import { questionnaireRoutes, teamQuestionnaireRoutes } from "./routes/questionnaires.js";
-import { statsRoutes, teamStatsRoutes } from "./routes/stats.js";
-import { notificationsRoutes } from "./routes/notifications.js";
-import { mcpRoute } from "./mcp/index.js";
-import { decompressPlugin } from "./middleware/decompress.js";
+import { buildServer } from "./app.js";
+import { bootstrapSingletonTeam } from "./services/bootstrap-team.js";
 import { createEmailService } from "./services/email.js";
 import { JobRunner } from "./services/job-runner.js";
 import { registerAllJobs } from "./jobs/index.js";
@@ -149,61 +122,33 @@ jobRunner.schedule({
   params: () => ({}),
 });
 
-// Decorators
-app.decorate("db", db);
-app.decorate("databaseUrl", config.databaseUrl);
-app.decorate("emailService", emailService);
-app.decorate("jobRunner", jobRunner);
-app.decorate("notificationDispatcher", notificationDispatcher);
-
-// Plugins
-await app.register(decompressPlugin);
-await app.register(cookie);
-await app.register(cors, {
-  origin: config.corsOrigins,
-  credentials: true,
-  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+// Decorators, plugins and routes — the shared factory in app.ts owns the route
+// list so this file and the test harness can never drift apart.
+await buildServer({
+  app,
+  db,
+  databaseUrl: config.databaseUrl,
+  emailService,
+  jobRunner,
+  notificationDispatcher,
+  cors: {
+    origin: config.corsOrigins,
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+  },
+  jwtSecret: config.jwtSecret,
 });
-await app.register(jwt, { secret: config.jwtSecret });
 
-// Health check
-app.get("/health", async () => ({ status: "ok" }));
-
-// Routes
-await app.register(authRoutes, { prefix: "/v1/auth" });
-await app.register(ingestRoutes, { prefix: "/v1" });
-await app.register(feedbackIngestRoutes, { prefix: "/v1" });
-await app.register(questionnaireIngestRoutes, { prefix: "/v1" });
-await app.register(ingestAttachmentRoutes, { prefix: "/v1" });
-await app.register(attachmentsRoutes, { prefix: "/v1" });
-await app.register(importRoutes, { prefix: "/v1" });
-await app.register(eventsRoutes, { prefix: "/v1" });
-await app.register(appsRoutes, { prefix: "/v1" });
-await app.register(projectsRoutes, { prefix: "/v1" });
-await app.register(identityRoutes, { prefix: "/v1" });
-await app.register(appUsersRoutes, { prefix: "/v1" });
-await app.register(teamsRoutes, { prefix: "/v1" });
-await app.register(invitationRoutes, { prefix: "/v1" });
-await app.register(metricsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(metricByIdRoutes, { prefix: "/v1" });
-await app.register(teamMetricsRoutes, { prefix: "/v1" });
-await app.register(funnelsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(funnelByIdRoutes, { prefix: "/v1" });
-await app.register(teamFunnelsRoutes, { prefix: "/v1" });
-await app.register(auditLogsRoutes, { prefix: "/v1/teams/:teamId" });
-await app.register(userPropertiesRoutes, { prefix: "/v1" });
-await app.register(jobsRoutes, { prefix: "/v1/teams/:teamId" });
-await app.register(jobsByIdRoutes, { prefix: "/v1" });
-await app.register(issuesRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamIssuesRoutes, { prefix: "/v1" });
-await app.register(feedbackRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamFeedbackRoutes, { prefix: "/v1" });
-await app.register(questionnaireRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamQuestionnaireRoutes, { prefix: "/v1" });
-await app.register(statsRoutes, { prefix: "/v1/projects/:projectId" });
-await app.register(teamStatsRoutes, { prefix: "/v1" });
-await app.register(notificationsRoutes, { prefix: "/v1" });
-await app.register(mcpRoute);
+// The configured team, its sole owner, and the sole-owner invariant must all
+// hold before a single request is served — a half-configured access model is
+// worse than a server that refuses to start. The error is printed on its own
+// because it names configuration, never credentials.
+try {
+  await bootstrapSingletonTeam(db);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+}
 
 // Start
 try {

@@ -1,7 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, inArray, isNull, isNotNull, asc } from "drizzle-orm";
-import { projects, apps, apiKeys, metricDefinitions, funnelDefinitions } from "@pubky-pulse/db";
-import type { CreateProjectRequest, UpdateProjectRequest } from "@pubky-pulse/shared";
+import { projects, projectOwners, apps, apiKeys, metricDefinitions, funnelDefinitions } from "@pubky-pulse/db";
+import type {
+  CreateProjectRequest,
+  ProjectOwnerResponse,
+  UpdateProjectRequest,
+} from "@pubky-pulse/shared";
 import {
   SLUG_REGEX,
   PG_UNIQUE_VIOLATION,
@@ -20,11 +24,43 @@ import {
   isValidProjectColor,
 } from "@pubky-pulse/shared";
 import { serializeApp, getClientSecretMap } from "../utils/serialize.js";
-import { requirePermission, getAuthTeamIds, hasTeamAccess, assertTeamRole } from "../middleware/auth.js";
+import { requirePermission, getAuthTeamIds, hasTeamAccess } from "../middleware/auth.js";
 import { logAuditEvent } from "../utils/audit.js";
 import { pickUnusedProjectColor } from "../utils/project-color.js";
+import {
+  enforceProjectWrite,
+  evaluateProjectWrite,
+  hasTeamOwnerAuthority,
+  resolveActorUserId,
+  resolveProjectAccess,
+} from "../utils/project-access.js";
+import {
+  addProjectOwner,
+  countProjectOwners,
+  getProjectOwnerMap,
+  getProjectOwners,
+  resolveAccessLevel,
+} from "../utils/project-owners.js";
 
-function serializeProject(p: typeof projects.$inferSelect) {
+/**
+ * Thrown out of the create transaction when a soft-deleted project already
+ * holds the requested slug and the caller has no authority to destroy it.
+ * Rolls the transaction back and is answered with the same 409 as an active
+ * duplicate, so the response never distinguishes the two.
+ */
+class SlugHeldBySoftDeletedProjectError extends Error {}
+
+/**
+ * Every project response carries its owner list and the caller's own effective
+ * access, so a client never has to infer write authority from team role. The
+ * owners are passed in rather than fetched here because the list endpoint loads
+ * them for the whole page in one query.
+ */
+function serializeProject(
+  p: typeof projects.$inferSelect,
+  owners: ProjectOwnerResponse[],
+  actorUserId: string | null,
+) {
   return {
     id: p.id,
     team_id: p.team_id,
@@ -44,6 +80,8 @@ function serializeProject(p: typeof projects.$inferSelect) {
     issue_alert_frequency: p.issue_alert_frequency,
     effective_issue_alert_frequency: p.issue_alert_frequency ?? "daily",
     created_at: p.created_at.toISOString(),
+    owners,
+    access_level: resolveAccessLevel(owners, actorUserId),
   };
 }
 
@@ -83,8 +121,12 @@ export async function projectsRoutes(app: FastifyInstance) {
         .where(and(inArray(projects.team_id, teamIds), isNull(projects.deleted_at)))
         .orderBy(asc(projects.created_at), asc(projects.id));
 
+      // One owner query for the whole page, not one per project.
+      const ownerMap = await getProjectOwnerMap(app.db, rows.map((r) => r.id));
+      const actorUserId = resolveActorUserId(auth);
+
       return {
-        projects: rows.map(serializeProject),
+        projects: rows.map((r) => serializeProject(r, ownerMap.get(r.id) ?? [], actorUserId)),
       };
     }
   );
@@ -118,11 +160,27 @@ export async function projectsRoutes(app: FastifyInstance) {
         .from(apps)
         .where(and(eq(apps.project_id, id), isNull(apps.deleted_at)));
 
-      const secretMap = await getClientSecretMap(app.db, projectApps.map(a => a.id));
+      const owners = await getProjectOwners(app.db, id);
+      const actorUserId = resolveActorUserId(auth);
+
+      // The owner list this response already carries decides the client
+      // secrets, so no second ownership query is needed — and a team owner who
+      // does not own this project is a non-owner here like anyone else.
+      const access = {
+        canReadClientSecret: resolveAccessLevel(owners, actorUserId) === "owner",
+      };
+      const secretMap = await getClientSecretMap(
+        app.db,
+        projectApps,
+        access.canReadClientSecret ? new Set([id]) : new Set<string>(),
+      );
 
       return {
-        ...serializeProject(project),
-        apps: projectApps.map(a => serializeApp({ ...a, client_secret: secretMap.get(a.id) ?? null })),
+        ...serializeProject(project, owners, actorUserId),
+        apps: projectApps.map(a => serializeApp(
+          { ...a, client_secret: secretMap.get(a.id) ?? null },
+          access,
+        )),
       };
     }
   );
@@ -156,37 +214,80 @@ export async function projectsRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "Not a member of this team" });
       }
 
-      const roleError = assertTeamRole(auth, team_id, "admin");
-      if (roleError) {
-        return reply.code(403).send({ error: roleError });
+      // Any member of the team may create a project; there is no team-level
+      // role gate on creation any more. What creation *does* require is an
+      // effective human actor to become the first owner — a client or import
+      // key has none, so those are refused even if they somehow carry
+      // `projects:write`. For an agent key the actor is its `created_by`, never
+      // the key itself: a key is not a person and cannot own a project.
+      const actorUserId = resolveActorUserId(auth);
+      if (actorUserId === null) {
+        return reply
+          .code(403)
+          .send({ error: "This operation requires a user session or an agent key" });
       }
 
       try {
-        // Clear any soft-deleted project with the same slug so it can be reused
-        await app.db
-          .delete(projects)
-          .where(
-            and(
-              eq(projects.team_id, team_id),
-              eq(projects.slug, slug),
-              isNotNull(projects.deleted_at)
-            )
-          );
-
         const color = await pickUnusedProjectColor(app.db, team_id);
 
-        const [created] = await app.db
-          .insert(projects)
-          .values({
-            team_id,
-            name,
-            slug,
-            color,
-            retention_days_events: retention_days_events ?? null,
-            retention_days_metrics: retention_days_metrics ?? null,
-            retention_days_funnels: retention_days_funnels ?? null,
-          })
-          .returning();
+        // The project and its first owner are inserted together. A project that
+        // committed without an owner row would be ownerless, and therefore
+        // writable by nobody but the team owner's recovery path.
+        const created = await app.db.transaction(async (tx) => {
+          // A soft-deleted project holds its slug for the 7-day undo window.
+          // Freeing it means hard-deleting that project and everything under it
+          // — apps, keys, events, issues, feedback, attachments — so only the
+          // authority that could have deleted the project in the first place
+          // may do it: a *human* who owns that project, or the singleton team
+          // owner reclaiming a slug from an orphaned one. Any team member can
+          // create a project now, so without this check a colleague (or an
+          // agent key owning nothing) could permanently destroy someone else's
+          // deleted project by guessing its slug.
+          const [held] = await tx
+            .select({ id: projects.id })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.team_id, team_id),
+                eq(projects.slug, slug),
+                isNotNull(projects.deleted_at)
+              )
+            )
+            .limit(1);
+
+          if (held) {
+            const heldOwners = await tx
+              .select({ user_id: projectOwners.user_id })
+              .from(projectOwners)
+              .where(eq(projectOwners.project_id, held.id));
+
+            const mayReclaim =
+              auth.type === "user" &&
+              (heldOwners.some((o) => o.user_id === actorUserId) ||
+                (hasTeamOwnerAuthority(auth) && heldOwners.length === 0));
+
+            if (!mayReclaim) throw new SlugHeldBySoftDeletedProjectError();
+
+            await tx.delete(projects).where(eq(projects.id, held.id));
+          }
+
+          const [row] = await tx
+            .insert(projects)
+            .values({
+              team_id,
+              name,
+              slug,
+              color,
+              retention_days_events: retention_days_events ?? null,
+              retention_days_metrics: retention_days_metrics ?? null,
+              retention_days_funnels: retention_days_funnels ?? null,
+            })
+            .returning();
+
+          await addProjectOwner(tx, row.id, actorUserId);
+
+          return row;
+        });
 
         logAuditEvent(app.db, auth, {
           team_id,
@@ -195,9 +296,22 @@ export async function projectsRoutes(app: FastifyInstance) {
           resource_id: created.id,
           metadata: { name, slug },
         });
+        logAuditEvent(app.db, auth, {
+          team_id,
+          action: "create",
+          resource_type: "project_owner",
+          resource_id: actorUserId,
+          metadata: { project_id: created.id },
+        });
 
-        return reply.code(201).send(serializeProject(created));
+        const owners = await getProjectOwners(app.db, created.id);
+        return reply.code(201).send(serializeProject(created, owners, actorUserId));
       } catch (err: any) {
+        if (err instanceof SlugHeldBySoftDeletedProjectError) {
+          return reply
+            .code(409)
+            .send({ error: "A project with this slug already exists in your team" });
+        }
         if (err.code === PG_UNIQUE_VIOLATION) {
           return reply
             .code(409)
@@ -253,6 +367,15 @@ export async function projectsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: `issue_alert_frequency must be one of: ${ISSUE_ALERT_FREQUENCIES.join(", ")}` });
       }
 
+      // Ordinary project write: owner-only, and for an agent key additionally
+      // gated on `projects:write` and on its creator's current ownership. Team
+      // ownership alone is deliberately not enough — recovery authority is not
+      // an ordinary write bypass.
+      const access = await enforceProjectWrite(app, id, auth, reply, {
+        permission: "projects:write",
+      });
+      if (!access) return;
+
       const [project] = await app.db
         .select({
           id: projects.id,
@@ -278,11 +401,6 @@ export async function projectsRoutes(app: FastifyInstance) {
 
       if (!project) {
         return reply.code(404).send({ error: "Project not found" });
-      }
-
-      const updateRoleError = assertTeamRole(auth, project.team_id, "admin");
-      if (updateRoleError) {
-        return reply.code(403).send({ error: updateRoleError });
       }
 
       const setFields: Record<string, unknown> = {};
@@ -335,7 +453,8 @@ export async function projectsRoutes(app: FastifyInstance) {
         changes,
       });
 
-      return serializeProject(updated);
+      const owners = await getProjectOwners(app.db, id);
+      return serializeProject(updated, owners, access.actor_user_id);
     }
   );
 
@@ -352,27 +471,29 @@ export async function projectsRoutes(app: FastifyInstance) {
 
       const { id } = request.params;
 
-      const [project] = await app.db
-        .select({ id: projects.id, team_id: projects.team_id })
-        .from(projects)
-        .where(
-          and(
-            eq(projects.id, id),
-            inArray(projects.team_id, getAuthTeamIds(auth)),
-            isNull(projects.deleted_at)
-          )
-        )
-        .limit(1);
+      const access = await resolveProjectAccess(app, id, auth, reply);
+      if (!access) return;
 
-      if (!project) {
-        return reply.code(404).send({ error: "Project not found" });
+      // Deletion is an ordinary project-owner write, plus one recovery
+      // exception: the singleton team owner may delete a project that has no
+      // owners at all, because otherwise an orphaned project could never be
+      // cleaned up. The exception is enabled only once the project is *proved*
+      // orphaned, so team ownership never becomes a general delete bypass. An
+      // owner already passes, so the count is only paid on the other path.
+      const orphaned = access.is_project_owner
+        ? false
+        : (await countProjectOwners(app.db, id)) === 0;
+
+      const denial = evaluateProjectWrite(auth, access, {
+        permission: "projects:write",
+        humanOnly: true,
+        allowTeamOwnerRecovery: orphaned,
+      });
+      if (denial) {
+        return reply.code(denial.status).send({ error: denial.error });
       }
 
-      const deleteRoleError = assertTeamRole(auth, project.team_id, "admin");
-      if (deleteRoleError) {
-        return reply.code(403).send({ error: deleteRoleError });
-      }
-
+      const project = access.project;
       const now = new Date();
 
       // Find app IDs for cascading to api_keys

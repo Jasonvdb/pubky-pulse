@@ -6,7 +6,7 @@ import {
   seedTestData,
   getToken,
   getTokenAndTeamId,
-  createUserAndGetToken,
+  createForeignTeam,
   testEmailService,
   TEST_USER,
   TEST_CLIENT_KEY,
@@ -106,7 +106,7 @@ describe("POST /v1/auth/verify-code", () => {
     expect(body.is_new_user).toBe(false);
   });
 
-  it("creates new user and team for unknown email", async () => {
+  it("creates an unknown allowed user as a member of the configured team", async () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
@@ -124,8 +124,11 @@ describe("POST /v1/auth/verify-code", () => {
     expect(body.token).toBeDefined();
     expect(body.user.email).toBe("newuser@pulse.pubky.org");
     expect(body.user.name).toBe("Newuser");
+    // No per-user team is created any more: the user joins the one configured
+    // team, and only the configured owner address gets the owner role.
     expect(body.teams).toHaveLength(1);
-    expect(body.teams[0].role).toBe("owner");
+    expect(body.teams[0].id).toBe(testData.teamId);
+    expect(body.teams[0].role).toBe("member");
     expect(body.is_new_user).toBe(true);
   });
 
@@ -337,23 +340,15 @@ describe("DELETE /v1/auth/keys/:id", () => {
   });
 
   it("returns 404 for key belonging to another team", async () => {
-    // Create a second user (gets their own team)
-    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org");
-
-    // Get a key ID from the original team
+    // Signing in can no longer produce a team of one's own, so the far side of
+    // the boundary is a team seeded directly in the database.
+    const foreign = await createForeignTeam();
     const token = await getToken(app);
-    const listRes = await app.inject({
-      method: "GET",
-      url: "/v1/auth/keys",
-      headers: { authorization: `Bearer ${token}` },
-    });
-    const keyId = listRes.json().api_keys[0].id;
 
-    // Try to delete from other user
     const res = await app.inject({
       method: "DELETE",
-      url: `/v1/auth/keys/${keyId}`,
-      headers: { authorization: `Bearer ${otherToken}` },
+      url: `/v1/auth/keys/${foreign.apiKeyId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -471,20 +466,13 @@ describe("GET /v1/auth/keys/:id", () => {
   });
 
   it("returns 404 for key belonging to another team", async () => {
-    const { token: otherToken } = await createUserAndGetToken(app, "other@pulse.pubky.org");
-
+    const foreign = await createForeignTeam();
     const token = await getToken(app);
-    const listRes = await app.inject({
-      method: "GET",
-      url: "/v1/auth/keys",
-      headers: { authorization: `Bearer ${token}` },
-    });
-    const keyId = listRes.json().api_keys[0].id;
 
     const res = await app.inject({
       method: "GET",
-      url: `/v1/auth/keys/${keyId}`,
-      headers: { authorization: `Bearer ${otherToken}` },
+      url: `/v1/auth/keys/${foreign.apiKeyId}`,
+      headers: { authorization: `Bearer ${token}` },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -588,29 +576,8 @@ describe("POST /v1/auth/keys", () => {
 
   it("rejects key creation for app in different team", async () => {
     const token = await getToken(app);
+    const foreign = await createForeignTeam();
 
-    // Create a second user with their own team and app
-    const { token: otherToken, teamId: otherTeamId } = await createUserAndGetToken(app, "other@pulse.pubky.org", "Other");
-
-    // Create a project in the other team
-    const projRes = await app.inject({
-      method: "POST",
-      url: "/v1/projects",
-      headers: { authorization: `Bearer ${otherToken}` },
-      payload: { name: "Other Project", slug: "other-project", team_id: otherTeamId },
-    });
-    const otherProjectId = projRes.json().id;
-
-    // Create an app in the other team
-    const appRes = await app.inject({
-      method: "POST",
-      url: "/v1/apps",
-      headers: { authorization: `Bearer ${otherToken}` },
-      payload: { name: "Other App", platform: "apple", bundle_id: "com.other.test", project_id: otherProjectId },
-    });
-    const otherAppId = appRes.json().id;
-
-    // First user tries to create a key for the other team's app
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/keys",
@@ -618,7 +585,7 @@ describe("POST /v1/auth/keys", () => {
       payload: {
         name: "Cross-team key",
         key_type: "client",
-        app_id: otherAppId,
+        app_id: foreign.appId,
       },
     });
 

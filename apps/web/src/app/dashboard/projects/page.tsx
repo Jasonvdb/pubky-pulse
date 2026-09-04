@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { Plus } from "lucide-react";
+import { AccessLevelBadge } from "@/components/badges/access-level-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,9 +20,10 @@ import {
 } from "@/components/ui/dialog";
 import { api, ApiError } from "@/lib/api";
 import { useTeam } from "@/contexts/team-context";
+import { useProjects } from "@/hooks/use-project";
 import { useUser } from "@/hooks/use-user";
 import { ProjectDot } from "@/lib/project-color";
-import type { AppResponse, ProjectResponse } from "@pubky-pulse/shared";
+import type { AppResponse } from "@pubky-pulse/shared";
 import { AnimatedPage, StaggerItem } from "@/components/ui/animated-page";
 import { CardGridSkeleton } from "@/components/ui/skeletons";
 
@@ -40,9 +42,10 @@ export default function ProjectsPage() {
   const { currentTeam } = useTeam();
   const { isLoading: isUserLoading } = useUser();
   const teamId = currentTeam?.id;
-  const { data, isLoading, mutate } = useSWR<{ projects: ProjectResponse[] }>(
-    teamId ? `/v1/projects?team_id=${teamId}` : null
-  );
+  // Every team member reads every project; `access_level` on each one says who
+  // may change it. Creating a project is open to the whole team, so the New
+  // Project dialog is never gated here.
+  const { projects, isLoading, mutate } = useProjects(teamId);
   const { data: appsData } = useSWR<{ apps: AppResponse[] }>(
     teamId ? `/v1/apps?team_id=${teamId}` : null
   );
@@ -51,7 +54,6 @@ export default function ProjectsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const projects = data?.projects ?? [];
   const appsByProject = new Map<string, AppResponse[]>();
   for (const app of appsData?.apps ?? []) {
     const list = appsByProject.get(app.project_id) ?? [];
@@ -141,7 +143,8 @@ export default function ProjectsPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <ProjectDot color={project.color} />
-                      <span>{project.name}</span>
+                      <span className="truncate">{project.name}</span>
+                      <AccessLevelBadge level={project.access_level} size="xs" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">

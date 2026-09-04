@@ -7,29 +7,37 @@ import Concept from '../../_snippets/projects.mdx';
 
 <Concept />
 
+## Access
+
+Reads span every project in the configured team. A **write** additionally requires the human who created this agent key to currently own the target project — re-read on every request, so an ownership change takes effect on the next call with no key re-issued. A refusal is `403 Requires project ownership`. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow).
+
+Creating a project is the exception: any team member may do it, and **`create-project` makes this key's creator the new project's first owner**, so the very next call can write to it. There is no `delete-project` tool — deleting a project is human-only.
+
 ## list-projects
 
-List all projects accessible to this agent.
+List every project in the team. Reads are team-wide, not limited to the projects this key's creator owns.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `team_id` | UUID | No | Filter by team ID |
 
-Returns `{ projects: [...] }` with each project's `id`, `name`, `slug`, `color`, `team_id`, and timestamps.
+Returns `{ projects: [...] }` with each project's `id`, `name`, `slug`, `color`, `team_id`, timestamps, `owners`, and `access_level`.
+
+`access_level` is `owner` or `viewer` **for the human who created this key**. A `viewer` row reads fine but every ordinary write to it returns `403` — check this field before planning a change.
 
 ## get-project
 
-Get a project by ID, including its list of apps.
+Get a project by ID, including its list of apps, its `owners`, and the `access_level` of this key's creator. Readable for every project in the team.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `project_id` | UUID | Yes | The project ID |
 
-Returns the project object with a nested `apps` array.
+Returns the project object with a nested `apps` array. A nested app's `client_secret` is `null` unless the key's creator owns the project.
 
 ## create-project
 
-Create a new project. Requires `projects:write` permission.
+Create a new project. Requires `projects:write` permission. The human who created this key becomes the project's first owner — the key itself never owns anything — so writes to the new project are authorized from the next call onwards.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -53,7 +61,9 @@ A display color is auto-assigned on creation; use `update-project` to override i
 
 ## update-project
 
-Update a project's name, color, data retention policies, or attachment storage quotas. Requires `projects:write` permission.
+Update a project's name, color, data retention policies, or attachment storage quotas. Requires `projects:write` permission **and** that this key's creator currently owns the project. A `403 Requires project ownership` means a human has to add them to the project's owner list — no new key is needed.
+
+Changing a project's owner list, like deleting a project, is human-only and has no MCP tool.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

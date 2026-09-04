@@ -8,7 +8,7 @@ description: Configure your MCP client to connect to Pubky Pulse — Claude Code
 You need an **agent API key** (`pulse_agent_*`) to connect. A default agent key is created for you on first sign-in — sign in below to see it pre-filled in all editor configs.
 
 <Callout>
-Agent keys get all permissions by default and are scoped to your team. You can also create additional keys from the **API Keys** page in the dashboard. See [Authentication](/docs/concepts/authentication) for details on key types and permissions.
+Agent keys get all permissions by default and are scoped to your team. The key is yours: it is visible only to you, and it carries your project access and nobody else's. You can create additional keys from the **API Keys** page in the dashboard. See [Authentication & Access Control](/docs/concepts/authentication) for key types, permissions and ownership.
 </Callout>
 
 ## Endpoint URL
@@ -51,7 +51,41 @@ Supported clients read the guide automatically so agents understand how to use t
 
 The MCP endpoint only accepts agent API keys (`pulse_agent_*`). Client keys (`pulse_client_*`) and JWT tokens are rejected with 401.
 
-Permissions are enforced per-tool — if your agent key doesn't have `projects:write`, the `create-project` tool will return an error. See [Authentication](/docs/concepts/authentication) for details on API key permissions.
+## Access model: read wide, write narrow
+
+Your key was created by a person, and it acts for that person. The difference between what it can read and what it can change is that person's project ownership.
+
+- **Reads** span every project in the configured team, for each read permission the key holds. If `list-projects` shows it, you can read it.
+- **Writes** additionally require the key's **creator** to currently own the target project. Ownership lives in a per-project owner list, not in a team role.
+
+Authorization for a write is an **intersection, never a union** — all of these must hold:
+
+```text
+key is active
+AND key has the route's explicit permission
+AND creator is an active team member on an allowed email domain
+AND creator currently owns the target project
+AND the operation is agent-supported
+```
+
+Holding `projects:write` does not by itself let you write to a project, and owning a project does not substitute for the permission. A refusal is a `403` naming the reason (`Missing permission: ...` versus `Requires project ownership`), so read the error rather than retrying blindly.
+
+**Ownership is re-read on every request.** When a human adds your creator to a project — or removes them — the very next tool call reflects it. The key is never recreated, re-issued or reconnected for an ownership change to take effect.
+
+**`create-project` makes your key's creator the project's first owner**, atomically with the project row. The key itself never owns anything: a key is not a person.
+
+**Human-only operations** return `403` for any agent key, even one whose creator owns the project and whose permissions are complete:
+
+- changing a project's owner list;
+- deleting a project, an app, a feedback item, a questionnaire, a questionnaire response, or an attachment;
+- deleting a comment written by anyone other than that exact key;
+- listing, updating or revoking API keys (`create-import-key` is the one exception).
+
+**Agent-supported writes**, with ownership plus the right permission: creating and updating projects, apps, metric and funnel definitions, and questionnaires; deleting metric and funnel definitions; merging issues and changing issue / feedback / questionnaire-response status; triggering and cancelling project jobs; and creating comments, plus editing or deleting comments **this exact key** authored.
+
+**Comments are the one exception to the ownership rule.** Any agent key whose creator is a team member may comment on any project it can read, so long as the key holds the route's write permission. The exception replaces only the ownership check — authentication, containment and permission still apply.
+
+If the key's creator is removed from the team, or their email domain stops being configured, the key is rejected with `401` on its next call.
 
 ## Verifying the connection
 

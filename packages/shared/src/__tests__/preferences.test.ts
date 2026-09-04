@@ -3,6 +3,7 @@ import {
   mergeUserPreferences,
   isDefaultColumnOrder,
   isChannelEnabled,
+  NOTIFICATION_TYPES,
   NOTIFICATION_TYPE_META,
   resolveSparklineWindowDays,
   DEFAULT_SPARKLINE_WINDOW_DAYS,
@@ -12,6 +13,7 @@ import {
   DEFAULT_MAGNITUDE_WINDOW_HOURS,
   MAGNITUDE_WINDOW_HOURS,
 } from "../preferences.js";
+import type { NotificationChannel } from "../preferences.js";
 
 describe("mergeUserPreferences", () => {
   it("returns patch when existing is null", () => {
@@ -132,9 +134,12 @@ describe("isChannelEnabled", () => {
     expect(isChannelEnabled(prefs, "issue.digest", "in_app")).toBe(true);
   });
 
-  it("returns false for team.invitation channels (transactional, no channels configured)", () => {
-    expect(isChannelEnabled(null, "team.invitation", "email")).toBe(false);
-    expect(isChannelEnabled(null, "team.invitation", "in_app")).toBe(false);
+  it("returns false for a channel a type does not offer", () => {
+    // Every remaining type offers in_app and email, so the guard is proven
+    // against a channel outside the type's declared list rather than against a
+    // transactional type — `team.invitation` was the last of those and is gone
+    // along with the invitation flow itself.
+    expect(isChannelEnabled(null, "issue.digest", "telegram" as NotificationChannel)).toBe(false);
   });
 });
 
@@ -288,14 +293,15 @@ describe("ui.dashboard.magnitudeWindowHours", () => {
 
 describe("NOTIFICATION_TYPE_META coverage", () => {
   it("every notification type has a meta entry", () => {
-    for (const type of ["issue.digest", "feedback.new", "job.completed", "team.invitation"] as const) {
+    for (const type of NOTIFICATION_TYPES) {
       expect(NOTIFICATION_TYPE_META[type]).toBeDefined();
       expect(NOTIFICATION_TYPE_META[type].label.length).toBeGreaterThan(0);
     }
   });
 
-  it("transactional types declare no configurable channels", () => {
-    expect(NOTIFICATION_TYPE_META["team.invitation"].channels).toEqual([]);
+  it("no longer declares a team.invitation type", () => {
+    expect(NOTIFICATION_TYPES as readonly string[]).not.toContain("team.invitation");
+    expect(Object.keys(NOTIFICATION_TYPE_META)).not.toContain("team.invitation");
   });
 
   it("user-configurable types include in_app and email", () => {

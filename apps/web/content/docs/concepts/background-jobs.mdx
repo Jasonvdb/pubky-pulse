@@ -25,7 +25,7 @@ Each job has a **type** that determines what it does and a **scope** that contro
 | `stats_aggregate_daily` | Daily Stats Aggregation | Project | Daily 00:30 UTC | Rolls event, metric, funnel, and questionnaire-response counts into the `*_daily` tables. With no params, re-aggregates the trailing 3 days for every project; `start`/`end` (YYYY-MM-DD) backfill a date range; `project_id` narrows to one project |
 | `stats_aggregate_hourly` | Hourly Stats Aggregation | Project | Hourly @ :05 | Hourly analog of `stats_aggregate_daily`, writing into the `*_hourly` tables. Trailing 3 hours by default; `start`/`end` accept ISO hours |
 
-**Project-scoped jobs** are triggered by team admins via the dashboard, the `trigger-job` MCP tool, or the API. They operate on a specific project and are visible to all team members with `jobs:read` permission.
+**Project-scoped jobs** are triggered from the dashboard, the `trigger-job` MCP tool, or the API by an **owner of the target project**. They are visible to every team member with `jobs:read` permission — reads are team-wide, triggering and cancelling are not.
 
 **System jobs** run on a cron schedule and handle infrastructure maintenance. They are not visible through the API or dashboard — the server owner monitors them via server-side maintenance scripts and email alerts.
 
@@ -85,4 +85,4 @@ If the server restarts while a job is running, any `pending` or `running` rows a
 | `jobs:read` | View job runs for the team |
 | `jobs:write` | Trigger and cancel jobs |
 
-Both permissions are included in the default agent key permissions. Users need `admin` role minimum to access jobs.
+Both permissions are included in the default agent key permissions. Reading job runs needs only team membership; triggering or cancelling a run additionally requires ownership of the project it belongs to, and for an agent key that means the human who created the key must own it. Every triggerable job type is project-scoped, so there is no team-wide trigger to escalate through.

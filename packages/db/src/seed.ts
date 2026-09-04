@@ -1,6 +1,6 @@
 import "./load-root-env.js";
 import { createDatabaseConnection } from "./index.js";
-import { users, teams, teamMembers, projects, apps, apiKeys, events, appUsers, appUserApps, metricDefinitions, funnelDefinitions, questionnaires } from "./schema.js";
+import { users, teams, teamMembers, projects, projectOwners, apps, apiKeys, events, appUsers, appUserApps, metricDefinitions, funnelDefinitions, questionnaires } from "./schema.js";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_API_KEY_PERMISSIONS } from "@pubky-pulse/shared";
 import crypto from "node:crypto";
@@ -69,6 +69,14 @@ async function main() {
     and(eq(projects.team_id, team.id), eq(projects.slug, "demo")),
   );
   console.log(`  Project: ${project.name} (${project.slug})`);
+
+  // --- Project owner ---
+  // Every project needs at least one owner; without it the seeded project is
+  // read-only for everyone, including the seeded user who created it.
+  await db.insert(projectOwners).values({
+    project_id: project.id,
+    user_id: user.id,
+  }).onConflictDoNothing();
 
   // --- Demo app (apple) ---
   const clientKey = "pulse_client_demo_000000000000000000000000000000000000000000";

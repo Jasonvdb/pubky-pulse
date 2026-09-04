@@ -7,13 +7,6 @@ import { cn } from "@/lib/utils";
 import { useTeam } from "@/contexts/team-context";
 import { useDataMode } from "@/contexts/data-mode-context";
 import { PulseLogo } from "@/components/pulse-logo";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { DataMode } from "@pubky-pulse/shared";
 
@@ -30,7 +23,9 @@ const navItems = [
   { href: "/dashboard/api-keys", label: "API Keys", icon: KeyRound },
   { href: "/dashboard/projects", label: "Projects", icon: FolderOpen },
   { href: "/dashboard/team", label: "Team", icon: Users },
-  { href: "/dashboard/audit-log", label: "Audit Log", icon: ClipboardList },
+  // The team-wide trail is owner-only on the server, so it is not offered to
+  // members who would only reach a refusal.
+  { href: "/dashboard/audit-log", label: "Audit Log", icon: ClipboardList, teamOwnerOnly: true },
   { href: "/dashboard/jobs", label: "Jobs", icon: Cog },
   { href: "/docs", label: "Docs", icon: BookOpen },
 ];
@@ -56,7 +51,7 @@ const DATA_MODE_ON = cn(
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { currentTeam, teams, setCurrentTeam } = useTeam();
+  const { currentTeam, isTeamOwner } = useTeam();
   const { dataMode, setDataMode } = useDataMode();
 
   return (
@@ -72,26 +67,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       {currentTeam && (
         <div className="border-b border-sidebar-border px-3 py-2">
-          {teams.length >= 2 ? (
-            <Select value={currentTeam.id} onValueChange={setCurrentTeam}>
-              <SelectTrigger className="h-8 w-full border-sidebar-border bg-sidebar-accent/50 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="flex h-8 w-full items-center rounded-md border border-sidebar-border bg-sidebar-accent/50 px-3">
-              <p className="truncate text-xs font-medium text-muted-foreground">
-                {currentTeam.name}
-              </p>
-            </div>
-          )}
+          {/* One configured team, so this names where you are — it never switched. */}
+          <div className="flex h-8 w-full items-center rounded-md border border-sidebar-border bg-sidebar-accent/50 px-3">
+            <p className="truncate text-xs font-medium text-muted-foreground">
+              {currentTeam.name}
+            </p>
+          </div>
         </div>
       )}
       <div className="border-b border-sidebar-border px-3 py-2">
@@ -114,6 +95,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
+          if (item.teamOwnerOnly && !isTeamOwner) return null;
           const active =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

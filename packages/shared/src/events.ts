@@ -13,6 +13,17 @@ export type Environment = "ios" | "ipados" | "macos" | "watchos" | "android" | "
 export const NETWORK_REQUEST_MESSAGE = "sdk:network_request";
 export const HTTP_URL_ATTRIBUTE = "_http_url";
 export const HTTP_METHOD_ATTRIBUTE = "_http_method";
+// Response side of the same instrumentation. The Web SDK emits both on every
+// tracked fetch/XHR; _http_status is "0" when the request never completed.
+export const HTTP_STATUS_ATTRIBUTE = "_http_status";
+export const HTTP_DURATION_MS_ATTRIBUTE = "_http_duration_ms";
+
+// Browser page context. On web `screen_name` carries the URL path, so these
+// hold what a path alone loses: the full URL (query string included) and the
+// referrer. Both get a 2048-char cap in
+// RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES.
+export const PAGE_URL_ATTRIBUTE = "_page_url";
+export const REFERRER_ATTRIBUTE = "_referrer";
 
 // Error/exception extraction attributes. SDKs that accept an Error/Exception
 // object (Pulse.error(error)) extract structured data into these reserved keys.

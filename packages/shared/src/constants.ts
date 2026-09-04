@@ -19,10 +19,13 @@ export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;
 
 // Per-key length overrides for trusted SDK-reserved attribute keys (always
-// underscore-prefixed). Stack traces don't fit in 200 chars; other reserved
-// keys stay at the default cap.
+// underscore-prefixed). Stack traces don't fit in 200 chars, and neither do
+// URLs — 2048 is the practical browser URL ceiling. Other reserved keys stay
+// at the default cap.
 export const RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES: Readonly<Record<string, number>> = {
   _error_stack: 16000,
+  _page_url: 2048,
+  _referrer: 2048,
 };
 
 export const APP_PLATFORMS = ["apple", "android", "web", "backend"] as const;

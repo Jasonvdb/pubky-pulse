@@ -4,6 +4,14 @@ import { gzipSync } from "node:zlib";
 import { eq } from "drizzle-orm";
 import { events, metricEvents, funnelEvents, appUsers } from "@pubky-pulse/db";
 import {
+  MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH,
+  MAX_EVENT_MESSAGE_LENGTH,
+  PAGE_URL_ATTRIBUTE,
+  REFERRER_ATTRIBUTE,
+  HTTP_STATUS_ATTRIBUTE,
+  HTTP_DURATION_MS_ATTRIBUTE,
+} from "@pubky-pulse/shared";
+import {
   buildApp,
   truncateAll,
   seedTestData,
@@ -15,6 +23,9 @@ import {
   TEST_ANDROID_BUNDLE_ID,
   TEST_BUNDLE_ID,
   TEST_SESSION_ID,
+  TEST_WEB_CLIENT_KEY,
+  TEST_WEB_BUNDLE_ID,
+  seedWebTestApp,
 } from "./setup.js";
 
 let app: FastifyInstance;
@@ -240,6 +251,69 @@ describe("POST /v1/ingest", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json().accepted).toBe(1);
+  });
+
+  it("truncates messages over MAX_EVENT_MESSAGE_LENGTH", async () => {
+    const message = "m".repeat(MAX_EVENT_MESSAGE_LENGTH + 500);
+    const res = await ingest([
+      { level: "info", message, session_id: TEST_SESSION_ID, user_id: "long-message-user" },
+    ]);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().accepted).toBe(1);
+
+    const [row] = await app.db
+      .select({ message: events.message })
+      .from(events)
+      .where(eq(events.user_id, "long-message-user"))
+      .limit(1);
+    expect(row.message).toHaveLength(MAX_EVENT_MESSAGE_LENGTH);
+  });
+
+  it("caps non-string custom attribute values", async () => {
+    // custom_attributes is untrusted JSON: a client can send an array or
+    // object, and stringifying it must not bypass the per-value cap.
+    const res = await ingest([
+      {
+        level: "info",
+        message: "Non-string attributes",
+        session_id: TEST_SESSION_ID,
+        user_id: "non-string-attrs-user",
+        custom_attributes: {
+          list: Array.from({ length: 400 }, (_, i) => i),
+          count: 42,
+        } as any,
+      },
+    ]);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().accepted).toBe(1);
+
+    const [row] = await app.db
+      .select({ custom_attributes: events.custom_attributes })
+      .from(events)
+      .where(eq(events.user_id, "non-string-attrs-user"))
+      .limit(1);
+    expect(row.custom_attributes!.list).toHaveLength(MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH);
+    expect(row.custom_attributes!.count).toBe("42");
+  });
+
+  it("rejects a non-UUID session_id per event without failing the batch", async () => {
+    // session_id is a uuid column: before per-event validation a malformed
+    // value blew up the INSERT and took the whole batch down with a 500.
+    const res = await ingest([
+      { level: "info", message: "Good", session_id: TEST_SESSION_ID },
+      { level: "info", message: "Bad session", session_id: "not-a-uuid" },
+      { level: "error", message: "Also good", session_id: TEST_SESSION_ID },
+    ]);
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.accepted).toBe(2);
+    expect(body.rejected).toBe(1);
+    expect(body.errors).toEqual([
+      { index: 1, message: expect.stringContaining("session_id must be a UUID") },
+    ]);
   });
 
   it("rejects empty events array", async () => {
@@ -710,6 +784,125 @@ describe("POST /v1/ingest", () => {
       const res = await ingest(events, TEST_BACKEND_CLIENT_KEY, undefined as any);
       expect(res.statusCode).toBe(200);
       expect(res.json().accepted).toBe(10);
+    });
+  });
+
+  describe("web platform", () => {
+    beforeEach(async () => {
+      await seedWebTestApp();
+    });
+
+    function ingestWeb(payloads: any[]) {
+      return ingest(payloads, TEST_WEB_CLIENT_KEY, TEST_WEB_BUNDLE_ID);
+    }
+
+    it("accepts a batch in the shape the Web SDK actually sends", async () => {
+      // Mirrors @synonymdev/pubky-pulse-web: environment "web", device_model is
+      // the browser, os_version the OS, screen_name the URL path, no build_number.
+      const res = await ingestWeb([
+        {
+          client_event_id: "00000000-0000-0000-0000-0000000000a1",
+          session_id: TEST_SESSION_ID,
+          level: "info",
+          message: "Page viewed",
+          screen_name: "/checkout/payment",
+          environment: "web",
+          sdk_name: "pubky-pulse-web",
+          sdk_version: "0.1.0",
+          app_version: "1.4.0",
+          device_model: "Chrome 120",
+          os_version: "macOS 10.15.7",
+          locale: "en-GB",
+          preferred_language: "en-GB",
+          user_id: "web-user",
+          is_dev: false,
+          timestamp: new Date().toISOString(),
+          custom_attributes: {
+            [PAGE_URL_ATTRIBUTE]: "https://app.example.com/checkout/payment?step=2",
+            [REFERRER_ATTRIBUTE]: "https://app.example.com/checkout",
+            [HTTP_STATUS_ATTRIBUTE]: "200",
+            [HTTP_DURATION_MS_ATTRIBUTE]: "134",
+          },
+        },
+      ]);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ accepted: 1, rejected: 0 });
+
+      const [row] = await app.db
+        .select({
+          environment: events.environment,
+          device_model: events.device_model,
+          os_version: events.os_version,
+          screen_name: events.screen_name,
+          build_number: events.build_number,
+          sdk_name: events.sdk_name,
+          custom_attributes: events.custom_attributes,
+        })
+        .from(events)
+        .where(eq(events.user_id, "web-user"))
+        .limit(1);
+      expect(row.environment).toBe("web");
+      expect(row.device_model).toBe("Chrome 120");
+      expect(row.os_version).toBe("macOS 10.15.7");
+      expect(row.screen_name).toBe("/checkout/payment");
+      expect(row.build_number).toBeNull();
+      expect(row.sdk_name).toBe("pubky-pulse-web");
+      expect(row.custom_attributes![PAGE_URL_ATTRIBUTE]).toBe(
+        "https://app.example.com/checkout/payment?step=2",
+      );
+      expect(row.custom_attributes![HTTP_STATUS_ATTRIBUTE]).toBe("200");
+    });
+
+    it("caps _page_url at 2048 rather than the default attribute cap", async () => {
+      const longUrl = `https://app.example.com/p?q=${"u".repeat(3000)}`;
+      const res = await ingestWeb([
+        {
+          level: "info",
+          message: "Long URL",
+          session_id: TEST_SESSION_ID,
+          user_id: "long-url-user",
+          environment: "web",
+          custom_attributes: { [PAGE_URL_ATTRIBUTE]: longUrl, [REFERRER_ATTRIBUTE]: longUrl },
+        },
+      ]);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().accepted).toBe(1);
+
+      const [row] = await app.db
+        .select({ custom_attributes: events.custom_attributes })
+        .from(events)
+        .where(eq(events.user_id, "long-url-user"))
+        .limit(1);
+      expect(row.custom_attributes![PAGE_URL_ATTRIBUTE]).toHaveLength(2048);
+      expect(row.custom_attributes![REFERRER_ATTRIBUTE]).toHaveLength(2048);
+    });
+
+    it("truncates an oversize device_model to the column width", async () => {
+      // A spoofed or unusually long user agent must not fail the batch's INSERT.
+      const res = await ingestWeb([
+        {
+          level: "info",
+          message: "Odd user agent",
+          session_id: TEST_SESSION_ID,
+          user_id: "long-ua-user",
+          environment: "web",
+          device_model: "B".repeat(400),
+          os_version: "O".repeat(200),
+        },
+      ]);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ accepted: 1, rejected: 0 });
+
+      const [row] = await app.db
+        .select({ device_model: events.device_model, os_version: events.os_version })
+        .from(events)
+        .where(eq(events.user_id, "long-ua-user"))
+        .limit(1);
+      expect(row.device_model).toHaveLength(100);
+      expect(row.os_version).toHaveLength(50);
     });
   });
 });

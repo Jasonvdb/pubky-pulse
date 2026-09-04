@@ -51,8 +51,12 @@ export const TEST_ANDROID_CLIENT_KEY =
   "pulse_client_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 export const TEST_IMPORT_KEY =
   "pulse_import_ffffffffffffffffffffffffffffffffffffffffffffffff";
+export const TEST_WEB_CLIENT_KEY =
+  "pulse_client_9999999999999999999999999999999999999999999999";
 export const TEST_ANDROID_BUNDLE_ID = "org.pubky.pulse.test.android";
 export const TEST_BUNDLE_ID = "org.pubky.pulse.test";
+// Web apps identify themselves by site, not by reverse-DNS bundle.
+export const TEST_WEB_BUNDLE_ID = "test.pulse.pubky.org";
 export const TEST_SESSION_ID = "00000000-0000-0000-0000-000000000001";
 export const TEST_USER = {
   email: "test@pulse.pubky.org",
@@ -386,6 +390,62 @@ export async function seedTestData() {
     androidProjectId: androidProject.id,
     androidAppId: androidApp.id,
   };
+}
+
+/**
+ * Opt-in `web` fixture: its own project, app and client key on the team
+ * seedTestData created. Call it after seedTestData in suites that ingest
+ * browser events.
+ *
+ * Deliberately not part of seedTestData: the apps and projects suites assert
+ * exact project/app counts over that fixture, so every suite would pay for a
+ * platform only a few of them exercise.
+ */
+export async function seedWebTestApp(): Promise<{
+  webProjectId: string;
+  webAppId: string;
+}> {
+  const client = postgres(TEST_DB_URL, { max: 1 });
+  try {
+    const [user] = await client`
+      SELECT id FROM users WHERE email = ${TEST_USER.email}
+    `;
+    const [team] = await client`SELECT id FROM teams WHERE slug = 'test-team'`;
+
+    const [webProject] = await client`
+      INSERT INTO projects (team_id, name, slug, color)
+      VALUES (${team.id}, 'Test Web Project', 'test-web-project', '#f97316')
+      RETURNING id
+    `;
+
+    await client`
+      INSERT INTO project_owners (project_id, user_id)
+      VALUES (${webProject.id}, ${user.id})
+    `;
+
+    const [webApp] = await client`
+      INSERT INTO apps (team_id, project_id, name, platform, bundle_id)
+      VALUES (${team.id}, ${webProject.id}, 'Test Web App', 'web', ${TEST_WEB_BUNDLE_ID})
+      RETURNING id
+    `;
+
+    await client`
+      INSERT INTO api_keys (secret, key_type, app_id, team_id, name, created_by, permissions)
+      VALUES (
+        ${TEST_WEB_CLIENT_KEY},
+        'client',
+        ${webApp.id},
+        ${team.id},
+        'Test Web Client Key',
+        ${user.id},
+        ${JSON.stringify(["events:write", "users:write"])}::jsonb
+      )
+    `;
+
+    return { webProjectId: webProject.id as string, webAppId: webApp.id as string };
+  } finally {
+    await client.end();
+  }
 }
 
 /**

@@ -4,6 +4,7 @@ import { apps, events, appUsers, appUserApps, metricEvents, funnelEvents } from 
 import { ANONYMOUS_ID_PREFIX, parseMetricMessage, parseFunnelStepMessage } from "@pubky-pulse/shared";
 import {
   MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH,
+  MAX_EVENT_MESSAGE_LENGTH,
   LOG_LEVELS,
   RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES,
 } from "@pubky-pulse/shared";
@@ -60,6 +61,11 @@ export function validateEventPayload(
   if (!payload.session_id || typeof payload.session_id !== "string") {
     return `events[${index}]: session_id is required and must be a string`;
   }
+  // events.session_id is `uuid NOT NULL`, so a malformed value fails the whole
+  // batch's INSERT with a 500. Reject it per event instead.
+  if (!UUID_REGEX.test(payload.session_id)) {
+    return `events[${index}]: session_id must be a UUID`;
+  }
   if (payload.timestamp) {
     const parsed = new Date(payload.timestamp);
     if (isNaN(parsed.getTime())) {
@@ -78,6 +84,10 @@ export function validateEventPayload(
   return null;
 }
 
+function truncate(value: string, max: number): string {
+  return value.length > max ? value.slice(0, max) : value;
+}
+
 export function truncateCustomAttributes(
   customAttributes: Record<string, string> | undefined
 ): Record<string, string> | null {
@@ -85,12 +95,38 @@ export function truncateCustomAttributes(
   const truncated: Record<string, string> = {};
   for (const [k, v] of Object.entries(customAttributes)) {
     const cap = RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES[k] ?? MAX_CUSTOM_ATTRIBUTE_VALUE_LENGTH;
-    truncated[k] =
-      typeof v === "string" && v.length > cap
-        ? v.slice(0, cap)
-        : String(v);
+    // Coerce first: the payload is untrusted JSON, so a value can be an array
+    // or object whose stringification is arbitrarily long. Capping only
+    // strings let those through unbounded.
+    truncated[k] = truncate(typeof v === "string" ? v : String(v), cap);
   }
   return truncated;
+}
+
+/** varchar widths from packages/db/src/schema.ts (events / metric_events / funnel_events). */
+const EVENT_COLUMN_MAX_LENGTHS = {
+  os_version: 50,
+  app_version: 50,
+  sdk_name: 50,
+  sdk_version: 50,
+  device_model: 100,
+  build_number: 50,
+  locale: 20,
+  preferred_language: 35,
+} as const;
+
+/**
+ * Normalize an optional SDK-supplied string to its column width. SDK values
+ * are best-effort — a browser's user agent can yield a device_model far wider
+ * than varchar(100) — and an oversize value aborts the whole batch's INSERT,
+ * so the row builder clamps rather than letting one event fail the batch.
+ */
+function clampColumn(
+  value: string | undefined | null,
+  column: keyof typeof EVENT_COLUMN_MAX_LENGTHS,
+): string | null {
+  if (!value) return null;
+  return truncate(value, EVENT_COLUMN_MAX_LENGTHS[column]);
 }
 
 export function buildEventRow(
@@ -107,24 +143,26 @@ export function buildEventRow(
     api_key_id,
     level: e.level,
     source_module: e.source_module || null,
-    message: e.message,
+    message: truncate(e.message, MAX_EVENT_MESSAGE_LENGTH),
     screen_name: e.screen_name || null,
     custom_attributes: truncateCustomAttributes(e.custom_attributes),
     environment: e.environment || null,
-    os_version: e.os_version || null,
-    app_version: e.app_version || null,
-    sdk_name: e.sdk_name || null,
-    sdk_version: e.sdk_version || null,
-    device_model: e.device_model || null,
-    build_number: e.build_number || null,
-    locale: e.locale || null,
-    preferred_language: e.preferred_language || null,
+    os_version: clampColumn(e.os_version, "os_version"),
+    app_version: clampColumn(e.app_version, "app_version"),
+    sdk_name: clampColumn(e.sdk_name, "sdk_name"),
+    sdk_version: clampColumn(e.sdk_version, "sdk_version"),
+    device_model: clampColumn(e.device_model, "device_model"),
+    build_number: clampColumn(e.build_number, "build_number"),
+    locale: clampColumn(e.locale, "locale"),
+    preferred_language: clampColumn(e.preferred_language, "preferred_language"),
     country_code,
     is_dev: e.is_dev ?? false,
     timestamp: e.timestamp ? new Date(e.timestamp) : new Date(),
   };
 }
 
+// Device/SDK columns are copied straight off the event rows, which
+// buildEventRow already clamped to the shared varchar widths.
 export function buildMetricRows(
   validEvents: Array<typeof events.$inferInsert>,
   api_key_id: string | null,

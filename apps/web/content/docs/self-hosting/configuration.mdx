@@ -97,13 +97,13 @@ Write this before building. Because Next.js inlines `NEXT_PUBLIC_*` values into 
 
 ## Migration note
 
-Database migrations (`pnpm db:migrate`) run from the `packages/db` directory and do not auto-load the `.env` file. When running migrations over SSH, prefix the command with the `DATABASE_URL`:
+Database migrations (`pnpm db:migrate`) load the repo-root `.env` themselves, so they pick up `DATABASE_URL` exactly as the API server does. Prefix the command only when you want to override that value — a different database, or a checkout with no `.env` of its own:
 
 ```bash
 DATABASE_URL='postgresql://pubky_pulse:password@localhost:5432/pubky_pulse' pnpm db:migrate
 ```
 
-The API server loads `.env` automatically via its config module, so this is only relevant for running migrations in isolation (e.g., during deployment scripts).
+Without the prefix the value in the root `.env` wins, which is what you want on a normal deployment.
 
 ## Cookie configuration
 

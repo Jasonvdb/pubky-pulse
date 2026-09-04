@@ -13,7 +13,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "generate": "drizzle-kit generate",
+    "generate": "tsx scripts/generate.ts",
+    "check": "drizzle-kit check && tsx scripts/generate.ts ci_drift_check --check",
     "migrate": "tsx src/migrate.ts",
     "dev:seed": "tsx src/seed.ts",
     "dev:seed-events": "tsx src/seed-events.ts",

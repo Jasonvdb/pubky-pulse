@@ -33,13 +33,23 @@ Use Node.js 20+, PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).
 - `pnpm build`: compile workspaces and build the production web bundle.
 - `pnpm test`: run all Vitest suites.
 - `pnpm test:coverage`: collect V8 coverage for the server.
-- `pnpm db:generate`: generate Drizzle migrations after schema changes.
+- `pnpm db:generate <snake_case_name>`: generate a named Drizzle migration after schema changes.
+- `pnpm db:check`: fail if `schema.ts` has changes with no matching migration; needs no database and runs in CI.
 
 ## Database Migrations
 
-Production migrations are append-only: never edit or squash a migration that may have been applied. After `pnpm db:generate`, verify the new entry in `packages/db/drizzle/meta/_journal.json` has a `when` value greater than every prior entry; Drizzle silently skips migrations whose timestamp is not newer than the latest applied migration.
+Edit `packages/db/src/schema.ts`, run `pnpm db:generate <snake_case_name>`, read the SQL it writes into `packages/db/drizzle/`, then `pnpm db:migrate` and `pnpm test`. The name is required and must match `^[a-z][a-z0-9_]*$`; a bare `pnpm db:generate` exits with usage rather than inventing one.
 
-Changes to the partitioned `events`, `metric_events`, or `funnel_events` tables must also update the raw DDL in `packages/db/src/migrate.ts` and `apps/server/src/__tests__/setup.ts`, then pass the partitioned-schema parity test.
+Rules:
+
+- Never add and remove columns of the same table, or tables, or enums, in a single migration. That is the only diff drizzle-kit prompts on ("created or renamed?"), and on a non-TTY the prompt hangs forever, so `db:generate` refuses it up front. Split it into two migrations — add and backfill first, drop second — which is also the production-safe way to rename.
+- Never hand-edit `packages/db/drizzle/meta/*`. Those snapshots are what the next diff is computed against.
+- `pnpm db:generate <name> --custom` writes an empty migration for SQL drizzle cannot express. Use it only for that, and only when `schema.ts` has no pending changes; the command refuses otherwise, because `--custom` writes a fresh snapshot while discarding the diff.
+- Production migrations are append-only: never edit or squash a migration once it may have been applied. The drizzle migrator only applies migrations newer than the last one it recorded, so the edit is silently skipped on every database that already ran it. After `pnpm db:generate`, verify the new entry in `packages/db/drizzle/meta/_journal.json` has a `when` value greater than every prior entry; a migration whose timestamp is not newer than the latest applied one is skipped the same way.
+
+`events`, `metric_events` and `funnel_events` are created `PARTITION BY RANGE ("timestamp")` in the baseline migration, while `schema.ts` declares them as ordinary tables because drizzle cannot express partitioning. So they take no primary key and no unique index that omits `timestamp`, no `.concurrently()` on their indexes (Postgres rejects concurrent index builds on a partitioned table), and no foreign keys from other tables pointing at them. Declare their indexes on the parent in `schema.ts` only — Postgres propagates a parent index to every existing and future partition, so per-partition indexes are always wrong.
+
+A database migrated before the partitioned baseline cannot be brought forward in place; `pnpm db:migrate` fails loudly on it, including one whose parents are partitioned but carry no indexes of their own (an older runner indexed the child partitions instead). Drop and recreate it (`dropdb <name> && createdb <name>`, then `pnpm db:migrate`). `pnpm dev:unsafe-reset` only truncates and will not fix it.
 
 ## Coding Style & Naming Conventions
 
@@ -49,7 +59,7 @@ In web client code, use the `@pubky-pulse/shared` root barrel only for type impo
 
 ## Testing Guidelines
 
-Name tests `*.test.ts` and use Vitest `describe`/`it` blocks with behavioral descriptions. Server tests require `postgres://localhost:5432/pubky_pulse_test`; create it with `createdb pubky_pulse_test`. The test setup performs destructive partition-table operations, so never point test helpers or `DATABASE_URL` at a non-`_test` database. Add regression tests for route, job, schema, and permission changes. Investigate failures before changing expectations; update tests only when behavior intentionally changed.
+Name tests `*.test.ts` and use Vitest `describe`/`it` blocks with behavioral descriptions. Server tests connect to `TEST_DATABASE_URL`, defaulting to `postgres://localhost:5432/pubky_pulse_test`; create it with `createdb pubky_pulse_test`. The test setup migrates and truncates that database, so it refuses to run unless the database name ends in `_test`; never point test helpers or `DATABASE_URL` at a non-`_test` database. Add regression tests for route, job, schema, and permission changes. Investigate failures before changing expectations; update tests only when behavior intentionally changed.
 
 ## Commit & Pull Request Guidelines
 

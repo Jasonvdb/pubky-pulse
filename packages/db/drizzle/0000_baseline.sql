@@ -144,7 +144,7 @@ CREATE TABLE "events" (
 	"is_dev" boolean DEFAULT false NOT NULL,
 	"timestamp" timestamp with time zone NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL
-);
+) PARTITION BY RANGE ("timestamp");
 --> statement-breakpoint
 CREATE TABLE "events_daily" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -245,7 +245,7 @@ CREATE TABLE "funnel_events" (
 	"client_event_id" uuid,
 	"timestamp" timestamp with time zone NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL
-);
+) PARTITION BY RANGE ("timestamp");
 --> statement-breakpoint
 CREATE TABLE "funnel_events_daily" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -387,7 +387,7 @@ CREATE TABLE "metric_events" (
 	"client_event_id" uuid,
 	"timestamp" timestamp with time zone NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL
-);
+) PARTITION BY RANGE ("timestamp");
 --> statement-breakpoint
 CREATE TABLE "metric_events_daily" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

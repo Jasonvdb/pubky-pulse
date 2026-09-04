@@ -60,19 +60,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Migration drift check
+        run: timeout 120 pnpm db:check < /dev/null
+
       - name: Build
         run: pnpm build
 
       - name: Run tests
         env:
-          # setup.ts hardcodes `postgres://localhost:5432/pubky_pulse_test`
-          # with no user in the URL. PGUSER=postgres lets postgres-js fall back
-          # to the default postgres superuser (created by the service container).
-          # PGHOST=localhost steers psql off the Unix-socket default path.
-          # With POSTGRES_HOST_AUTH_METHOD=trust, no password is needed.
-          PGUSER: postgres
-          PGHOST: localhost
-          DATABASE_URL: postgres://postgres@localhost:5432/pubky_pulse_test
+          TEST_DATABASE_URL: postgres://postgres@localhost:5432/pubky_pulse_test
           JWT_SECRET: test-secret
           HOST: 127.0.0.1
           # Identity configuration is required — apps/server/src/config.ts

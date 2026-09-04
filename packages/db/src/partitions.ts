@@ -14,7 +14,7 @@ export async function getEventPartitionNames(client: postgres.Sql): Promise<stri
     FROM pg_inherits i
     JOIN pg_class c ON c.oid = i.inhrelid
     JOIN pg_class p ON p.oid = i.inhparent
-    WHERE p.relname = 'events'
+    WHERE p.relname = 'events' AND p.relnamespace = 'public'::regnamespace
     ORDER BY c.relname ASC
   `;
   return rows.map((r) => r.partition_name as string);
@@ -91,16 +91,25 @@ export async function dropOldestEventPartitions(
 interface PartitionConfig {
   tableName: string;
   prefix: string;
-  indexesSql: (partitionName: string) => string;
 }
 
 async function ensureTablePartitions(client: postgres.Sql, config: PartitionConfig, monthsAhead: number) {
   const result = await client`
-    SELECT relkind FROM pg_class WHERE relname = ${config.tableName}
+    SELECT relkind FROM pg_class
+    WHERE relname = ${config.tableName} AND relnamespace = 'public'::regnamespace
   `;
 
-  if (result.length === 0 || result[0].relkind !== "p") {
-    return;
+  // Fail loudly rather than skipping: a missing or non-partitioned parent means
+  // the database was never migrated, or predates the partitioned baseline. See
+  // run-migrations.ts.
+  if (result.length === 0) {
+    throw new Error(`ensureTablePartitions: table "${config.tableName}" does not exist`);
+  }
+  if (result[0].relkind !== "p") {
+    throw new Error(
+      `ensureTablePartitions: table "${config.tableName}" is not partitioned ` +
+        `(relkind=${result[0].relkind}); recreate the database from the current baseline migration`,
+    );
   }
 
   const now = new Date();
@@ -126,14 +135,16 @@ async function createMonthlyPartition(client: postgres.Sql, config: PartitionCon
     throw new Error(`createMonthlyPartition: invalid partition name "${partitionName}"`);
   }
 
+  // No per-partition indexes are created here: Postgres 11+ propagates every
+  // index declared on the partitioned parent (see drizzle/0000_baseline.sql) to
+  // each attached partition automatically. Creating them by hand would
+  // duplicate the parent's index list and drift from schema.ts.
   try {
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS ${partitionName}
         PARTITION OF ${config.tableName}
         FOR VALUES FROM ('${from}') TO ('${to}');
     `);
-
-    await client.unsafe(config.indexesSql(partitionName));
 
     console.log(`Partition ${partitionName} ready.`);
   } catch (err: any) {
@@ -150,15 +161,6 @@ async function createMonthlyPartition(client: postgres.Sql, config: PartitionCon
 const eventsPartitionConfig: PartitionConfig = {
   tableName: "events",
   prefix: "events_",
-  indexesSql: (p) => `
-    CREATE INDEX IF NOT EXISTS ${p}_app_ts_idx ON ${p} (app_id, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_level_ts_idx ON ${p} (app_id, level, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_user_ts_idx ON ${p} (app_id, user_id, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_screen_name_ts_idx ON ${p} (app_id, screen_name, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_client_eid_idx ON ${p} (app_id, client_event_id);
-    CREATE INDEX IF NOT EXISTS ${p}_app_session_ts_idx ON ${p} (app_id, session_id, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_dev_ts_idx ON ${p} (app_id, is_dev, "timestamp");
-  `,
 };
 
 export async function ensurePartitions(client: postgres.Sql, monthsAhead = 3) {
@@ -170,12 +172,6 @@ export async function ensurePartitions(client: postgres.Sql, monthsAhead = 3) {
 const metricEventsPartitionConfig: PartitionConfig = {
   tableName: "metric_events",
   prefix: "metric_events_",
-  indexesSql: (p) => `
-    CREATE INDEX IF NOT EXISTS ${p}_app_slug_ts_idx ON ${p} (app_id, metric_slug, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_slug_phase_ts_idx ON ${p} (app_id, metric_slug, phase, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_tracking_id_idx ON ${p} (app_id, tracking_id);
-    CREATE INDEX IF NOT EXISTS ${p}_app_client_eid_idx ON ${p} (app_id, client_event_id);
-  `,
 };
 
 export async function ensureMetricEventPartitions(client: postgres.Sql, monthsAhead = 3) {
@@ -187,12 +183,6 @@ export async function ensureMetricEventPartitions(client: postgres.Sql, monthsAh
 const funnelEventsPartitionConfig: PartitionConfig = {
   tableName: "funnel_events",
   prefix: "funnel_events_",
-  indexesSql: (p) => `
-    CREATE INDEX IF NOT EXISTS ${p}_app_step_ts_idx ON ${p} (app_id, step_name, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_user_ts_idx ON ${p} (app_id, user_id, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_step_user_ts_idx ON ${p} (app_id, step_name, user_id, "timestamp");
-    CREATE INDEX IF NOT EXISTS ${p}_app_client_eid_idx ON ${p} (app_id, client_event_id);
-  `,
 };
 
 export async function ensureFunnelEventPartitions(client: postgres.Sql, monthsAhead = 3) {

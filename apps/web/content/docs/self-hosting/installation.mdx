@@ -103,11 +103,13 @@ See [Configuration](/docs/self-hosting/configuration) for a full reference of al
 
 ## 4. Run migrations
 
-Migrations run from `packages/db` and do not auto-load the root `.env`, so prefix the command with `DATABASE_URL`:
+Migrations load the repo-root `.env`, so with the file from the previous step in place this is all you need:
 
 ```bash
-DATABASE_URL='postgresql://pubky_pulse:<password>@localhost:5432/pubky_pulse' pnpm db:migrate
+pnpm db:migrate
 ```
+
+Prefix the command with `DATABASE_URL='postgresql://pubky_pulse:<password>@localhost:5432/pubky_pulse'` only to override that value — pointing at a different database, or running from a checkout without an `.env`.
 
 This creates all database tables and sets up monthly event partitions. The `events`, `metric_events`, and `funnel_events` tables use `PARTITION BY RANGE` on the `timestamp` column. Partitions for the current month plus the next 2 months are created automatically.
 

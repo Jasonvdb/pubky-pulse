@@ -69,7 +69,8 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-sm font-medium">Notification preferences</p>
                   <p className="text-xs text-muted-foreground">
-                    Choose channels (in-app, email) for each notification type.
+                    Choose which notification emails you receive. Dashboard inbox notifications
+                    always remain available.
                   </p>
                 </div>
               </div>

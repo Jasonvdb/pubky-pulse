@@ -7,7 +7,7 @@ A Next.js app has two halves, and Pubky Pulse has an SDK for each: the Web SDK i
 
 ## Client Component
 
-`configure()` needs `window`, so it lives in a client component. On the server it is a no-op, which means an accidental import from a server component will not crash the render.
+`configure()` needs `window`, so it lives in a client component. With a valid configuration it is a no-op on the server, so an accidental import from a server component does no work — though it still validates its arguments first, so a missing endpoint or key throws even during a server render.
 
 ```tsx
 // app/pulse-provider.tsx
@@ -55,27 +55,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 }
 ```
 
-Both keys are `NEXT_PUBLIC_`, which is correct here: the client key is public and write-only by design. Never put an agent key (`pulse_agent_...`) in a `NEXT_PUBLIC_` variable.
+Both keys are `NEXT_PUBLIC_`, which is correct here: the client key is public and ingest-scoped by design. Never put an agent key (`pulse_agent_...`) in a `NEXT_PUBLIC_` variable.
 
 ## Route Handlers
 
-`propagateSessionTo: ["/api"]` adds an `X-Pulse-Session-Id` header to every request whose URL starts with `/api`. Read it in your route handlers with the Node.js SDK and the browser session and the server session become one trace:
+`propagateSessionTo: ["/api"]` adds an `X-Pulse-Session-Id` header to every `fetch` request whose URL starts with `/api` (requests issued with `XMLHttpRequest` or `sendBeacon` are not annotated). Read it in your route handlers with the Node.js SDK and the browser session and the server session become one trace:
 
 ```typescript
 // app/api/checkout/route.ts
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 export async function POST(req: Request) {
-  const log = Pulse.withUser(await currentUserId()).withSession(
-    req.headers.get("x-pulse-session-id"),
-  );
+  const sessionId = req.headers.get("x-pulse-session-id");
+  const scope = Pulse.withUser(await currentUserId());
+  const log = sessionId ? scope.withSession(sessionId) : scope;
 
   log.info("checkout_started");
   return Response.json({ ok: true });
 }
 ```
 
-The Node SDK ignores a missing or non-UUID header value and falls back to its own session id, so a request from outside the browser never breaks the handler. See [`Pulse.withSession()`](/docs/sdks/node/identity#withsession) for the details.
+The guard keeps the snippet type-correct — `Headers.get()` returns `string | null` — and the Node SDK ignores a non-UUID value and falls back to its own session id, so a request from outside the browser never breaks the handler. See [`Pulse.withSession()`](/docs/sdks/node/identity#withsession) for the details.
 
 Configure the Node SDK once, in a module your route handlers import — with its own app and its own `pulse_client_` key for a `backend`-platform app. The two SDKs report to different apps in the same project; the shared session id is what joins them.
 

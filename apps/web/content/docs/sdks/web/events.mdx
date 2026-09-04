@@ -44,7 +44,15 @@ try {
 }
 ```
 
-The Error overload accepts `unknown`, so `throw "boom"` patterns are handled too. SDK-reserved `_error_*` keys win over caller-supplied keys of the same name, so the server's issue fingerprinting stays stable.
+The Error overload is chosen only when the first argument is not a string — a string first argument is always the logger-style message — so wrap a caught value that might not be an `Error` before passing anything after it:
+
+```typescript
+Pulse.error(err instanceof Error ? err : new Error(String(err)), "checkout failed", {
+  order_id: order.id,
+});
+```
+
+SDK-reserved `_error_*` keys win over caller-supplied keys of the same name, so the server's issue fingerprinting stays stable.
 
 ## Unhandled Errors
 

@@ -33,7 +33,7 @@ Pulse.configure({
 | `captureUnhandled` | `boolean` | `true` | Capture uncaught errors and unhandled rejections. See [Events](/docs/sdks/web/events#unhandled-errors). |
 | `trackPageViews` | `boolean` | `true` | Emit screen events for History API navigations. See [Screens](/docs/sdks/web/screens). |
 | `networkTracking` | `boolean` | `false` | Emit an `sdk:network_request` event per `fetch` call. |
-| `propagateSessionTo` | `string[]` | `[]` | URL prefixes that receive the `X-Pulse-Session-Id` header. |
+| `propagateSessionTo` | `string[]` | `[]` | URL prefixes whose `fetch` requests receive the `X-Pulse-Session-Id` header. |
 | `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes. |
 | `flushThreshold` | `number` | `20` | Buffered events that trigger an immediate flush. |
 | `maxBufferSize` | `number` | `10000` | Buffered events kept before the oldest are dropped. |
@@ -47,7 +47,7 @@ Invalid values throw at `configure()` time with a `Pubky Pulse: ...` message, so
 1. **Validates** the endpoint, the key format, and every option.
 2. **Checks for `window`** — under server rendering there is none, so `configure()` returns without installing anything.
 3. **Loads or creates the anonymous id** (`pulse_anon_<uuid>` in `localStorage`) so the first event already has a user id.
-4. **Starts a session** — a UUID kept in `sessionStorage` and renewed after `sessionTimeoutMs` of inactivity — and emits `sdk:session_started`.
+4. **Starts or resumes a session** — a UUID kept in `sessionStorage`. The stored id is adopted when the last activity is inside `sessionTimeoutMs`, so a reload in the same tab keeps the session and emits no event; `sdk:session_started` is emitted only when a new session actually begins. See [Sessions](/docs/sdks/web/identity#sessions).
 5. **Installs page hooks** — page-visibility flushing, screen tracking when `trackPageViews` is on, unhandled-error capture when `captureUnhandled` is on, and the `fetch` wrapper when `networkTracking` or `propagateSessionTo` needs it.
 
 Calling `configure()` again replaces the pipeline: the old transport is drained and every page hook is removed first.
@@ -81,7 +81,7 @@ Pulse.configure({
 
 `networkTracking` wraps `window.fetch` and logs an `sdk:network_request` event per call with the method, the URL (query string stripped), the status, and the duration — debug for 2xx/3xx, warn for anything else, error when the request throws. Requests to your Pulse endpoint are skipped.
 
-`propagateSessionTo` lists URL prefixes that receive the `X-Pulse-Session-Id` header, and works whether or not `networkTracking` is on. Only list origins you control: the header should not leak to third parties. See [Next.js](/docs/sdks/web/nextjs) for the server side of that trace.
+`propagateSessionTo` lists URL prefixes that receive the `X-Pulse-Session-Id` header on `fetch` requests, and works whether or not `networkTracking` is on. Propagation is implemented by wrapping `fetch`, so requests made with `XMLHttpRequest` or `sendBeacon` — including libraries such as axios that default to XHR in the browser — are not annotated and must set the header themselves. Only list origins you control: the header should not leak to third parties. See [Next.js](/docs/sdks/web/nextjs) for the server side of that trace.
 
 ## Flush and Shutdown
 

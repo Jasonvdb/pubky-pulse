@@ -135,7 +135,7 @@ Any evergreen browser is supported; the build targets ES2020. Two features degra
 - **gzip** needs `CompressionStream`. Where it is missing, bodies are sent as plain JSON. Bodies under 512 bytes and the unload path are never compressed anyway.
 - **Attachments** need `crypto.subtle`, which requires a secure context (HTTPS or `localhost`). Elsewhere uploads are skipped and the event is still sent.
 
-The package is safe to import on the server. `configure()` checks for `window` and, when there is none, returns without installing anything — so a Next.js or SvelteKit server render does no work and throws nothing. Log calls made before a successful `configure()` are ignored, so shared code that logs on both sides needs no guard of its own.
+The package is safe to import on the server. `configure()` validates its arguments first, so an invalid configuration — a missing or blank `endpoint`, `apiKey`, or `bundleId`, or a key without the `pulse_client_` prefix — throws with or without a `window`. A valid one then checks for `window` and, when there is none, returns without installing anything, so a Next.js or SvelteKit server render does no work. Log calls made before a successful `configure()` are ignored, so shared code that logs on both sides needs no guard of its own.
 
 ## Next Steps
 

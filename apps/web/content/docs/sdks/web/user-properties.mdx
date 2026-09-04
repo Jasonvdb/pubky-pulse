@@ -14,7 +14,7 @@ await Pulse.setUserProperties({
 });
 ```
 
-The call awaits a flush of the buffered events first, so those events and the properties land under the same user id. It resolves once the server has the properties.
+The call awaits a flush of the buffered events first, so those events and the properties land under the same user id. It resolves once the request has been attempted, not once the server has accepted it: a rejected or unreachable request is dropped without throwing and without a value to inspect. Turn on `debug` to see those drops in the console.
 
 ## Removing a Property
 
@@ -56,5 +56,7 @@ Properties set before `setUser` attach to the anonymous id, so set them after si
 - Max key length: 50 characters
 - Max value length: 200 characters
 - All values must be strings
+
+The server rejects a write that breaks any of these limits, and the SDK drops it silently, so validate lengths and counts yourself before calling.
 
 Keep personal data out of properties unless you have a reason to store it: this call runs in the browser, where the request body is visible to anyone with devtools open.

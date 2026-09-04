@@ -1,13 +1,13 @@
 ---
 title: Getting Started
-description: Run or connect to a Pubky Pulse instance, sign in, add the MCP server to your editor, and let your agent do the integration.
+description: Run or connect to a Pubky Pulse instance, sign in, add the MCP server to your client, and let your agent do the integration.
 ---
 
 Pubky Pulse is designed to be set up by your coding agent. There are four steps:
 
 1. Run or access a Pubky Pulse instance
 2. Sign in to the dashboard
-3. Add the MCP server to your editor
+3. Add the MCP server to your client
 4. Tell your agent to create a project and an app, then integrate an SDK
 
 ## 1. Run or access an instance
@@ -38,9 +38,9 @@ Sign-in is restricted to the email domains the instance was configured with (`PU
 
 If no `RESEND_API_KEY` is configured, the verification code is printed to the API server console instead of being emailed.
 
-Signing in also creates a default agent key (`pulse_agent_*`) that belongs to **you** — that is the credential the MCP config uses. It carries your project access and is visible only to you; colleagues get their own. You can create more keys later from the **API Keys** page.
+Signing in also creates a default agent key (`pulse_agent_*`) that belongs to **you** — that is the credential your MCP client uses. It carries your project access and is visible only to you; colleagues get their own. You can create more keys later from the **API Keys** page.
 
-## 3. Add the MCP server to your editor
+## 3. Add the MCP server to your client
 
 The [MCP endpoint](/docs/mcp/setup) is the agent interface: one HTTP URL gives your agent 62 tools, with nothing to install and no updates to keep on top of.
 
@@ -57,7 +57,7 @@ claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky
   --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
 ```
 
-Any MCP-capable editor works (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code). The [MCP setup guide](/docs/mcp/setup) has copy-pasteable config for each one, pre-filled with your key when you are signed in.
+Any supported MCP client works (Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, Roo Code). The [MCP setup guide](/docs/mcp/setup) leads with the fastest safe method for each one and includes project-level or extension-specific fallbacks where available.
 
 Verify the connection by asking your agent to call the `whoami` tool. It should return your key type, team, and permissions.
 

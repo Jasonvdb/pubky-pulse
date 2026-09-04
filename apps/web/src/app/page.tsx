@@ -101,11 +101,11 @@ export default function LandingPage() {
         <section id="get-started" className="mx-auto max-w-4xl px-6 pb-24 md:pb-32">
           <div className="text-center">
             <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Add one config. Tell your agent. Done.
+              Connect your client. Tell your agent. Done.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-              Add the Pubky Pulse MCP server to your editor, then your agent handles auth,
-              project setup and SDK integration.
+              Use the fastest supported setup for your MCP client, then your agent handles
+              auth, project setup and SDK integration.
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export default function LandingPage() {
             </Step>
 
             <div className="mt-8">
-              <Step n={2} title="Pick your editor and copy the config">
+              <Step n={2} title="Pick your client and use the recommended setup">
                 <LandingMcpSetup />
               </Step>
             </div>

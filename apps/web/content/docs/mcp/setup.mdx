@@ -1,11 +1,11 @@
 ---
 title: Setup
-description: Configure your MCP client to connect to Pubky Pulse — Claude Code, Codex, OpenCode, Cursor, VS Code, Claude Desktop, Windsurf, Zed, JetBrains, Cline, and Roo Code.
+description: Connect your MCP client to Pubky Pulse using its fastest supported setup method.
 ---
 
 ## Prerequisites
 
-You need an **agent API key** (`pulse_agent_*`) to connect. A default agent key is created for you on first sign-in — sign in below to see it pre-filled in all editor configs.
+You need an **agent API key** (`pulse_agent_*`) to connect. A default agent key is created for you on first sign-in — sign in below to see it pre-filled wherever the setup method can safely use it.
 
 <Callout>
 Agent keys get all permissions by default and are scoped to your team. The key is yours: it is visible only to you, and it carries your project access and nobody else's. You can create additional keys from the **API Keys** page in the dashboard. See [Authentication & Access Control](/docs/concepts/authentication) for key types, permissions and ownership.
@@ -21,9 +21,9 @@ The MCP endpoint is `POST /mcp` on your Pubky Pulse API server, and it exposes a
 | Self-hosted | `https://api.yourdomain.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
 
-## Editor Setup
+## Client Setup
 
-Pick your editor below for copy-pasteable config. We support **Claude Code**, **Codex**, **OpenCode**, **Cursor**, **VS Code**, **Claude Desktop**, **Windsurf**, **Zed**, **JetBrains** (IntelliJ, WebStorm, PyCharm, etc.), **Cline**, and **Roo Code**.
+Pick your client below. The fastest safe supported method is first, with project-level and extension-specific fallbacks where available. We support **Claude Code**, **Codex**, **OpenCode**, **Cursor**, **VS Code**, **Claude Desktop**, **Windsurf**, **Zed**, **JetBrains** (IntelliJ, WebStorm, PyCharm, etc.), **Cline**, and **Roo Code**.
 
 <McpSetupInstructions />
 

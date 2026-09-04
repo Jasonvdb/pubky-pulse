@@ -6,7 +6,14 @@ import { Eye, EyeOff, LogIn, KeyRound } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { CopyButton } from "@/components/copy-button";
 import { api } from "@/lib/api";
-import { EDITORS, PLACEHOLDER, MCP_URL, SERVER_NAME, maskKey } from "@/lib/mcp-editors";
+import {
+  EDITORS,
+  PLACEHOLDER,
+  MCP_URL,
+  SERVER_NAME,
+  SETUP_METHOD_LABELS,
+  maskKey,
+} from "@/lib/mcp-editors";
 
 function renderNote(note: string) {
   return (
@@ -80,7 +87,7 @@ export function McpSetupInstructions() {
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-chart-3/30 bg-chart-3/10 px-4 py-3">
           <LogIn className="h-4 w-4 shrink-0 text-chart-3" />
           <p className="flex-1 text-sm text-foreground">
-            Sign in to get your API key pre-filled in all editor configs below.
+            Sign in to get your API key pre-filled in the setup methods that can safely use it.
           </p>
           <a
             href="/login?redirect=/docs/mcp/setup"
@@ -94,7 +101,7 @@ export function McpSetupInstructions() {
           <div className="flex items-center gap-3">
             <KeyRound className="h-4 w-4 shrink-0 text-chart-2" />
             <p className="flex-1 text-sm text-foreground">
-              Your agent API key is pre-filled in all configs below.
+              Your agent API key is pre-filled in the setup methods that can safely use it.
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -121,13 +128,13 @@ export function McpSetupInstructions() {
         </div>
       ) : null}
 
-      {/* Editor config tabs */}
+      {/* MCP client setup tabs */}
       <Tabs items={EDITORS.map((e) => e.name)}>
         {EDITORS.map((editor) => {
           const scopeIdx = scopeSelections[editor.name] ?? 0;
           const scope = editor.scopes[scopeIdx];
-          const configText = scope.config(activeKey, MCP_URL, SERVER_NAME);
-          const configDisplay = scope.config(displayKey, MCP_URL, SERVER_NAME);
+          const setupText = scope.content(activeKey, MCP_URL, SERVER_NAME);
+          const setupDisplay = scope.content(displayKey, MCP_URL, SERVER_NAME);
           return (
             <Tab key={editor.name} value={editor.name}>
               {/* Scope toggle — only shown when editor has multiple scopes */}
@@ -137,6 +144,7 @@ export function McpSetupInstructions() {
                     <button
                       key={s.label}
                       type="button"
+                      aria-pressed={scopeIdx === i}
                       onClick={() =>
                         setScopeSelections((prev) => ({ ...prev, [editor.name]: i }))
                       }
@@ -152,16 +160,23 @@ export function McpSetupInstructions() {
                 </div>
               )}
 
+              <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full bg-brand/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-brand">
+                  {SETUP_METHOD_LABELS[scope.method]}
+                </span>
+                <span>{scope.label}</span>
+              </div>
+
               {/* Note */}
               {scope.note && renderNote(scope.note)}
 
-              {/* Config code block */}
+              {/* Copyable setup content */}
               <div className="relative">
                 <pre className="overflow-x-auto rounded-lg border border-border bg-fd-code-background p-4 text-sm">
-                  <code>{configDisplay}</code>
+                  <code data-language={scope.language}>{setupDisplay}</code>
                 </pre>
                 <div className="absolute right-2 top-2">
-                  <CopyButton text={configText} />
+                  <CopyButton text={setupText} />
                 </div>
               </div>
 

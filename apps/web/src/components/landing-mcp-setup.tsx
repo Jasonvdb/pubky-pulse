@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { EDITORS, PLACEHOLDER, MCP_URL, SERVER_NAME } from "@/lib/mcp-editors";
+import {
+  EDITORS,
+  PLACEHOLDER,
+  MCP_URL,
+  SERVER_NAME,
+  SETUP_METHOD_LABELS,
+} from "@/lib/mcp-editors";
 import { useUser } from "@/hooks/use-user";
 import { api } from "@/lib/api";
 import { TerminalCopyButton } from "@/components/terminal-copy-button";
@@ -31,7 +37,8 @@ export function LandingMcpSetup() {
   const hasRealKey = activeKey !== PLACEHOLDER;
 
   const editor = EDITORS[selectedEditor];
-  const configText = editor.scopes[0].config(activeKey, MCP_URL, SERVER_NAME);
+  const scope = editor.scopes[0];
+  const setupText = scope.content(activeKey, MCP_URL, SERVER_NAME);
 
   return (
     <div>
@@ -58,7 +65,7 @@ export function LandingMcpSetup() {
         <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-12 bg-linear-to-r from-transparent to-background" />
       </div>
 
-      {/* Config display */}
+      {/* Recommended setup */}
       <div className="overflow-hidden rounded-xl bg-card shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
@@ -68,29 +75,42 @@ export function LandingMcpSetup() {
               <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
             </div>
             <span className="ml-2 text-xs font-medium text-muted-foreground">{editor.name}</span>
+            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+              {SETUP_METHOD_LABELS[scope.method]}
+            </span>
           </div>
-          <TerminalCopyButton text={configText} />
+          <TerminalCopyButton text={setupText} />
         </div>
+        {scope.note && (
+          <p className="border-b border-border px-5 py-3 text-xs leading-relaxed text-muted-foreground">
+            {scope.note}
+          </p>
+        )}
         <pre className="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed">
-          <code className="text-card-foreground">
+          <code className="text-card-foreground" data-language={scope.language}>
             {hasRealKey
-              ? configText.split(activeKey).map((part, i, arr) => (
+              ? setupText.split(activeKey).map((part, i, arr) => (
                   <span key={i}>
                     {part}
                     {i < arr.length - 1 && <span className="text-brand">{activeKey}</span>}
                   </span>
                 ))
-              : configText}
+              : setupText}
           </code>
         </pre>
+        {editor.callout && (
+          <p className="border-t border-border bg-muted/20 px-5 py-3 text-xs leading-relaxed text-muted-foreground">
+            {editor.callout}
+          </p>
+        )}
       </div>
 
-      {/* Note — only show when no real key */}
-      {!hasRealKey && (
-        <p className="mt-2.5 text-[11px] tracking-wide text-muted-foreground">
-          Sign in above to get your key auto-filled
-        </p>
-      )}
+      <div className="mt-2.5 flex items-center justify-between gap-4 text-[11px] tracking-wide text-muted-foreground">
+        {!hasRealKey ? <span>Sign in above to get your key auto-filled where supported</span> : <span />}
+        <a className="shrink-0 transition-colors hover:text-foreground" href="/docs/mcp/setup">
+          All scopes and fallbacks →
+        </a>
+      </div>
     </div>
   );
 }

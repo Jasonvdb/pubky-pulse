@@ -393,10 +393,12 @@ If `permissions` is omitted, defaults are applied:
 | Key type | Default permissions |
 |----------|-------------------|
 | Client | `["events:write", "users:write"]` |
-| Agent | All agent permissions: `events:read`, `funnels:read`, `funnels:write`, `apps:read`, `apps:write`, `projects:read`, `projects:write`, `metrics:read`, `metrics:write`, `audit_logs:read`, `users:write`, `jobs:read`, `jobs:write`, `issues:read`, `issues:write`, `feedback:read`, `feedback:write`, `questionnaires:read`, `questionnaires:write` |
+| Agent | All agent permissions: `events:read`, `funnels:read`, `funnels:write`, `apps:read`, `apps:write`, `projects:read`, `projects:write`, `metrics:read`, `metrics:write`, `audit_logs:read`, `jobs:read`, `jobs:write`, `issues:read`, `issues:write`, `feedback:read`, `feedback:write`, `questionnaires:read`, `questionnaires:write` |
 | Import | `["events:write", "users:write"]` |
 
 Client and import keys share the same permissions (`events:write`, `users:write`). Import keys require an `app_id` and are used with the [bulk import endpoint](/docs/api-reference/import).
+
+`users:write` is a client/import permission only, and agent keys cannot be granted it. Its single route, [`POST /v1/identity/properties`](/docs/api-reference/identity), takes its target app from the credential rather than from the request body, so it accepts only those two key types.
 
 The `secret` in a create response is always the real value — this is the one response that carries a freshly minted credential.
 

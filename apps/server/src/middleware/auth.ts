@@ -94,11 +94,18 @@ async function revalidateUserIdentity(
   db: Db,
   userId: string
 ): Promise<{ ok: true; context: UserContext } | { ok: false; error: string }> {
-  const [user] = await db
-    .select({ id: users.id, email: users.email })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  // The user row and the singleton team are independent lookups, and this runs
+  // on every authenticated request, so they are issued together instead of in
+  // series. The checks below keep their original order and messages — this
+  // changes when the queries are sent, never what is rejected.
+  const [[user], team] = await Promise.all([
+    db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1),
+    findSingletonTeam(db),
+  ]);
 
   if (!user) return { ok: false, error: "Invalid or expired token" };
 
@@ -109,7 +116,6 @@ async function revalidateUserIdentity(
 
   if (!isEmailDomainAllowed(user.email, config.allowedEmailDomains)) return rejected;
 
-  const team = await findSingletonTeam(db);
   if (!team) return rejected;
 
   const [membership] = await db
@@ -139,16 +145,20 @@ async function revalidateUserIdentity(
  * longer a member — checked on every request, not once at key creation.
  */
 async function isAgentCreatorValid(db: Db, createdBy: string): Promise<boolean> {
-  const [creator] = await db
-    .select({ id: users.id, email: users.email })
-    .from(users)
-    .where(eq(users.id, createdBy))
-    .limit(1);
+  // Same reasoning as `revalidateUserIdentity`: two independent reads on the
+  // hot path for every agent-key request, so they go out concurrently.
+  const [[creator], team] = await Promise.all([
+    db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, createdBy))
+      .limit(1),
+    findSingletonTeam(db),
+  ]);
 
   if (!creator) return false;
   if (!isEmailDomainAllowed(creator.email, config.allowedEmailDomains)) return false;
 
-  const team = await findSingletonTeam(db);
   if (!team) return false;
 
   const [membership] = await db

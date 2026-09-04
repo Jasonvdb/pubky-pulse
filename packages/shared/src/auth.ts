@@ -60,15 +60,25 @@ export const VALID_PERMISSIONS: Permission[] = [
   "questionnaires:write",
 ];
 
+/**
+ * `users:write` is deliberately absent from both agent lists.
+ *
+ * The only route requiring it is `POST /v1/identity/properties`, which is SDK
+ * ingestion: it takes its target app from the credential rather than from the
+ * request, so there is no named project an ownership check could apply to, and
+ * it therefore refuses anything that is not a client or import key. Granting an
+ * agent a permission whose single route always answers `403` would advertise a
+ * capability the product does not have.
+ */
 export const ALLOWED_PERMISSIONS_BY_KEY_TYPE: Record<ApiKeyType, Permission[]> = {
   client: ["events:write", "users:write"],
-  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
+  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
   import: ["events:write", "users:write"],
 };
 
 export const DEFAULT_API_KEY_PERMISSIONS: Record<ApiKeyType, Permission[]> = {
   client: ["events:write", "users:write"],
-  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "users:write", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
+  agent: ["events:read", "funnels:read", "funnels:write", "apps:read", "apps:write", "projects:read", "projects:write", "metrics:read", "metrics:write", "audit_logs:read", "jobs:read", "jobs:write", "issues:read", "issues:write", "feedback:read", "feedback:write", "questionnaires:read", "questionnaires:write"],
   import: ["events:write", "users:write"],
 };
 

@@ -542,6 +542,47 @@ describe("app and project client_secret redaction", () => {
     }
   });
 
+  /**
+   * An agent key is the one principal that both reads `/v1/apps` and is itself
+   * a long-lived credential a person can hold. It inherits its creator's
+   * project access, so `client_secret` must follow `created_by`'s ownership —
+   * in both directions, or a member could mint an agent key and read every
+   * other project's ingestion secret through it.
+   */
+  it("returns a client secret to an agent whose creator owns the app's project", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/apps",
+      headers: { authorization: `Bearer ${agentOfOwnerA.secret}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const byId = new Map(
+      (res.json().apps as Array<{ id: string; client_secret: string | null }>).map((a) => [a.id, a]),
+    );
+
+    expect(byId.get(appA)?.client_secret).toBe(clientKeyA.secret);
+    expect(byId.get(appB)).toHaveProperty("client_secret", null);
+  });
+
+  it("redacts a client secret from an agent whose creator owns the other project", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/apps",
+      headers: { authorization: `Bearer ${agentOfOwnerB.secret}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const byId = new Map(
+      (res.json().apps as Array<{ id: string; client_secret: string | null }>).map((a) => [a.id, a]),
+    );
+
+    expect(byId.get(appB)?.client_secret).toBe(clientKeyB.secret);
+    expect(byId.get(appA)).toHaveProperty("client_secret", null);
+    expect(res.body).not.toContain(clientKeyA.secret);
+    expect(res.body).not.toContain(importKeyA.secret);
+  });
+
   it("returns client secrets to the project owner in a project detail response", async () => {
     const res = await app.inject({
       method: "GET",
@@ -718,25 +759,36 @@ describe("agent key credential management", () => {
 // ─── Client and import keys are locked out of management ─────────────
 
 describe("client and import keys cannot invoke management endpoints", () => {
-  const managementRoutes = [
-    { method: "GET" as const, url: "/v1/auth/keys" },
-    { method: "GET" as const, url: "/v1/auth/keys/00000000-0000-0000-0000-000000000000" },
-    {
-      method: "POST" as const,
-      url: "/v1/auth/keys",
-      payload: { name: "Nope", key_type: "import" },
-    },
-    {
-      method: "PATCH" as const,
-      url: "/v1/auth/keys/00000000-0000-0000-0000-000000000000",
-      payload: { name: "Nope" },
-    },
-    { method: "DELETE" as const, url: "/v1/auth/keys/00000000-0000-0000-0000-000000000000" },
-    { method: "GET" as const, url: "/v1/auth/me" },
-  ];
+  /**
+   * Built per test because the team routes carry the seeded team id, which only
+   * exists after `beforeEach`. An ingestion credential's own `team_id` satisfies
+   * `hasTeamAccess`, so without an explicit human-actor check a client key
+   * lifted out of a shipped app binary would read every colleague's user id,
+   * email, name, role and join date off the roster.
+   */
+  function managementRoutes() {
+    return [
+      { method: "GET" as const, url: "/v1/auth/keys" },
+      { method: "GET" as const, url: "/v1/auth/keys/00000000-0000-0000-0000-000000000000" },
+      {
+        method: "POST" as const,
+        url: "/v1/auth/keys",
+        payload: { name: "Nope", key_type: "import" },
+      },
+      {
+        method: "PATCH" as const,
+        url: "/v1/auth/keys/00000000-0000-0000-0000-000000000000",
+        payload: { name: "Nope" },
+      },
+      { method: "DELETE" as const, url: "/v1/auth/keys/00000000-0000-0000-0000-000000000000" },
+      { method: "GET" as const, url: "/v1/auth/me" },
+      { method: "GET" as const, url: `/v1/teams/${teamId}` },
+      { method: "GET" as const, url: `/v1/teams/${teamId}/members` },
+    ];
+  }
 
   it("rejects every key-management route for a client key", async () => {
-    for (const route of managementRoutes) {
+    for (const route of managementRoutes()) {
       const res = await app.inject({
         method: route.method,
         url: route.url,
@@ -748,7 +800,7 @@ describe("client and import keys cannot invoke management endpoints", () => {
   });
 
   it("rejects every key-management route for an import key", async () => {
-    for (const route of managementRoutes) {
+    for (const route of managementRoutes()) {
       const res = await app.inject({
         method: route.method,
         url: route.url,
@@ -756,6 +808,20 @@ describe("client and import keys cannot invoke management endpoints", () => {
         ...(route.payload ? { payload: route.payload } : {}),
       });
       expect(res.statusCode).toBe(403);
+    }
+  });
+
+  it("leaks no roster field to an ingestion key that guesses the team id", async () => {
+    for (const secret of [TEST_CLIENT_KEY, TEST_IMPORT_KEY]) {
+      const res = await app.inject({
+        method: "GET",
+        url: `/v1/teams/${teamId}/members`,
+        headers: { authorization: `Bearer ${secret}` },
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body).not.toContain(ownerA.userId);
+      expect(res.body).not.toContain("owner-a@example.com");
     }
   });
 

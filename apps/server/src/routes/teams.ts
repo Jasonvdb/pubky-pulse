@@ -3,6 +3,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { teams, teamMembers, users, apiKeys } from "@pubky-pulse/db";
 import type { Db } from "@pubky-pulse/db";
 import { requireAuth, hasTeamAccess } from "../middleware/auth.js";
+import { resolveActorUserId } from "../utils/project-access.js";
 
 /**
  * The singleton team is read-only over the API.
@@ -17,7 +18,17 @@ import { requireAuth, hasTeamAccess } from "../middleware/auth.js";
  * Every handler pins `teamId` to the caller's own membership via
  * `hasTeamAccess`, so a supplied team id must equal the configured singleton
  * team the request was revalidated against.
+ *
+ * `hasTeamAccess` is necessary but not sufficient for the roster: an ingestion
+ * credential's `team_id` satisfies it too, and a client key ships inside an app
+ * binary. So the roster routes additionally require a human actor behind the
+ * request — `resolveActorUserId` yields a JWT user's id or an agent key's
+ * `created_by`, and `null` for client/import keys, which is exactly the
+ * documented "JWT or agent key" contract for these two endpoints.
  */
+
+/** Roster reads need a human principal behind them; ingestion keys have none. */
+const NO_ROSTER_ACCESS = "Ingestion keys cannot read the team roster";
 
 /**
  * The roster, readable by every team member.
@@ -58,6 +69,10 @@ export async function teamsRoutes(app: FastifyInstance) {
       const auth = request.auth;
       const { teamId } = request.params;
 
+      if (!resolveActorUserId(auth)) {
+        return reply.code(403).send({ error: NO_ROSTER_ACCESS });
+      }
+
       if (!hasTeamAccess(auth, teamId)) {
         return reply.code(403).send({ error: "Not a member of this team" });
       }
@@ -90,6 +105,10 @@ export async function teamsRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const auth = request.auth;
       const { teamId } = request.params;
+
+      if (!resolveActorUserId(auth)) {
+        return reply.code(403).send({ error: NO_ROSTER_ACCESS });
+      }
 
       if (!hasTeamAccess(auth, teamId)) {
         return reply.code(403).send({ error: "Not a member of this team" });

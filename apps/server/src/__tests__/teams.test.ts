@@ -423,4 +423,29 @@ describe("API key rejection on team routes", () => {
     expect(res.statusCode).toBe(403);
     expect(res.body).not.toContain("pulse_agent_");
   });
+
+  /**
+   * The roster routes reject ingestion keys, which have no human behind them.
+   * An agent key does — it acts with its revalidated creator's authority — and
+   * both routes are documented as "JWT or agent key", so the guard has to be
+   * "is there an effective actor", not "is this a JWT". This pins that it did
+   * not over-correct into locking agents out.
+   */
+  it("still lets an agent key read the team and its roster", async () => {
+    const { token, teamId } = await getTokenAndTeamId(app);
+    const agentKey = await createAgentKey(app, token, teamId, ["projects:read"]);
+
+    for (const url of [`/v1/teams/${teamId}`, `/v1/teams/${teamId}/members`]) {
+      const res = await app.inject({
+        method: "GET",
+        url,
+        headers: { authorization: `Bearer ${agentKey}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().members).toEqual([
+        expect.objectContaining({ user_id: testData.userId, role: "owner" }),
+      ]);
+    }
+  });
 });

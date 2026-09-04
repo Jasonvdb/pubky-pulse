@@ -38,9 +38,13 @@ Pulse.configure({
 | `flushThreshold` | `number` | `20` | Buffered events that trigger an immediate flush. |
 | `maxBufferSize` | `number` | `10000` | Buffered events kept before the oldest are dropped. |
 | `sessionTimeoutMs` | `number` | `1800000` | Idle time (30 minutes) after which a new session starts. |
-| `supportedLanguages` | `string[]` | `navigator.languages` | Overrides the reported language list. |
+| `supportedLanguages` | `string[]` | *not sent* | The locales your app ships. Written through to the app record and used for localization-gap analysis. |
 
-Invalid values throw at `configure()` time with a `Pubky Pulse: ...` message, so a typo surfaces on the first page load rather than silently dropping your data.
+Every numeric option must be a positive integer, and `flushThreshold` must not exceed `maxBufferSize`; invalid values throw at `configure()` time with a `Pubky Pulse: ...` message, so a typo surfaces on the first page load rather than silently dropping your data.
+
+<Callout>
+Set `supportedLanguages` explicitly to the locales your app ships — `supportedLanguages: ["en", "es", "fr"]`. It is an app-level field, not a per-event label: the server writes the first value it sees in a batch through to the app record with source `sdk`, overriding anything set by hand. Leaving it unset sends nothing at all, so a manually configured list stays as it is. See [Ingest](/docs/api-reference/ingest).
+</Callout>
 
 ## What Happens on Configure
 

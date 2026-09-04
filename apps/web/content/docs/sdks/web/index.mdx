@@ -48,7 +48,7 @@ Configure as early in the page's life as you can. Calls made before `configure()
 
 1. Create an app with platform `web` and give it a bundle id, either in the [dashboard](/dashboard) or with the `create-app` MCP tool. The bundle id is the same string you pass as `bundleId`.
 2. Add the site's origin to the server's `CORS_ORIGINS`, including the port you use in development (`http://localhost:5173`, say). Without it the browser blocks every request.
-3. Copy the app's client key. It starts with `pulse_client_`, is public and ingest-scoped — it writes events, feedback, and user data for this one app, and reads questionnaire specs; it cannot read events, metrics, or project data — and is meant to ship in your bundle. Never put an agent key (`pulse_agent_...`) in a browser.
+3. Copy the app's client key. It starts with `pulse_client_`, is public and ingest-scoped — it writes events, feedback, and user data for this one app, and reads questionnaire specs plus the in-progress draft answers of the `user_id` a request names; it cannot read events, metrics, or project data — and is meant to ship in your bundle. Never put an agent key (`pulse_agent_...`) in a browser.
 
 ## Next Steps
 

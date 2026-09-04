@@ -34,20 +34,17 @@ export function PulseProvider({ userId }: { userId?: string }) {
 }
 ```
 
-Mount it once in the root layout:
+Mount it once in the root layout, and keep that layout synchronous:
 
 ```tsx
 // app/layout.tsx
 import { PulseProvider } from "./pulse-provider";
-import { getSession } from "@/lib/session";
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <PulseProvider userId={session?.userId} />
+        <PulseProvider />
         {children}
       </body>
     </html>
@@ -56,6 +53,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 ```
 
 Both keys are `NEXT_PUBLIC_`, which is correct here: the client key is public and ingest-scoped by design. Never put an agent key (`pulse_agent_...`) in a `NEXT_PUBLIC_` variable.
+
+Awaiting a session in the root layout to fill `userId` would run a per-request read on every route in the app and opt the whole tree out of static rendering. It is not needed: `Pulse.setUser()` is a client-side call and the claim is [idempotent](/docs/sdks/web/identity), so pass the id from the client-side session your app already has.
+
+```tsx
+// app/use-pulse-user.ts
+"use client";
+
+import { useEffect } from "react";
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+import { useAuth } from "@/lib/auth";
+
+export function usePulseUser() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) void Pulse.setUser(user.id);
+  }, [user]);
+}
+```
+
+If the id can only come from the server, render `<PulseProvider userId={...} />` from a nested layout that is already dynamic rather than from the root.
 
 ## Route Handlers
 

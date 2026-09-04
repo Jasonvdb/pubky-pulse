@@ -296,6 +296,8 @@ describe("MCP endpoint", () => {
       for (const sdk of EXPECTED_GUIDE_SDKS) {
         expect(contents[0].text, `MCP guide missing SDK "${sdk}"`).toContain(sdk);
       }
+      // The bold names alone predate the Web SDK bullet; assert its package too.
+      expect(contents[0].text).toContain("@synonymdev/pubky-pulse-web");
     });
   });
 

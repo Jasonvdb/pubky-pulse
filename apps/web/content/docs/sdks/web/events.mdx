@@ -20,8 +20,8 @@ Each method accepts:
 
 | Parameter | Type | Description |
 |---|---|---|
-| `message` | `string` | What happened — a short, stable name. |
-| `attributes` | `Record<string, unknown>` | Optional custom attributes. Values are converted to strings; `undefined` and `null` values are dropped, so optional fields can be passed straight through. |
+| `message` | `string` | What happened — a short, stable name. Truncated to 2000 characters. |
+| `attributes` | `Record<string, unknown>` | Optional custom attributes. Values are converted to strings and truncated to 200 characters; `undefined` and `null` values are dropped, so optional fields can be passed straight through. |
 | `options` | `{ screenName?, attachments? }` | Optional. `screenName` overrides the screen stamped on this event; `attachments` uploads files alongside it. |
 
 ## Per-Call Options

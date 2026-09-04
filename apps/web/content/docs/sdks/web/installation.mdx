@@ -1,0 +1,142 @@
+---
+title: Installation
+description: Install @synonymdev/pubky-pulse-web and configure it in React, SvelteKit, Angular, or a plain HTML page.
+---
+
+Install the `@synonymdev/pubky-pulse-web` package from npm.
+
+## Install
+
+```bash tab="npm"
+npm install @synonymdev/pubky-pulse-web
+```
+
+```bash tab="pnpm"
+pnpm add @synonymdev/pubky-pulse-web
+```
+
+```bash tab="yarn"
+yarn add @synonymdev/pubky-pulse-web
+```
+
+## Import
+
+`Pulse` is a module singleton. There is no provider and no context — import it wherever you need it.
+
+```typescript
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+```
+
+## Static Page
+
+No bundler needed; import the module straight from a CDN.
+
+```html
+<script type="module">
+  import { Pulse } from "https://esm.sh/@synonymdev/pubky-pulse-web";
+
+  Pulse.configure({
+    endpoint: "https://ingest.pulse.pubky.org",
+    apiKey: "pulse_client_...",
+    bundleId: "com.example.web",
+  });
+
+  document.querySelector("#buy").addEventListener("click", () => {
+    Pulse.info("buy_clicked");
+  });
+</script>
+```
+
+## React
+
+Configure once in your root component.
+
+```tsx
+import { useEffect } from "react";
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+
+export function App() {
+  useEffect(() => {
+    Pulse.configure({
+      endpoint: import.meta.env.VITE_PULSE_ENDPOINT,
+      apiKey: import.meta.env.VITE_PULSE_KEY,
+      bundleId: "com.example.web",
+      appVersion: __APP_VERSION__,
+    });
+  }, []);
+
+  return <Routes />;
+}
+```
+
+If your router does not use the History API (some hash routers do not), turn `trackPageViews` off and call `Pulse.trackScreen(name)` from your route-change handler instead. See [Screens](/docs/sdks/web/screens).
+
+## Next.js
+
+`configure()` needs `window`, so it belongs in a client component. See the [Next.js guide](/docs/sdks/web/nextjs) for the full pattern, including propagating the session id into your route handlers.
+
+## SvelteKit
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { Pulse } from "@synonymdev/pubky-pulse-web";
+  import { PUBLIC_PULSE_ENDPOINT, PUBLIC_PULSE_KEY } from "$env/static/public";
+
+  onMount(() => {
+    Pulse.configure({
+      endpoint: PUBLIC_PULSE_ENDPOINT,
+      apiKey: PUBLIC_PULSE_KEY,
+      bundleId: "com.example.web",
+    });
+
+    return () => void Pulse.shutdown();
+  });
+</script>
+
+<slot />
+```
+
+## Angular
+
+```typescript
+// src/app/app.config.ts
+import { APP_INITIALIZER, type ApplicationConfig } from "@angular/core";
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+import { environment } from "../environments/environment";
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: () => () => {
+        Pulse.configure({
+          endpoint: environment.pulseEndpoint,
+          apiKey: environment.pulseKey,
+          bundleId: "com.example.web",
+          appVersion: environment.version,
+        });
+      },
+    },
+  ],
+};
+```
+
+## Any Other Framework
+
+There is nothing framework-specific in the package: import `Pulse`, call `configure()` once after the page has a `window`, and log from anywhere. That is the whole integration.
+
+## Browser Support and SSR
+
+Any evergreen browser is supported; the build targets ES2020. Two features degrade rather than break:
+
+- **gzip** needs `CompressionStream`. Where it is missing, bodies are sent as plain JSON. Bodies under 512 bytes and the unload path are never compressed anyway.
+- **Attachments** need `crypto.subtle`, which requires a secure context (HTTPS or `localhost`). Elsewhere uploads are skipped and the event is still sent.
+
+The package is safe to import on the server. `configure()` checks for `window` and, when there is none, returns without installing anything — so a Next.js or SvelteKit server render does no work and throws nothing. Log calls made before a successful `configure()` are ignored, so shared code that logs on both sides needs no guard of its own.
+
+## Next Steps
+
+Once installed, [configure the SDK](/docs/sdks/web/configuration) with your endpoint, API key, and bundle id.

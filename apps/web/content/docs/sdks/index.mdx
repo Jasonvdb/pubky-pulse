@@ -9,32 +9,30 @@ The SDKs send events, metrics, and funnels to Pubky Pulse from web, backend, and
 
 ## Available SDKs
 
-- **[Web SDK](/docs/sdks/web)** — *coming soon.* Browser-side event, metric, and funnel capture for web apps.
-- **[Node.js SDK](/docs/sdks/node)** — Server-side SDK for Express, Fastify, and serverless functions. Pure ESM package, zero runtime dependencies. Covers event logging, structured metrics, funnels, identity scoping, and serverless support.
+- **[Web SDK](/docs/sdks/web)** — Browser SDK for web apps. Framework-agnostic TypeScript, zero runtime dependencies, no UI. Covers event logging, route tracking, structured metrics, funnels, identity, user properties, feedback, questionnaires, attachments, and opt-in network tracking.
+- **[Node.js SDK](/docs/sdks/node)** — Server-side SDK for Express, Fastify, and serverless functions. Ships ESM and CommonJS, zero runtime dependencies. Covers event logging, structured metrics, funnels, identity scoping, and serverless support.
 - **[Swift SDK](/docs/sdks/swift)** — Native SDK for iOS, iPadOS, macOS, and watchOS apps. Distributed as a Swift Package, zero external dependencies. Covers event logging, screen tracking, structured metrics, funnels, identity management, network monitoring, and app launch time measurement.
 - **[Android SDK](/docs/sdks/android)** — Kotlin SDK for Android apps, with optional Jetpack Compose UI. Published to Maven Central; the core module has a single dependency (`kotlinx-coroutines`). Covers event logging, screen tracking, structured metrics, funnels, identity management, feedback, and questionnaires.
 
 ## Comparison
 
-The table covers the SDKs that ship today; the Web SDK is not in it yet.
-
-| Feature | Node.js | Swift | Android |
-|---------|---------|-------|---------|
-| Events with log levels | Yes | Yes | Yes |
-| Structured metrics | Yes | Yes | Yes |
-| Funnel tracking | Yes | Yes | Yes |
-| Auto screen tracking | — | Yes | Yes (Compose) |
-| In-app feedback / questionnaires | — | Yes | Yes (Compose) |
-| Network monitoring | — | Yes | — |
-| App launch time | — | Yes | Yes |
-| Serverless support | Yes | — | — |
-| User scoping | `Pulse.withUser()` | `Pulse.setUser()` | `Pulse.setUser()` |
-| Compression | Gzip | Gzip | Gzip |
-| Min runtime | Node.js 20 | iOS 16 / macOS 13 | Android 7 (API 24) |
+| Feature | Web | Node.js | Swift | Android |
+|---------|-----|---------|-------|---------|
+| Events with log levels | Yes | Yes | Yes | Yes |
+| Structured metrics | Yes | Yes | Yes | Yes |
+| Funnel tracking | Yes | Yes | Yes | Yes |
+| Auto screen tracking | Yes (routes) | — | Yes | Yes (Compose) |
+| In-app feedback / questionnaires | Yes (API, bring your own UI) | — | Yes | Yes (Compose) |
+| Network monitoring | Yes (fetch, opt-in) | — | Yes | — |
+| App launch time | Yes (Navigation Timing) | — | Yes | Yes |
+| Serverless support | — | Yes | — | — |
+| User scoping | `Pulse.setUser()` | `Pulse.withUser()` | `Pulse.setUser()` | `Pulse.setUser()` |
+| Compression | Gzip | Gzip | Gzip | Gzip |
+| Min runtime | Evergreen browsers | Node.js 20 | iOS 16 / macOS 13 | Android 7 (API 24) |
 
 ## Choosing an SDK
 
-- Building a **web app** → the [Web SDK](/docs/sdks/web) is coming soon. Until it lands, send events straight to the [ingest API](/docs/api-reference/ingest) or route them through your own backend with the Node.js SDK.
+- Building a **web app** → [Web SDK](/docs/sdks/web). A Next.js app uses both: the Web SDK in client components and the [Node.js SDK](/docs/sdks/node) in route handlers, joined by a shared session id — see the [Next.js guide](/docs/sdks/web/nextjs).
 - Building a **backend service, API, or serverless function** → [Node.js SDK](/docs/sdks/node)
 - Building an **iOS, iPadOS, macOS, or watchOS** app → [Swift SDK](/docs/sdks/swift)
 - Building an **Android** app → [Android SDK](/docs/sdks/android)

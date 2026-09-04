@@ -67,11 +67,13 @@ Accept a batch of events for a specific app.
 | `environment` | string | No | Runtime environment. Must match the app's platform. See table below. |
 | `os_version` | string | No | Operating system version. |
 | `app_version` | string | No | Application version string. |
-| `sdk_name` | string | No | Identifier of the Pubky Pulse SDK that produced the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`). Auto-set by official SDKs. |
+| `sdk_name` | string | No | Identifier of the Pubky Pulse SDK that produced the event (e.g. `pubky-pulse-swift`, `pubky-pulse-node`, `pubky-pulse-web`). Auto-set by official SDKs. |
 | `sdk_version` | string | No | Version of the Pubky Pulse SDK that produced the event. Auto-set by official SDKs. |
 | `build_number` | string | No | Build number. |
 | `device_model` | string | No | Device model identifier. |
 | `locale` | string | No | User locale (e.g., `en_US`). |
+| `preferred_language` | string | No | The user's top wanted language, unconstrained by what the app ships (e.g. `fr`). Powers localization-demand queries. |
+| `supported_languages` | string[] | No | Languages this app ships. App-level: written through to the app record rather than stored on the event row. |
 | `is_dev` | boolean | No | Whether this event is from a development build. Default `false`. |
 | `timestamp` | string | No | ISO 8601 timestamp. Defaults to server time if omitted. |
 

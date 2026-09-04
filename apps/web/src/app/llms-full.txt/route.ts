@@ -30,7 +30,7 @@ export function GET() {
     "- **Time-series rollups**: Pre-aggregated daily and hourly counts of events, users, sessions, metric completions, funnel completions, and questionnaire responses — powering dashboard sparklines and trend queries that survive raw-event retention",
     "- **Locale demand**: Rank users by the language they want (device preferred language) and by country, flagging languages with demand the app doesn't ship yet — to decide where to localize next",
     "- **Notifications**: Unified multi-channel inbox (in-app, email) with per-user channel preferences",
-    "- **SDKs**: Node.js (backends), Swift (iOS/macOS/watchOS), and Android (Kotlin / Jetpack Compose) — batching, compression, and retry built in; watch events relay through paired iPhone via WatchConnectivity when offline. A Web SDK is coming soon",
+    "- **SDKs**: Web (browsers), Node.js (backends), Swift (iOS/macOS/watchOS), and Android (Kotlin / Jetpack Compose) — batching, compression, and retry built in; watch events relay through paired iPhone via WatchConnectivity when offline",
     "- **MCP server**: Agent-native MCP interface for setup, querying, and management — coding agents create projects, query events, and triage issues directly",
     "- **Self-hosted**: Single Postgres database, deploy on your own infrastructure",
     "",

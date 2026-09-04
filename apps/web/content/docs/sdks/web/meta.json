@@ -1,4 +1,18 @@
 {
   "title": "Web SDK",
-  "pages": ["index"]
+  "pages": [
+    "index",
+    "installation",
+    "configuration",
+    "events",
+    "screens",
+    "metrics",
+    "funnels",
+    "identity",
+    "user-properties",
+    "feedback",
+    "questionnaires",
+    "attachments",
+    "nextjs"
+  ]
 }

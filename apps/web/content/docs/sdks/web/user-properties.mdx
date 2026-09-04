@@ -1,0 +1,60 @@
+---
+title: User Properties
+description: Attach custom metadata to the current user from the browser with Pulse.setUserProperties().
+---
+
+User properties attach custom key-value data to the current user. Properties are merged server-side, so keys you do not send are preserved.
+
+## Setting Properties
+
+```typescript
+await Pulse.setUserProperties({
+  plan: "pro",
+  company: "Acme",
+});
+```
+
+The call awaits a flush of the buffered events first, so those events and the properties land under the same user id. It resolves once the server has the properties.
+
+## Removing a Property
+
+Set a value to an empty string to delete it:
+
+```typescript
+await Pulse.setUserProperties({ trial_ends: "" });
+```
+
+## Merge Behavior
+
+Only the keys you send are updated:
+
+```typescript
+await Pulse.setUserProperties({ plan: "free", company: "Acme" });
+// Server state: { plan: "free", company: "Acme" }
+
+await Pulse.setUserProperties({ plan: "pro" });
+// Server state: { plan: "pro", company: "Acme" }
+```
+
+## When to Call
+
+Call it after sign-in — once you know who the user is via [`Pulse.setUser()`](/docs/sdks/web/identity) — and whenever user-level data changes:
+
+```typescript
+await Pulse.setUser(user.id);
+await Pulse.setUserProperties({
+  plan: user.plan,
+  signup_source: user.signupSource,
+});
+```
+
+Properties set before `setUser` attach to the anonymous id, so set them after sign-in when they describe the real user.
+
+## Limits
+
+- Max 50 properties per user
+- Max key length: 50 characters
+- Max value length: 200 characters
+- All values must be strings
+
+Keep personal data out of properties unless you have a reason to store it: this call runs in the browser, where the request body is visible to anyone with devtools open.

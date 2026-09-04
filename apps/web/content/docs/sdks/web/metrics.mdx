@@ -1,0 +1,72 @@
+---
+title: Metrics
+description: Measure browser work with Pulse.startOperation() and Pulse.recordMetric().
+---
+
+The SDK supports [structured metrics](/docs/concepts/metrics) in two shapes: lifecycle operations that measure duration, and single-shot recordings for a value you already have.
+
+## Operations
+
+`Pulse.startOperation()` measures something with a beginning and an end. It emits `metric:<slug>:start` immediately and exactly one terminal event later, both carrying the same `tracking_id`:
+
+```typescript
+const operation = Pulse.startOperation("image-upload", { source: "camera" });
+
+try {
+  await upload(file);
+  operation.complete({ bytes: String(file.size) });
+} catch (err) {
+  operation.fail(err);
+}
+```
+
+### Starting an Operation
+
+`Pulse.startOperation(metric, attributes?)` returns a `PulseOperation`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `metric` | `string` | Metric slug — lowercase letters, numbers, and hyphens only (e.g. `"image-upload"`). |
+| `attributes` | `Record<string, unknown>` | Optional attributes included on the start event. |
+
+The returned handle also exposes `operation.trackingId`, the UUID shared by the start and terminal events, if you want to correlate it with something of your own.
+
+### Finishing an Operation
+
+Call exactly one of these:
+
+| Method | Level | Description |
+|---|---|---|
+| `operation.complete(attributes?)` | info | The work succeeded. Emits `metric:<slug>:complete` with `duration_ms`. |
+| `operation.fail(error, attributes?)` | error | The work failed. Emits `metric:<slug>:fail` with `duration_ms` and an `error` attribute describing what was thrown. |
+| `operation.cancel(attributes?)` | info | The user abandoned the work, which is not the same as a failure. Emits `metric:<slug>:cancel` with `duration_ms`. |
+
+Finishing is idempotent: a late `complete()` after a `fail()` — a retry path, or a promise that settles twice — is ignored rather than double-counted.
+
+## Single-Shot Metrics
+
+For a measurement that has no start and end of its own, use `recordMetric`. It emits one `metric:<slug>:record` event:
+
+```typescript
+Pulse.recordMetric("cold-start", { duration_ms: "820" });
+```
+
+The Navigation Timing API pairs well with this — read `performance.getEntriesByType("navigation")[0]` once the page has settled and record the number you care about:
+
+```typescript
+const [navigation] = performance.getEntriesByType(
+  "navigation",
+) as PerformanceNavigationTiming[];
+
+if (navigation) {
+  Pulse.recordMetric("page-load", {
+    duration_ms: String(Math.round(navigation.duration)),
+  });
+}
+```
+
+## Metric Slugs
+
+Slugs must match `^[a-z0-9-]+$`. Anything else is lowercased, has invalid characters replaced with hyphens, and has runs collapsed — matching the Node.js, Swift, and Android SDKs so the same metric from any client lands on one dashboard row. One console warning is printed per page, however many bad slugs you pass.
+
+Define your metric slugs in the dashboard or with the `create-metric` MCP tool before sending events, so metric aggregation queries have something to attach to. See [Structured Metrics](/docs/concepts/metrics) for how the server processes them.

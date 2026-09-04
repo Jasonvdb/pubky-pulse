@@ -1,0 +1,83 @@
+---
+title: Events
+description: Log events at four levels from the browser, report Error values, and capture unhandled failures.
+---
+
+The SDK provides four logging methods corresponding to the standard [log levels](/docs/concepts/events#log-levels).
+
+## Log Levels
+
+```typescript
+Pulse.debug("cache_hit", { key: "profile" });
+Pulse.info("signed_up", { plan: "pro" });
+Pulse.warn("slow_response", { ms: 2400 });
+Pulse.error("payment_declined", { code: "insufficient_funds" });
+```
+
+Keep messages short and stable — they are what you group by on the server.
+
+Each method accepts:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `message` | `string` | What happened — a short, stable name. |
+| `attributes` | `Record<string, unknown>` | Optional custom attributes. Values are converted to strings; `undefined` and `null` values are dropped, so optional fields can be passed straight through. |
+| `options` | `{ screenName?, attachments? }` | Optional. `screenName` overrides the screen stamped on this event; `attachments` uploads files alongside it. |
+
+## Per-Call Options
+
+```typescript
+Pulse.info("exported_report", { rows: 940 }, { screenName: "Reports" });
+```
+
+Without `screenName`, events carry whatever screen the [page tracker](/docs/sdks/web/screens) currently holds.
+
+## Reporting an `Error` Value
+
+`Pulse.error` is overloaded — pass a string message (logger-style), or pass the error itself (exception-style) and the SDK extracts the type, the stack, and up to five levels of `cause` into reserved `_error_*` attributes:
+
+```typescript
+try {
+  await pay(order);
+} catch (err) {
+  Pulse.error(err, "checkout failed", { order_id: order.id });
+}
+```
+
+The Error overload accepts `unknown`, so `throw "boom"` patterns are handled too. SDK-reserved `_error_*` keys win over caller-supplied keys of the same name, so the server's issue fingerprinting stays stable.
+
+## Unhandled Errors
+
+While `captureUnhandled` is on (the default), the SDK listens for `error` and `unhandledrejection` on `window` and logs each one at error level with an `_unhandled` attribute naming the hook that saw it. Errors are re-thrown as usual — the SDK never swallows one.
+
+To opt out and rely on explicit `Pulse.error(err)` calls only:
+
+```typescript
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "com.example.web",
+  captureUnhandled: false,
+});
+```
+
+## Console Mirroring
+
+While `consoleLogging` is on (the default), every event is mirrored to the console as:
+
+```
+[pulse] INFO  signed_up {plan=pro}
+```
+
+The SDK's own lifecycle messages (anything starting with `sdk:`) and metric `start` events stay out of the console so your log stays readable.
+
+## Event Lifecycle
+
+Events are not sent immediately. They are buffered and flushed in batches:
+
+1. A log call builds an event and adds it to the buffer, stamped with the session id, the current user id, and the current screen.
+2. The batch is sent when `flushThreshold` events are buffered (default 20) or the flush timer fires (default every 5 seconds).
+3. Bodies over 512 bytes are gzipped where `CompressionStream` exists.
+4. When the page is hidden the SDK flushes with a `keepalive` request; anything left over is parked in an offline queue in `localStorage` and drained on the next page load.
+
+Call `await Pulse.flush()` when you need the buffer sent right now.

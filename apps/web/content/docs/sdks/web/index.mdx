@@ -1,50 +1,57 @@
 ---
 title: Web SDK
-description: Browser instrumentation for Pubky Pulse. Coming soon.
+description: Integrate Pubky Pulse into browser apps with the framework-agnostic @synonymdev/pubky-pulse-web package.
 ---
 
-The Web SDK is in development and is not published yet. This page records the intended scope so you can plan an integration; nothing here is final.
+`@synonymdev/pubky-pulse-web` is the browser client for Pubky Pulse: events, errors, metrics, funnels, identity, feedback, and questionnaires from any web app, batched and sent to your own Pulse server. It is framework-agnostic TypeScript with no runtime dependencies, no UI, and no framework bindings — you call it from wherever your app already lives.
 
-## Planned coverage
+Events are stamped with `environment: "web"` and `sdk_name: "pubky-pulse-web"`, so browser traffic lands in the same project as your Node.js, Swift, and Android events.
 
-- Page and route tracking, including navigation in single-page apps
-- Structured events at the four log levels, with custom attributes
-- Browser error capture
-- Structured metrics for operation start, complete, and fail
-- Funnel step tracking
-- User identity and user properties
-- Feedback capture from the browser
+## Features
 
-It will follow the same API surface as the [Node.js](/docs/sdks/node), [Swift](/docs/sdks/swift), and [Android](/docs/sdks/android) SDKs, so browser events land in the same project as the rest of your platforms.
+- **[Events](/docs/sdks/web/events)** — four log levels (`info`, `debug`, `warn`, `error`) with custom attributes. `Pulse.error` is overloaded: pass a string, or pass the error itself and the SDK extracts the type, the stack, and up to five levels of `cause`. Uncaught exceptions and unhandled rejections are captured automatically and tagged `_unhandled`
+- **[Screens and route tracking](/docs/sdks/web/screens)** — History API navigations emit `sdk:screen_appeared` / `sdk:screen_disappeared` on their own; `Pulse.trackScreen()` names anything the URL does not describe
+- **[Structured metrics](/docs/sdks/web/metrics)** — `Pulse.startOperation()` measures work with a beginning and an end; `Pulse.recordMetric()` records a measurement you already have
+- **[Funnels](/docs/sdks/web/funnels)** — `Pulse.step()` emits named step completions for conversion tracking
+- **[Identity](/docs/sdks/web/identity)** — an anonymous id per browser, and `Pulse.setUser()` flushes, claims the anonymous history server-side, then switches the id
+- **[User properties](/docs/sdks/web/user-properties)** — `Pulse.setUserProperties()` merges custom metadata onto the current user
+- **[Feedback](/docs/sdks/web/feedback)** — `Pulse.sendFeedback()` submits free text with optional name and email, and returns a receipt
+- **[Questionnaires](/docs/sdks/web/questionnaires)** — fetch a survey by slug, render it yourself, and save drafts or submissions with the pure answer helpers
+- **[Attachments](/docs/sdks/web/attachments)** — attach a `Blob`, `File`, or `Uint8Array` to a single event; the upload runs out of band
+- **Network tracking** — opt in to an `sdk:network_request` event per `fetch` call, and propagate `X-Pulse-Session-Id` to the origins you control
+- **Batching, gzip, and offline queue** — batches flush on an interval or a threshold, bodies are gzipped through `CompressionStream` where available, and anything that does not make it out is parked in `localStorage` and drained on the next page load
 
-## Until it ships
+## Requirements
 
-Two approaches work today.
+- Any evergreen browser (Chrome, Edge, Firefox, Safari); the build targets ES2020
+- A Pubky Pulse app with platform `web`, its bundle id, and a client API key (`pulse_client_...`)
+- The site's origin listed in the server's `CORS_ORIGINS`
 
-**Send events directly to the ingest API.** Create an app with platform `web`, use its `pulse_client_` key, and POST batches to [`/v1/ingest`](/docs/api-reference/ingest) with `environment` set to `web`. Add the site's origin to `CORS_ORIGINS` on your server or the browser will block the request. A client key embedded in a page is readable by anyone who views the source; it is scoped to a single app and can only write events and user data, never read them.
+## Quick Start
 
-```bash
-curl -X POST https://ingest.yourdomain.com/v1/ingest \
-  -H "Authorization: Bearer pulse_client_..." \
-  -H "Content-Type: application/json" \
-  -d '{
-    "bundle_id": "com.example.myapp",
-    "events": [
-      {
-        "client_event_id": "550e8400-e29b-41d4-a716-446655440000",
-        "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "level": "info",
-        "message": "screen_viewed",
-        "screen_name": "Pricing",
-        "environment": "web",
-        "app_version": "1.2.0",
-        "locale": "en_US",
-        "timestamp": "2026-01-15T10:30:00.000Z"
-      }
-    ]
-  }'
+```typescript
+import { Pulse } from "@synonymdev/pubky-pulse-web";
+
+Pulse.configure({
+  endpoint: "https://ingest.pulse.pubky.org",
+  apiKey: "pulse_client_...",
+  bundleId: "com.example.web",
+  appVersion: "1.4.0",
+});
+
+Pulse.info("signed_up", { plan: "pro" });
 ```
 
-The [ingest reference](/docs/api-reference/ingest) covers the full field list, the 100-event batch limit, gzip support, and deduplication via `client_event_id`.
+Configure as early in the page's life as you can. Calls made before `configure()` are ignored — one console note, then silence — so a stray log during startup can never throw.
 
-**Route through your backend.** Post from the browser to your own API and log there with the [Node.js SDK](/docs/sdks/node). This keeps the client key on the server and lets you tag events with a user ID you have already authenticated.
+## Server Setup
+
+1. Create an app with platform `web` and give it a bundle id, either in the [dashboard](/dashboard) or with the `create-app` MCP tool. The bundle id is the same string you pass as `bundleId`.
+2. Add the site's origin to the server's `CORS_ORIGINS`, including the port you use in development (`http://localhost:5173`, say). Without it the browser blocks every request.
+3. Copy the app's client key. It starts with `pulse_client_`, is public and write-only, and is meant to ship in your bundle. Never put an agent key (`pulse_agent_...`) in a browser.
+
+## Next Steps
+
+- [Installation](/docs/sdks/web/installation) — install the package and wire it into React, SvelteKit, Angular, or a plain `<script type="module">`
+- [Configuration](/docs/sdks/web/configuration) — every option, its default, and what happens on `configure()`
+- [Next.js](/docs/sdks/web/nextjs) — pair the Web SDK in the browser with the [Node.js SDK](/docs/sdks/node) in route handlers so one session spans both

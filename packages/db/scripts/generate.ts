@@ -21,7 +21,7 @@
  * Usage: tsx scripts/generate.ts <snake_case_name> [--custom] [--check]
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,6 +74,12 @@ function fail(message: string): never {
 function readJournal(): Journal {
   if (!existsSync(JOURNAL_PATH)) return {};
   return JSON.parse(readFileSync(JOURNAL_PATH, "utf8")) as Journal;
+}
+
+/** The journal's exact bytes, or undefined if it does not exist yet. */
+function readJournalText(): string | undefined {
+  if (!existsSync(JOURNAL_PATH)) return undefined;
+  return readFileSync(JOURNAL_PATH, "utf8");
 }
 
 function lastEntry(journal: Journal): { idx: number; tag: string } | undefined {
@@ -244,10 +250,22 @@ function main(): void {
     const repoRoot = git(["rev-parse", "--show-toplevel"], PACKAGE_DIR).stdout.trim();
     if (!repoRoot) fail(NEEDS_GIT);
     const before = drizzleStatus();
+    const journalText = readJournalText();
     const run = runDrizzleKit(["generate", "--name", name]);
+    const journalChanged = readJournalText() !== journalText;
     const reverted = revertCheckArtifacts(before, repoRoot);
+
+    // The git-based revert deliberately skips paths that were already dirty, so
+    // a journal a developer had mid-edit would keep the `ci_drift_check` entry
+    // drizzle-kit appended to it. Restoring the bytes we read is unconditional
+    // and correct either way: when the journal was clean the checkout above
+    // already produced exactly these bytes.
+    if (journalChanged && journalText !== undefined) {
+      writeFileSync(JOURNAL_PATH, journalText);
+    }
+
     if (run.status !== 0) process.exit(run.status);
-    if (reverted.length > 0 || !run.stdout.includes(NO_CHANGES)) {
+    if (journalChanged || reverted.length > 0 || !run.stdout.includes(NO_CHANGES)) {
       fail(
         "Migration drift: schema.ts has changes with no matching migration.\n" +
           "Run `pnpm db:generate <snake_case_name>` and commit the generated SQL and snapshot.",

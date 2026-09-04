@@ -39,7 +39,7 @@ Rules:
 
 `events`, `metric_events` and `funnel_events` are created `PARTITION BY RANGE ("timestamp")` in the baseline migration, while `schema.ts` declares them as ordinary tables because drizzle cannot express partitioning. So they take no primary key and no unique index that omits `timestamp`, no `.concurrently()` on their indexes (Postgres rejects concurrent index builds on a partitioned table), and no foreign keys from other tables pointing at them. Declare their indexes on the parent in `schema.ts` only — Postgres propagates a parent index to every existing and future partition, so per-partition indexes are always wrong.
 
-A database migrated before the partitioned baseline cannot be brought forward in place; `pnpm db:migrate` fails loudly on it. Drop and recreate it (`dropdb <name> && createdb <name>`, then `pnpm db:migrate`). `pnpm dev:unsafe-reset` only truncates and will not fix it.
+A database migrated before the partitioned baseline cannot be brought forward in place; `pnpm db:migrate` fails loudly on it, including one whose parents are partitioned but carry no indexes of their own (an older runner indexed the child partitions instead). Drop and recreate it (`dropdb <name> && createdb <name>`, then `pnpm db:migrate`). `pnpm dev:unsafe-reset` only truncates and will not fix it.
 
 ## Coding Style & Naming Conventions
 

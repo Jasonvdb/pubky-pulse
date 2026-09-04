@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import postgres from "postgres";
+import { findPartitionProblems } from "@pubky-pulse/db";
+import type { PartitionedTableState } from "@pubky-pulse/db";
 import { TEST_DB_URL } from "./setup.js";
 
 // `events`, `metric_events` and `funnel_events` are PARTITION BY RANGE tables
@@ -111,4 +113,57 @@ describe("partitioned event tables", () => {
       ).toEqual([]);
     });
   }
+});
+
+// The migration runner's guard, exercised as a pure function so it needs no
+// DDL. It has to reject an index-less partitioned parent as well as a plain
+// table: a database initialised by the previous runner has relkind 'p' but
+// zero parent indexes, and packages/db/src/partitions.ts now relies entirely on
+// Postgres propagating the parent's indexes to each new partition.
+describe("findPartitionProblems", () => {
+  const healthy = (relname: string): PartitionedTableState => ({
+    relname,
+    relkind: "p",
+    indexCount: 4,
+  });
+
+  const allHealthy = (): PartitionedTableState[] =>
+    PARTITIONED_TABLES.map((t) => healthy(t.table));
+
+  it("passes a partitioned parent that carries indexes", () => {
+    expect(findPartitionProblems(allHealthy())).toEqual([]);
+  });
+
+  it("reports a partitioned parent with no indexes of its own", () => {
+    const rows = allHealthy();
+    rows[0] = { relname: "events", relkind: "p", indexCount: 0 };
+
+    expect(findPartitionProblems(rows)).toEqual(["events (partitioned, but 0 parent indexes)"]);
+  });
+
+  it("reports a plain table", () => {
+    const rows = allHealthy();
+    rows[0] = { relname: "events", relkind: "r", indexCount: 7 };
+
+    expect(findPartitionProblems(rows)).toEqual(["events (relkind=r)"]);
+  });
+
+  it("reports a missing table", () => {
+    const rows = allHealthy().filter((r) => r.relname !== "funnel_events");
+
+    expect(findPartitionProblems(rows)).toEqual(["funnel_events (missing)"]);
+  });
+
+  it("reports every offending table at once", () => {
+    expect(
+      findPartitionProblems([
+        { relname: "events", relkind: "p", indexCount: 0 },
+        { relname: "metric_events", relkind: "r", indexCount: 4 },
+      ]),
+    ).toEqual([
+      "events (partitioned, but 0 parent indexes)",
+      "metric_events (relkind=r)",
+      "funnel_events (missing)",
+    ]);
+  });
 });

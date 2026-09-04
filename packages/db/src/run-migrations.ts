@@ -35,40 +35,74 @@ export const MIGRATIONS_FOLDER = path.resolve(
 /** Tables the baseline creates with `PARTITION BY RANGE ("timestamp")`. */
 export const PARTITIONED_TABLES = ["events", "metric_events", "funnel_events"] as const;
 
+/** One row of the partition guard's probe: what `public.<relname>` actually is. */
+export interface PartitionedTableState {
+  relname: string;
+  /** `pg_class.relkind`: `p` for a partitioned table, `r` for a plain one. */
+  relkind: string;
+  /** Number of indexes declared on the parent itself (`pg_index.indrelid`). */
+  indexCount: number;
+}
+
 /**
- * Fails if any of the high-volume tables is a plain table rather than a
- * partitioned one.
+ * Names every table that is not a usable partitioned parent, one
+ * human-readable entry each. Empty means the database is sound.
+ *
+ * Pure so it can be unit-tested without DDL; `assertPartitioned` supplies the
+ * rows.
+ */
+export function findPartitionProblems(rows: PartitionedTableState[]): string[] {
+  const byName = new Map(rows.map((r) => [r.relname, r]));
+
+  return PARTITIONED_TABLES.flatMap((table) => {
+    const row = byName.get(table);
+    if (!row) return [`${table} (missing)`];
+    if (row.relkind !== "p") return [`${table} (relkind=${row.relkind})`];
+    if (row.indexCount === 0) return [`${table} (partitioned, but 0 parent indexes)`];
+    return [];
+  });
+}
+
+/**
+ * Fails unless each high-volume table is a partitioned parent that carries its
+ * own indexes.
  *
  * The drizzle migrator does not compare stored hashes — it only applies
  * migrations whose journal timestamp is newer than the last applied one — so a
  * database created before the baseline gained its `PARTITION BY RANGE` clauses
  * silently skips the edited baseline and keeps its regular tables. Detecting
  * that here turns a subtle "partitions never appear" bug into a clear failure.
+ *
+ * The index count matters just as much as `relkind`. An older runner dropped
+ * and recreated these tables as partitioned at startup but declared the indexes
+ * on each child partition, leaving the parents with none. Such a database has
+ * `relkind = 'p'` and would pass a kind-only check, yet
+ * `createMonthlyPartition` now relies solely on Postgres propagating the
+ * parent's indexes — so every partition created from here on would have no
+ * indexes at all. A parent with zero indexes is therefore just as broken as a
+ * plain table, and is reported the same way.
  */
 async function assertPartitioned(client: postgres.Sql) {
-  const rows = await client<{ relname: string; relkind: string }[]>`
-    SELECT relname, relkind
-    FROM pg_class
-    WHERE relnamespace = 'public'::regnamespace
-      AND relname::text = ANY(${[...PARTITIONED_TABLES]})
+  const rows = await client<PartitionedTableState[]>`
+    SELECT
+      c.relname,
+      c.relkind::text AS relkind,
+      (SELECT count(*)::int FROM pg_index i WHERE i.indrelid = c.oid) AS "indexCount"
+    FROM pg_class c
+    WHERE c.relnamespace = 'public'::regnamespace
+      AND c.relname::text = ANY(${[...PARTITIONED_TABLES]})
   `;
 
-  const byName = new Map(rows.map((r) => [r.relname, r.relkind]));
-  const wrong = PARTITIONED_TABLES.filter((t) => byName.get(t) !== "p");
-
-  if (wrong.length === 0) return;
-
-  const detail = wrong
-    .map((t) => `${t} (${byName.has(t) ? `relkind=${byName.get(t)}` : "missing"})`)
-    .join(", ");
+  const problems = findPartitionProblems(rows);
+  if (problems.length === 0) return;
 
   throw new Error(
-    `Expected partitioned tables, found: ${detail}. This database predates the ` +
-      `partitioned baseline migration — drizzle only applies migrations newer than the ` +
-      `last one it recorded, so the edited drizzle/0000_baseline.sql was skipped. Drop and ` +
-      `recreate the database, then re-run the migration: dropdb <name> && createdb <name>. ` +
-      `(For a _test database that is safe to do outright; note that ` +
-      `\`pnpm dev:unsafe-reset --yes\` only truncates and will not fix this.)`,
+    `Expected partitioned tables with indexes on the parent, found: ${problems.join(", ")}. ` +
+      `This database predates the partitioned baseline migration — drizzle only applies ` +
+      `migrations newer than the last one it recorded, so the edited drizzle/0000_baseline.sql ` +
+      `was skipped. Drop and recreate the database, then re-run the migration: ` +
+      `dropdb <name> && createdb <name>. (For a _test database that is safe to do outright; ` +
+      `note that \`pnpm dev:unsafe-reset --yes\` only truncates and will not fix this.)`,
   );
 }
 

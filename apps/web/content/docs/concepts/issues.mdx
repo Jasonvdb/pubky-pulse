@@ -171,10 +171,10 @@ Both dev (`is_dev: true`) and production events create issues, tracked separatel
 
 Two notification paths fire off issue activity, both production-only (dev issues are never surfaced to a team's inbox or email):
 
-- **`issue.new`** — instant fan-out. The `issue_scan` job dispatches one notification per team at the end of every run summarizing all production issues created or regressed during that scan. Bypasses the per-project digest cadence so it lands in close to real time. Defaults to in-app on, email off.
-- **`issue.digest`** — per-project rollup. The `issue_notify` job assembles a periodic digest at each project's configured cadence and sends it to every team member over their enabled channels. Defaults to email only (in-app off so the digest doesn't double up with the instant `issue.new` notification).
+- **`issue.new`** — instant fan-out. The `issue_scan` job dispatches one notification per team at the end of every run summarizing all production issues created or regressed during that scan. Bypasses the per-project digest cadence so it lands in close to real time. Every eligible recipient gets a dashboard inbox row; email is off by default.
+- **`issue.digest`** — per-project rollup. The `issue_notify` job assembles a periodic digest at each project's configured cadence. When produced, every eligible team member gets a dashboard inbox row; email is on by default.
 
-Both types route through the unified [notifications dispatcher](/docs/concepts/notifications), so each recipient's per-channel toggles at `/dashboard/profile/notifications` decide whether a given delivery becomes an inbox row, an email, or both.
+Both types route through the unified [notifications dispatcher](/docs/concepts/notifications). The dashboard at `/dashboard/profile/notifications` exposes only the Email preference, which controls whether each inbox notification is also emailed. Inbox rows are not suppressed by channel preferences.
 
 ### Per-Project Alert Frequency
 
@@ -190,7 +190,7 @@ The `issue_alert_frequency` setting controls **only the digest cadence** — `is
 
 The `issue_notify` job runs hourly @ :05 and checks each project's frequency. When a digest is due, it lists new and regressed issues with activity since the last notification. The job is silent when nothing has changed.
 
-Configure the frequency via the project settings in the dashboard or the API (`PATCH /v1/projects/:id` with `issue_alert_frequency`). Setting it to `none` only mutes the digest — instant `issue.new` notifications still fire and can be muted per-user under notification preferences.
+Configure the frequency via the project settings in the dashboard or the API (`PATCH /v1/projects/:id` with `issue_alert_frequency`). Setting it to `none` prevents digest production, so no digest inbox rows or emails are created. Instant `issue.new` notifications still fire and always create inbox rows; each user's Email preference only controls whether those notifications are also emailed.
 
 ## Permissions
 

@@ -11,7 +11,7 @@ Call `Pulse.configure()` once at application startup before logging any events.
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
+  endpoint: "https://ingest.pubkypulse.com",
   apiKey: "pulse_client_...",
   serviceName: "payment-service",
   appVersion: "1.4.0",
@@ -60,7 +60,7 @@ Override it explicitly if you need different behavior:
 
 ```typescript
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
+  endpoint: "https://ingest.pubkypulse.com",
   apiKey: "pulse_client_...",
   isDev: false, // always production, regardless of NODE_ENV
 });

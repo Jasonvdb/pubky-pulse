@@ -20,7 +20,7 @@ class MyApp : Application() {
         try {
             Pulse.configure(
                 context = this,
-                endpoint = "https://ingest.pulse.pubky.org",
+                endpoint = "https://ingest.pubkypulse.com",
                 apiKey = "pulse_client_...",
             )
         } catch (e: PulseConfigurationError) {
@@ -58,7 +58,7 @@ Register the `Application` subclass in your manifest:
 ```kotlin
 Pulse.configure(
     context = this,
-    endpoint = "https://ingest.pulse.pubky.org",
+    endpoint = "https://ingest.pubkypulse.com",
     apiKey = "pulse_client_...",
     flushOnBackground = true,
     compressionEnabled = true,

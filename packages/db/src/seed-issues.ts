@@ -354,7 +354,8 @@ async function main() {
     process.exit(1);
   }
 
-  const [adminUser] = await db.select().from(users).where(eq(users.email, "admin@pulse.pubky.org"));
+  // Must match the SEED_ADMIN_EMAIL literal in seed.ts, which inserts this user.
+  const [adminUser] = await db.select().from(users).where(eq(users.email, "admin@pulse.test"));
   if (!adminUser) {
     console.error("Admin user not found. Run `pnpm dev:seed` first.");
     process.exit(1);

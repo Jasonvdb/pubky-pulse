@@ -24,7 +24,7 @@ The setup script creates `/opt/pubky-pulse` as an empty directory. Clone the rep
 
 ```bash
 cd /opt/pubky-pulse
-git clone https://github.com/pubky/pubky-pulse.git .
+git clone https://github.com/Jasonvdb/pubky-pulse.git .
 pnpm install
 pnpm build
 ```
@@ -147,4 +147,4 @@ pnpm dev:seed-events  # Generates 200 random test events across 24 hours
 
 Do not run the seed commands in production. The seed API keys are committed to the repository and publicly known.
 
-The seed inserts its own team (`Default Team` / `default`, owned by `admin@pulse.pubky.org`). Because the server allows exactly one active team, a seeded database needs the four `PULSE_*` variables pointed at that team and domain, or startup fails on the extra team.
+The seed inserts its own team (`Default Team` / `default`, owned by `admin@pulse.test`). Because the server allows exactly one active team, a seeded database needs the four `PULSE_*` variables pointed at that team and domain, or startup fails on the extra team.

@@ -3,8 +3,16 @@ title: Hosted Instance
 description: Pubky runs a Pubky Pulse instance for Pubky apps — everyone else self-hosts.
 ---
 
-Pubky runs its own Pubky Pulse instance at [pulse.pubky.org](https://pulse.pubky.org), used by Pubky's apps. It is not an open sign-up service.
+Pubky runs its own Pubky Pulse instance at [pubkypulse.com](https://pubkypulse.com), used by Pubky's apps. It is not an open sign-up service.
+
+That instance is live and its hostnames are the real ones used throughout these docs:
+
+| Host | What it serves |
+|------|----------------|
+| `pubkypulse.com` | The dashboard and this documentation. |
+| `api.pubkypulse.com` | The REST API and the MCP endpoint. |
+| `ingest.pubkypulse.com` | SDK event ingestion. |
 
 Everyone else runs their own instance. Pubky Pulse is MIT-licensed and self-contained -- a single Fastify API server backed by PostgreSQL -- so a deployment takes well under an hour. See the [Self-Hosting Quickstart](/docs/getting-started/self-hosting).
 
-Nothing else in these docs is specific to either deployment. Wherever an example uses `pulse.pubky.org`, substitute your own instance's hostnames -- the dashboard, the `api.` host for REST and MCP, and the `ingest.` host for SDK configuration.
+Nothing else in these docs is specific to either deployment. Examples use Pubky's hostnames because they are a working reference; when you self-host, swap in your own three -- the dashboard, the `api.` host for REST and MCP, and the `ingest.` host for SDK configuration.

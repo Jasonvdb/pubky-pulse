@@ -18,7 +18,7 @@ struct MyApp: App {
     init() {
         do {
             try Pulse.configure(
-                endpoint: "https://ingest.pulse.pubky.org",
+                endpoint: "https://ingest.pubkypulse.com",
                 apiKey: "pulse_client_..."
             )
         } catch {
@@ -45,7 +45,7 @@ func application(
 ) -> Bool {
     do {
         try Pulse.configure(
-            endpoint: "https://ingest.pulse.pubky.org",
+            endpoint: "https://ingest.pubkypulse.com",
             apiKey: "pulse_client_..."
         )
     } catch {
@@ -70,7 +70,7 @@ func application(
 
 ```swift
 try Pulse.configure(
-    endpoint: "https://ingest.pulse.pubky.org",
+    endpoint: "https://ingest.pubkypulse.com",
     apiKey: "pulse_client_...",
     flushOnBackground: true,
     compressionEnabled: true,

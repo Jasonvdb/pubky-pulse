@@ -23,6 +23,15 @@ if (process.env.NODE_ENV === "production") {
 
 const url = process.env.DATABASE_URL || "postgres://localhost:5432/pubky_pulse";
 
+/**
+ * Sign-in address of the seeded admin account. `.test` is reserved and
+ * non-routable, so this local-development mailbox can never become
+ * deliverable. `seed-issues.ts` and `seed-user-variations.ts` look the same
+ * user up by this exact address and exit if it is missing, so the three seeds
+ * have to move together.
+ */
+const SEED_ADMIN_EMAIL = "admin@pulse.test";
+
 type Db = ReturnType<typeof createDatabaseConnection>;
 
 /** Insert a row if it doesn't exist, otherwise select the existing one. Requires a unique constraint on the lookup column(s). */
@@ -53,8 +62,8 @@ async function main() {
   // --- User ---
   const user = await findOrCreate<typeof users.$inferSelect>(
     db, users,
-    { email: "admin@pulse.pubky.org", name: "Admin" },
-    eq(users.email, "admin@pulse.pubky.org"),
+    { email: SEED_ADMIN_EMAIL, name: "Admin" },
+    eq(users.email, SEED_ADMIN_EMAIL),
   );
   console.log(`  User:    ${user.email} (${user.id})`);
 

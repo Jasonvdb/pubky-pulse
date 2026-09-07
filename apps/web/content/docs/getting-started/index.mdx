@@ -28,7 +28,7 @@ Pubky Pulse is self-hosted, so the first thing you need is an instance to talk t
   ```
 
   Run `pnpm dev:server` and `pnpm dev:web` in separate terminals. The seed data is for development only — its API keys are committed to the repository and publicly known.
-- **Pubky's instance** — Pubky runs its own instance at pulse.pubky.org for Pubky's apps. It is not an open sign-up service; see [Hosted instance](/docs/getting-started/hosted).
+- **Pubky's instance** — Pubky runs its own instance at [pubkypulse.com](https://pubkypulse.com) for Pubky's apps. It is not an open sign-up service; see [Hosted instance](/docs/getting-started/hosted).
 
 ## 2. Sign in
 
@@ -46,9 +46,11 @@ The [MCP endpoint](/docs/mcp/setup) is the agent interface: one HTTP URL gives y
 
 | Instance | MCP endpoint |
 |----------|--------------|
-| Pubky's instance (placeholder — substitute your own host) | `https://api.pulse.pubky.org/mcp` |
+| Pubky's instance (Pubky's apps only) | `https://api.pubkypulse.com/mcp` |
 | Self-hosted | `https://api.yourdomain.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
+
+`api.pubkypulse.com` is Pubky's live instance, reachable only by accounts on Pubky's team — the examples below use it as a concrete, working URL. Self-hosters substitute their own `api.` host wherever it appears.
 
 The quickest path is to let the agent configure itself — paste this into any agent, with your own key:
 
@@ -57,7 +59,7 @@ Add the Pubky Pulse MCP server to my global (user-level) agent config, so it loa
 
 - Name: pubky-pulse
 - Transport: remote streamable HTTP
-- URL: https://api.pulse.pubky.org/mcp
+- URL: https://api.pubkypulse.com/mcp
 - Header: Authorization: Bearer pulse_agent_YOUR_KEY_HERE
 
 Use whatever mechanism this harness supports — its own `mcp add` command if it has
@@ -69,7 +71,7 @@ commit the key anywhere; it is a secret. Then reload the MCP servers and call th
 For Claude Code, the equivalent is one command:
 
 ```bash
-claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky.org/mcp \
+claude mcp add --transport http --scope user pubky-pulse https://api.pubkypulse.com/mcp \
   --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
 ```
 
@@ -111,7 +113,7 @@ Other agents install from the same repo; its README has the per-client commands.
 ```markdown
 ### Pubky Pulse
 Use the Pubky Pulse MCP tools for any analytics work — read the `pubky-pulse://guide`
-resource first, and see https://pulse.pubky.org/docs/sdks for SDK integration.
+resource first, and see https://pubkypulse.com/docs/sdks for SDK integration.
 ```
 
 Every future session then knows Pubky Pulse is integrated and picks up the right context automatically — including the full tool surface, funnel design rules, and lifecycle metric patterns.

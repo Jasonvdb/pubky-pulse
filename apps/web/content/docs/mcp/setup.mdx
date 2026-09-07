@@ -17,9 +17,11 @@ The MCP endpoint is `POST /mcp` on your Pubky Pulse API server, and it exposes a
 
 | Environment | URL |
 |-------------|-----|
-| Pubky's instance (placeholder — substitute your own host) | `https://api.pulse.pubky.org/mcp` |
+| Pubky's instance (Pubky's apps only) | `https://api.pubkypulse.com/mcp` |
 | Self-hosted | `https://api.yourdomain.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
+
+`api.pubkypulse.com` is Pubky's live instance, reachable only by accounts on Pubky's team — the examples below use it as a concrete, working URL. Self-hosters substitute their own `api.` host wherever it appears.
 
 ## Client Setup
 
@@ -33,7 +35,7 @@ Other MCP clients can connect only if they support Streamable HTTP and a custom 
 
 - **Server name:** `pubky-pulse` (the dashboard emits `pubky-pulse-local-dev` when it is itself running in development, so a local entry doesn't collide with your production one)
 - **Transport:** Streamable HTTP (stateless JSON)
-- **URL:** your instance's `/mcp` endpoint — `https://api.pulse.pubky.org/mcp` on Pubky's instance, `https://api.yourdomain.com/mcp` self-hosted, `http://localhost:4000/mcp` in local development
+- **URL:** your instance's `/mcp` endpoint — `https://api.pubkypulse.com/mcp` on Pubky's instance, `https://api.yourdomain.com/mcp` self-hosted, `http://localhost:4000/mcp` in local development
 - **Auth:** `Authorization: Bearer pulse_agent_YOUR_KEY_HERE` header (required on POST and GET)
 - **Mode:** Stateless JSON — each POST request is independent, no session initialization needed. GET opens an authenticated SSE stream; DELETE returns 405.
 

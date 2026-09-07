@@ -53,6 +53,8 @@ Three other key types exist alongside agent keys: `pulse_client_*` for SDKs send
 
 The fastest supported setup for each MCP client lives at [pulse.pubky.org/docs/mcp/setup](https://pulse.pubky.org/docs/mcp/setup); the walkthrough from empty database to first event is at [pulse.pubky.org/docs/getting-started](https://pulse.pubky.org/docs/getting-started).
 
+The MCP server tells an agent what it can do; the [agent skills](https://github.com/Jasonvdb/pubky-pulse-skills) tell it how to instrument a codebase, cover every error path, and triage issues. Install both.
+
 ## Why agent-first
 
 Dashboards assume a human is watching. Most of the time now, the thing reading your error logs and correlating them with a deploy is an agent — and it is bad at screenshots and good at API calls. So the API is the product here, and everything else is a client of it: the MCP server, the dashboard, the SDKs. Nothing is dashboard-only, which means an agent can do anything a person can do in the web UI.

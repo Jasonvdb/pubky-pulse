@@ -138,10 +138,16 @@ const EXPECTED_GUIDE_IDENTITY_CONSENT = [
   // `setUserProperties` rides on whichever id is in play, so it is deliberately
   // NOT on the gated list — pin the sentence that says so.
   "`Pulse.setUserProperties()` is not gated separately",
-  // `clearUser` REMOVES a link rather than creating one, so gating it would
-  // strand an identifier a previous `setUser` persisted — pin the sentence that
-  // keeps it off the gated list.
+  // `clearUser` never creates a link, so gating it would strand an identifier a
+  // previous `setUser` persisted — pin the sentence that keeps it off the gated
+  // list. It is not an unlink either: ingest re-resolves the restored anonymous
+  // id back to the account that claimed it (resolveClaimedUserIds), so pin the
+  // correction too — the guide must never call `clearUser` an unlink or a
+  // deletion control again.
   "`Pulse.clearUser()` is never gated",
+  "It is not an unlink",
+  "`newAnonymousId: true`",
+  "not a privacy or data-deletion control",
   "explicit yes",
   "commented one-liner",
   "// TODO(pulse):",

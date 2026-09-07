@@ -34,6 +34,8 @@ const pulse = Pulse.withUser("user_123");
 pulse.setUserProperties({ plan: "premium", org: "acme" });
 ```
 
+`setUserProperties()` itself is not gated — it attaches to whichever id is already in play. Naming a real user with [`Pulse.withUser()`](/docs/sdks/node/identity) is, though: identity is opt-in, so get the developer's explicit yes before adding it.
+
 ### Via the API
 
 ```

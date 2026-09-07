@@ -375,7 +375,8 @@ Three different \`403\`s are worth telling apart:
 2. \`create-project\` → create project with name and slug (optionally set retention policies)
 3. \`create-app\` → create app(s) for each platform, note the \`client_secret\`
 4. Read the SDK integration guide for the platform — see **SDK Integration Guides** below
-5. Configure the SDK with the \`client_secret\` and ingest endpoint
+5. Settle user identity with the developer before writing any identity call — see **Identity Is Opt-In**
+6. Configure the SDK with the \`client_secret\` and ingest endpoint
 
 ### Defining what to track
 1. \`create-metric\` → for each measurable operation (API calls, load times, etc.)
@@ -398,19 +399,30 @@ Three different \`403\`s are worth telling apart:
 7. \`add-issue-comment\` → document root cause, the shared pattern, and affected versions
 8. \`resolve-issue\` → mark resolved with fix version
 
+## Identity Is Opt-In
+
+**Anonymous is the default.** Never wire a real user identifier into Pubky Pulse on your own initiative. This covers \`Pulse.setUser()\` and \`Pulse.clearUser()\` (Web, Swift, Android), and \`Pulse.withUser()\` and per-request user scoping (Node). \`Pulse.setUserProperties()\` is not gated separately — it attaches to whichever id is already in play, so it follows the answer.
+
+- **Ask, then write.** Ask the developer whether they want identified analytics and get an explicit yes before writing any of those calls; an unanswered question is not a yes.
+- **No human to ask?** Leave a commented one-liner at the exact callsite — the identity call itself behind a \`// TODO(pulse):\` marker, as in \`// TODO(pulse): Pulse.setUser(user.id) — opt in to identified analytics\` — and nothing else: no live call, no commented scaffolding, no disabled feature flag.
+- **Consent is never inferred** from the app having an auth system, from a \`userId\` already in scope at the callsite, or from another analytics vendor in the codebase already identifying users.
+
+Anonymous-only costs little on Web, Swift and Android: each keeps a persistent anonymous id, so sessions, funnels, retention and per-user issue counts all still work — you lose only the join to a real account (one person on two devices reads as two) and the sign-in claim of the pre-sign-up history. **Node is the asymmetry:** it has no anonymous id, so events emitted without \`Pulse.withUser()\` carry no \`user_id\` at all — group them by \`session_id\` instead, propagating \`X-Pulse-Session-Id\` from the client.
+
 ## SDK Integration Guides
 
 This guide is served as the MCP resource \`pubky-pulse://guide\` — fetch it whenever you need the concepts, conventions, or SDK detail behind a tool. MCP is the agent interface: create projects and apps, define metrics and funnels, and query events with the tools (\`create-project\`, \`create-app\`, \`create-metric\`, \`create-funnel\`, \`query-events\`).
 
-Pubky Pulse instruments web, backend and mobile apps. Four SDKs cover it — what each covers:
+Pubky Pulse instruments web, backend and mobile apps. Four SDKs cover it. The user identity each one lists below is opt-in — read **Identity Is Opt-In** before writing an identity call in any of them. What each covers:
 
-- **Web** ([github.com/Jasonvdb/pubky-pulse-web](https://github.com/Jasonvdb/pubky-pulse-web)) — framework-agnostic browser SDK (\`@synonymdev/pubky-pulse-web\`): package installation, \`Pulse.configure()\` with the app's \`bundleId\`, event logging with automatic capture of uncaught errors and unhandled rejections, automatic screen tracking on History API navigation, structured metrics, funnels, user identity (\`Pulse.setUser()\` flushes and claims the anonymous history), user properties, **error attachments**, **feedback** (\`Pulse.sendFeedback\`), **questionnaires** (\`Pulse.fetchQuestionnaire\` / \`saveQuestionnaireResponse\` plus pure answer helpers — the SDK ships no UI), and \`propagateSessionTo\` to forward \`X-Pulse-Session-Id\` to your own API for session correlation with the Node SDK. Create the app with \`platform: "web"\`, a site identifier as its \`bundle_id\`, and the site's origins in its \`allowed_origins\` — including the dev server's (\`http://localhost:5173\`). Ingest refuses a browser request whose \`Origin\` is not on that list, and CORS allows the ones that are; nothing needs to change in the server's \`CORS_ORIGINS\`, which is the dashboard's own origin. Set \`appVersion\` in \`Pulse.configure()\` too: without it issue regression detection and the latest-version badges have nothing to compare.
+- **Web** ([github.com/Jasonvdb/pubky-pulse-web](https://github.com/Jasonvdb/pubky-pulse-web)) — framework-agnostic browser SDK (\`@synonymdev/pubky-pulse-web\`): package installation, \`Pulse.configure()\` with the app's \`bundleId\`, event logging with automatic capture of uncaught errors and unhandled rejections, automatic screen tracking on History API navigation, structured metrics, funnels, user identity (\`Pulse.setUser()\` flushes and claims the anonymous history — opt-in only, see **Identity Is Opt-In**), user properties, **error attachments**, **feedback** (\`Pulse.sendFeedback\`), **questionnaires** (\`Pulse.fetchQuestionnaire\` / \`saveQuestionnaireResponse\` plus pure answer helpers — the SDK ships no UI), and \`propagateSessionTo\` to forward \`X-Pulse-Session-Id\` to your own API for session correlation with the Node SDK. Create the app with \`platform: "web"\`, a site identifier as its \`bundle_id\`, and the site's origins in its \`allowed_origins\` — including the dev server's (\`http://localhost:5173\`). Ingest refuses a browser request whose \`Origin\` is not on that list, and CORS allows the ones that are; nothing needs to change in the server's \`CORS_ORIGINS\`, which is the dashboard's own origin. Set \`appVersion\` in \`Pulse.configure()\` too: without it issue regression detection and the latest-version badges have nothing to compare.
 - **Node** ([github.com/Jasonvdb/pubky-pulse-node](https://github.com/Jasonvdb/pubky-pulse-node)) — package installation, \`Pulse.configure()\`, event logging, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback forwarding** (when the team collects feedback through their own frontend and wants it pushed to Pubky Pulse with \`Pulse.sendFeedback\`), and **per-request session/user scoping** (\`Pulse.withSession(...)\` / \`Pulse.withUser(...)\` / per-call \`options.sessionId\`) for linking backend events to a client session via the \`X-Pulse-Session-Id\` header.
 - **Swift** ([github.com/Jasonvdb/pubky-pulse-swift](https://github.com/Jasonvdb/pubky-pulse-swift)) — iOS, iPadOS and macOS: package installation, \`Pulse.configure()\`, event logging, automatic screen tracking, structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (drop-in \`PulseFeedbackView\` or programmatic \`Pulse.sendFeedback\`), **questionnaires** (\`.pulseQuestionnaire(...)\` / \`PulseQuestionnaireView\`), and reading \`Pulse.sessionId\` to forward to a backend for session correlation.
 - **Android** ([github.com/Jasonvdb/pubky-pulse-android](https://github.com/Jasonvdb/pubky-pulse-android)) — Kotlin core plus an optional Jetpack Compose artifact: dependency setup, \`Pulse.configure()\`, event logging, screen tracking (\`Modifier.pulseScreen()\`), structured metrics, funnels, user identity, user properties, **error attachments**, **feedback collection** (\`PulseFeedbackView\` / \`Pulse.sendFeedback\`), **questionnaires** (\`PulseQuestionnaireGate\` / \`PulseQuestionnaireView\`), and reading \`Pulse.sessionId\` to forward to a backend for session correlation.
 
 ## Key Notes
 
+- User identity is opt-in: never write \`setUser\`/\`withUser\` without the developer's explicit yes. See **Identity Is Opt-In**.
 - \`bundle_id\` is **immutable after creation** — to change it, an owner must delete and recreate the app from the dashboard; there is no \`delete-app\` MCP tool. Backend apps have no bundle_id. A web app's \`allowed_origins\`, by contrast, is editable with \`update-app\` at any time.
 - Agent keys are for reading/managing. Client keys are for SDK event ingestion.
 - Reads reach every project in the team; writes reach only the projects your key's creator owns, re-checked on every request. See **Access Model**.

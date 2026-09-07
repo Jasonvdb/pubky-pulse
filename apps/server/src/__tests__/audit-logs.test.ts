@@ -72,7 +72,7 @@ describe("Auth & Permissions", () => {
 
   it("403 for member-role user", async () => {
     const { token: memberToken, userId: memberUserId } =
-      await createUserAndGetToken(app, "member@pulse.pubky.org");
+      await createUserAndGetToken(app, "member@pulse.test");
     await addTeamMember(teamId, memberUserId, "member");
 
     const res = await getAuditLogs({
@@ -90,7 +90,7 @@ describe("Auth & Permissions", () => {
     // The key inherits its creator's authority and never more, so a member's
     // agent key cannot read the team-wide trail even holding audit_logs:read.
     const { token: memberToken, userId: memberUserId } =
-      await createUserAndGetToken(app, "agent-owner@pulse.pubky.org");
+      await createUserAndGetToken(app, "agent-owner@pulse.test");
     await addTeamMember(teamId, memberUserId, "member");
     const key = await createAgentKey(app, memberToken, teamId, ["audit_logs:read"]);
 
@@ -394,7 +394,7 @@ describe("Team Scoping", () => {
     // Create a second user with their own team
     const { token: otherToken } = await createUserAndGetToken(
       app,
-      "other@pulse.pubky.org",
+      "other@pulse.test",
     );
 
     // Try to access the seeded team's audit logs
@@ -589,7 +589,7 @@ describe("Resource Type Coverage", () => {
     const project = await createProject("Owners Audited", "owners-audited");
     const { userId: peerUserId } = await createUserAndGetToken(
       app,
-      "owner-audit-peer@pulse.pubky.org",
+      "owner-audit-peer@pulse.test",
     );
     await addTeamMember(teamId, peerUserId, "member");
 

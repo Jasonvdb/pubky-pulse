@@ -120,7 +120,7 @@ describe("Job Routes", () => {
       // The run list is an aggregate read over projects the member can already
       // read, so it is not owner-only. It is also not a mutation path — the
       // trigger test below proves that half separately.
-      const member = await createUserAndGetToken(app, "jobs-reader@pulse.pubky.org");
+      const member = await createUserAndGetToken(app, "jobs-reader@pulse.test");
       await addTeamMember(teamId, member.userId, "member");
 
       const res = await app.inject({
@@ -157,7 +157,7 @@ describe("Job Routes", () => {
     it("still refuses a trigger from a member who does not own the project", async () => {
       // Opening the run *list* to every member must not open triggering with
       // it: a write into someone else's project stays a 403.
-      const member = await createUserAndGetToken(app, "jobs-viewer@pulse.pubky.org");
+      const member = await createUserAndGetToken(app, "jobs-viewer@pulse.test");
       await addTeamMember(teamId, member.userId, "member");
 
       const res = await app.inject({

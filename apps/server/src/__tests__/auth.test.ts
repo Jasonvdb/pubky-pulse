@@ -34,13 +34,13 @@ describe("POST /v1/auth/send-code", () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "anyone@pulse.pubky.org" },
+      payload: { email: "anyone@pulse.test" },
     });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().message).toBe("Verification code sent");
     expect(testEmailService.lastCode).toHaveLength(6);
-    expect(testEmailService.lastEmail).toBe("anyone@pulse.pubky.org");
+    expect(testEmailService.lastEmail).toBe("anyone@pulse.test");
   });
 
   it("rejects missing email", async () => {
@@ -64,7 +64,7 @@ describe("POST /v1/auth/send-code", () => {
   });
 
   it("rate limits after 5 requests", async () => {
-    const email = "ratelimit@pulse.pubky.org";
+    const email = "ratelimit@pulse.test";
     for (let i = 0; i < 5; i++) {
       await app.inject({
         method: "POST",
@@ -110,19 +110,19 @@ describe("POST /v1/auth/verify-code", () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "newuser@pulse.pubky.org" },
+      payload: { email: "newuser@pulse.test" },
     });
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/verify-code",
-      payload: { email: "newuser@pulse.pubky.org", code: testEmailService.lastCode },
+      payload: { email: "newuser@pulse.test", code: testEmailService.lastCode },
     });
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.token).toBeDefined();
-    expect(body.user.email).toBe("newuser@pulse.pubky.org");
+    expect(body.user.email).toBe("newuser@pulse.test");
     expect(body.user.name).toBe("Newuser");
     // No per-user team is created any more: the user joins the one configured
     // team, and only the configured owner address gets the owner role.

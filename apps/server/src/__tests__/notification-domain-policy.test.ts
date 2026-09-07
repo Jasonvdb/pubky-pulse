@@ -22,8 +22,9 @@ import { resolveTeamMemberUserIds } from "../utils/team-members.js";
  * revoked address. These tests pin both ends of that path: recipient resolution
  * and the later per-delivery lookup.
  *
- * `pulse.pubky.org` and `example.com` are the suite's configured allowed domains
- * (vitest.config.ts); `revoked.test` stands for a domain that has been removed.
+ * `pulse.test` and `example.com` are the suite's configured allowed domains
+ * (vitest.config.ts), both reserved for testing, so no fixture address is ever
+ * deliverable; `revoked.test` stands for a domain that has been removed.
  */
 const REVOKED_EMAIL = "former-colleague@revoked.test";
 

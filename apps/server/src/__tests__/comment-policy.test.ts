@@ -40,8 +40,9 @@ import {
  * through its own author's request would hide a missing check behind a passing
  * one.
  *
- * `pulse.pubky.org` and `example.com` are the suite's configured allowed
- * domains (vitest.config.ts); no deployment domain appears here.
+ * `pulse.test` and `example.com` are the suite's configured allowed domains
+ * (vitest.config.ts), both reserved for testing; no deployment domain appears
+ * here, so no fixture address is ever deliverable.
  */
 
 let app: FastifyInstance;

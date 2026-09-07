@@ -39,12 +39,12 @@ async function sendCode(email: string): Promise<string> {
 
 describe("POST /v1/auth/agent-login", () => {
   it("verifies code and returns agent key for new user", async () => {
-    const code = await sendCode("newagent@pulse.pubky.org");
+    const code = await sendCode("newagent@pulse.test");
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "newagent@pulse.pubky.org", code },
+      payload: { email: "newagent@pulse.test", code },
     });
 
     expect(res.statusCode).toBe(201);
@@ -72,12 +72,12 @@ describe("POST /v1/auth/agent-login", () => {
   });
 
   it("returned agent key works for API calls", async () => {
-    const code = await sendCode("apitest@pulse.pubky.org");
+    const code = await sendCode("apitest@pulse.test");
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "apitest@pulse.pubky.org", code },
+      payload: { email: "apitest@pulse.test", code },
     });
 
     const agentKey = res.json().api_key;
@@ -174,7 +174,7 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
     const sendRes = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "agentuser@pulse.pubky.org" },
+      payload: { email: "agentuser@pulse.test" },
     });
     expect(sendRes.statusCode).toBe(200);
 
@@ -182,7 +182,7 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
     const loginRes = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "agentuser@pulse.pubky.org", code: testEmailService.lastCode },
+      payload: { email: "agentuser@pulse.test", code: testEmailService.lastCode },
     });
     expect(loginRes.statusCode).toBe(201);
     const body = loginRes.json();
@@ -229,12 +229,12 @@ describe("Full agent bootstrap flow (end-to-end)", () => {
 
 describe("GET /v1/auth/whoami", () => {
   it("returns key info for agent key auth", async () => {
-    const code = await sendCode("whoami@pulse.pubky.org");
+    const code = await sendCode("whoami@pulse.test");
 
     const loginRes = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "whoami@pulse.pubky.org", code },
+      payload: { email: "whoami@pulse.test", code },
     });
     const agentKey = loginRes.json().api_key;
 

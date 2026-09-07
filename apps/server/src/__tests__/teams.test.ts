@@ -33,7 +33,7 @@ afterAll(async () => {
 
 /** Create a second user and return their token + user info. */
 async function registerSecondUser() {
-  return createUserAndGetToken(app, "second@pulse.pubky.org", "Second User");
+  return createUserAndGetToken(app, "second@pulse.test", "Second User");
 }
 
 // ─── Singleton Team Reads ───────────────────────────────────────────
@@ -141,7 +141,7 @@ describe("removed team and invitation endpoints", () => {
       { method: "DELETE" as const, url: `/v1/teams/${teamId}` },
       { method: "PATCH" as const, url: `/v1/teams/${teamId}/members/${testData.userId}`, payload: { role: "member" } },
       { method: "DELETE" as const, url: `/v1/teams/${teamId}/members/${testData.userId}` },
-      { method: "POST" as const, url: `/v1/teams/${teamId}/invitations`, payload: { email: "someone@pulse.pubky.org" } },
+      { method: "POST" as const, url: `/v1/teams/${teamId}/invitations`, payload: { email: "someone@pulse.test" } },
       { method: "DELETE" as const, url: `/v1/teams/${teamId}/invitations/00000000-0000-0000-0000-000000000000` },
       { method: "GET" as const, url: "/v1/invites/00000000-0000-0000-0000-000000000000" },
       { method: "POST" as const, url: "/v1/invites/accept", payload: { token: "00000000-0000-0000-0000-000000000000" } },
@@ -302,7 +302,7 @@ describe("Role enforcement on existing routes", () => {
   async function addMemberAndGetToken(teamId: string) {
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "member");
-    const { token } = await createUserAndGetToken(app, "second@pulse.pubky.org");
+    const { token } = await createUserAndGetToken(app, "second@pulse.test");
     return token;
   }
 
@@ -361,7 +361,7 @@ describe("Role enforcement on existing routes", () => {
     const { teamId } = await getTokenAndTeamId(app);
     const second = await registerSecondUser();
     await addTeamMember(teamId, second.userId, "member");
-    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.pubky.org");
+    const { token: memberToken } = await createUserAndGetToken(app, "second@pulse.test");
 
     const res = await app.inject({
       method: "POST",

@@ -13,8 +13,8 @@ export default defineConfig({
     // before the first import. They match the domains seedTestData already uses;
     // global-setup.ts mirrors them for the main process.
     env: {
-      PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.pubky.org,example.com",
-      PULSE_TEAM_OWNER_EMAIL: "test@pulse.pubky.org",
+      PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.test,example.com",
+      PULSE_TEAM_OWNER_EMAIL: "test@pulse.test",
       PULSE_DEFAULT_TEAM_SLUG: "test-team",
       PULSE_DEFAULT_TEAM_NAME: "Test Team",
     },

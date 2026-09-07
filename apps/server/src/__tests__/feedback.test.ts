@@ -207,7 +207,7 @@ describe("GET /v1/projects/:projectId/feedback", () => {
   });
 
   it("non-dev feedback fans out feedback.new notifications to team members", async () => {
-    const u2 = await createUserAndGetToken(app, "fb-member@pulse.pubky.org");
+    const u2 = await createUserAndGetToken(app, "fb-member@pulse.test");
     await addTeamMember(teamId, u2.userId, "member");
 
     const id = await ingestFeedback({ message: "hello prod" });
@@ -224,7 +224,7 @@ describe("GET /v1/projects/:projectId/feedback", () => {
   });
 
   it("dev feedback does NOT fan out notifications", async () => {
-    const u2 = await createUserAndGetToken(app, "fb-dev-member@pulse.pubky.org");
+    const u2 = await createUserAndGetToken(app, "fb-dev-member@pulse.test");
     await addTeamMember(teamId, u2.userId, "member");
     await ingestFeedback({ message: "dev only", is_dev: true });
     await new Promise((r) => setTimeout(r, 150));

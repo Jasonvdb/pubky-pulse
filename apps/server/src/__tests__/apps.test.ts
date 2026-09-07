@@ -298,7 +298,7 @@ describe("POST /v1/apps", () => {
       method: "POST",
       url: "/v1/apps",
       headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Second App", platform: "web", bundle_id: "pulse.pubky.org", project_id: testData.projectId },
+      payload: { name: "Second App", platform: "web", bundle_id: "pulse.test", project_id: testData.projectId },
     });
 
     const res = await app.inject({

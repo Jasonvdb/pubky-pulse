@@ -24,15 +24,17 @@ import {
  * on the machine that actually has the file, or the reverse. An explicit record
  * has no such ambient input.
  *
- * `pulse.pubky.org` and `example.com` are the suite's own allowed domains. No
- * deployment domain, team or owner address appears here.
+ * `pulse.test` and `example.com` are the suite's own allowed domains, both
+ * reserved for testing, so no fixture address is ever deliverable and no team
+ * or owner address names a real one. The deployment domain appears only in
+ * `public deployment defaults` below, where it is the value under test.
  */
 
 const VALID = {
-  PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.pubky.org,example.com",
+  PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.test,example.com",
   PULSE_DEFAULT_TEAM_NAME: "Wiring Test Team",
   PULSE_DEFAULT_TEAM_SLUG: "wiring-test-team",
-  PULSE_TEAM_OWNER_EMAIL: "Owner@Pulse.Pubky.Org",
+  PULSE_TEAM_OWNER_EMAIL: "Owner@Pulse.Test",
 } as const;
 
 /** The four variables, as a mutable record the cases can delete a key from. */
@@ -61,11 +63,11 @@ describe("resolveIdentityConfig", () => {
     const identity = resolveIdentityConfig(env());
 
     expect(identity).toEqual({
-      allowedEmailDomains: ["pulse.pubky.org", "example.com"],
+      allowedEmailDomains: ["pulse.test", "example.com"],
       defaultTeamName: "Wiring Test Team",
       defaultTeamSlug: "wiring-test-team",
       // Lowercased on the way through, so every later comparison is exact.
-      teamOwnerEmail: "owner@pulse.pubky.org",
+      teamOwnerEmail: "owner@pulse.test",
     });
   });
 
@@ -126,7 +128,7 @@ describe("resolveIdentityConfig", () => {
 
   it("rejects a malformed domain entry without echoing another variable's value", () => {
     expect(() =>
-      resolveIdentityConfig(env({ PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.pubky.org,localhost" })),
+      resolveIdentityConfig(env({ PULSE_ALLOWED_EMAIL_DOMAINS: "pulse.test,localhost" })),
     ).toThrow(/PULSE_ALLOWED_EMAIL_DOMAINS contains an invalid domain: "localhost"/);
   });
 });

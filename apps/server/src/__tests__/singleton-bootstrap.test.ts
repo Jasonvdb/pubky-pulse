@@ -88,7 +88,7 @@ describe("singleton-team bootstrap", () => {
 
   it("demotes any other team-level owner to member", async () => {
     const [usurper] = await client`
-      INSERT INTO users (email, name) VALUES ('usurper@pulse.pubky.org', 'Usurper') RETURNING id
+      INSERT INTO users (email, name) VALUES ('usurper@pulse.test', 'Usurper') RETURNING id
     `;
     await client`
       INSERT INTO team_members (team_id, user_id, role)
@@ -172,7 +172,7 @@ describe("singleton-team bootstrap", () => {
 
 describe("sign-in against the singleton team", () => {
   it("puts a first-time user in the existing team as a member, creating no new team", async () => {
-    const res = await signIn("firsttimer@pulse.pubky.org");
+    const res = await signIn("firsttimer@pulse.test");
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
@@ -197,10 +197,10 @@ describe("sign-in against the singleton team", () => {
 
   it("repairs an allowed existing user whose singleton membership is missing", async () => {
     const [orphan] = await client`
-      INSERT INTO users (email, name) VALUES ('orphan@pulse.pubky.org', 'Orphan') RETURNING id
+      INSERT INTO users (email, name) VALUES ('orphan@pulse.test', 'Orphan') RETURNING id
     `;
 
-    const res = await signIn("orphan@pulse.pubky.org");
+    const res = await signIn("orphan@pulse.test");
 
     expect(res.statusCode).toBe(200);
     expect(res.json().is_new_user).toBe(false);
@@ -213,11 +213,11 @@ describe("sign-in against the singleton team", () => {
 
   it("repeated sign-in creates no duplicate team, user, membership or key", async () => {
     for (let i = 0; i < 3; i++) {
-      const res = await signIn("repeat@pulse.pubky.org");
+      const res = await signIn("repeat@pulse.test");
       expect([200, 201]).toContain(res.statusCode);
     }
 
-    const users = await client`SELECT id FROM users WHERE email = 'repeat@pulse.pubky.org'`;
+    const users = await client`SELECT id FROM users WHERE email = 'repeat@pulse.test'`;
     expect(users).toHaveLength(1);
 
     const teams = await client`SELECT id FROM teams WHERE deleted_at IS NULL`;

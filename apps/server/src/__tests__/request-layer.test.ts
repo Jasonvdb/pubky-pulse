@@ -249,7 +249,7 @@ describe("web app origin enforcement", () => {
   });
 
   it("accepts ingest from the registered origin regardless of its casing", async () => {
-    const res = await ingestFromOrigin("https://TEST.PULSE.PUBKY.ORG");
+    const res = await ingestFromOrigin("https://TEST.PULSE.TEST");
     expect(res.statusCode).toBe(200);
   });
 

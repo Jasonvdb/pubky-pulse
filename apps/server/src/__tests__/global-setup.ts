@@ -15,9 +15,9 @@ process.env.PULSE_ATTACHMENTS_SIGNING_SECRET =
 // values mirror vitest.config.ts `test.env`, which covers the worker processes
 // but not this one. The domains match what seedTestData inserts.
 process.env.PULSE_ALLOWED_EMAIL_DOMAINS =
-  process.env.PULSE_ALLOWED_EMAIL_DOMAINS || "pulse.pubky.org,example.com";
+  process.env.PULSE_ALLOWED_EMAIL_DOMAINS || "pulse.test,example.com";
 process.env.PULSE_TEAM_OWNER_EMAIL =
-  process.env.PULSE_TEAM_OWNER_EMAIL || "test@pulse.pubky.org";
+  process.env.PULSE_TEAM_OWNER_EMAIL || "test@pulse.test";
 process.env.PULSE_DEFAULT_TEAM_SLUG =
   process.env.PULSE_DEFAULT_TEAM_SLUG || "test-team";
 process.env.PULSE_DEFAULT_TEAM_NAME =

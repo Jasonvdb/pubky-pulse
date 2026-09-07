@@ -50,8 +50,9 @@ import type { ApiKeyContext, AuthContext, UserContext } from "../types.js";
  *   coOwnerA  — member, added as an equal owner of Project A;
  *   ownerB    — member, first owner of Project B, therefore a viewer of A.
  *
- * `pulse.pubky.org` and `example.com` are the suite's configured allowed
- * domains (vitest.config.ts); no deployment domain appears here.
+ * `pulse.test` and `example.com` are the suite's configured allowed domains
+ * (vitest.config.ts), both reserved for testing; no deployment domain appears
+ * here, so no fixture address is ever deliverable.
  */
 
 let app: FastifyInstance;

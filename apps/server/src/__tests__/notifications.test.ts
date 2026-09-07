@@ -32,7 +32,7 @@ beforeEach(async () => {
   const result = await getTokenAndTeamId(app);
   token = result.token;
   teamId = result.teamId;
-  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@pulse.pubky.org'`;
+  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@pulse.test'`;
   userId = owner.id;
 });
 

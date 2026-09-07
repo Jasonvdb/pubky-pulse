@@ -92,6 +92,15 @@ Supported clients read the `pubky-pulse://guide` resource automatically on conne
 
 Identity is the one thing the agent will not decide alone. Every SDK is anonymous by default, and the guide instructs the agent to ask before linking events to your own user ids — and to leave the integration anonymous-only if nobody answers.
 
+For a deeper, repeatable procedure, install the [Pubky Pulse agent skills](https://github.com/Jasonvdb/pubky-pulse-skills). The guide tells the agent what the tools do; the skills tell it how to work: audit the codebase for surfaces, draft a tracking plan, wire each SDK with every error path covered, verify data arrives, and later triage issues. In Claude Code:
+
+```
+/plugin marketplace add Jasonvdb/pubky-pulse-skills
+/plugin install pubky-pulse-skills@pubky-pulse-skills
+```
+
+Other agents install from the same repo; its README has the per-client commands.
+
 | SDK | Platforms | Docs |
 |-----|-----------|------|
 | Web | Browser apps | [/docs/sdks/web](/docs/sdks/web) |

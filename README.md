@@ -51,7 +51,7 @@ Reads are wide and writes are narrow. An agent key reads every project in the te
 
 Three other key types exist alongside agent keys: `pulse_client_*` for SDKs sending data (scoped to one app's bundle ID), `pulse_import_*` for backfilling history, and a passwordless email code that signs you into the dashboard. Only agent keys reach MCP.
 
-Editor-specific setup lives at [pulse.pubky.org/docs/mcp/setup](https://pulse.pubky.org/docs/mcp/setup); the walkthrough from empty database to first event is at [pulse.pubky.org/docs/getting-started](https://pulse.pubky.org/docs/getting-started).
+The fastest supported setup for each MCP client lives at [pulse.pubky.org/docs/mcp/setup](https://pulse.pubky.org/docs/mcp/setup); the walkthrough from empty database to first event is at [pulse.pubky.org/docs/getting-started](https://pulse.pubky.org/docs/getting-started).
 
 ## Why agent-first
 
@@ -140,7 +140,7 @@ Documentation is served by the dashboard app and published at [pulse.pubky.org/d
 
 - [Getting started](https://pulse.pubky.org/docs/getting-started) — from empty database to first event
 - [Concepts](https://pulse.pubky.org/docs/concepts) — events, issues, feedback, attachments, metrics, funnels, jobs and more
-- [MCP](https://pulse.pubky.org/docs/mcp) — endpoint, tool reference and editor setup
+- [MCP](https://pulse.pubky.org/docs/mcp) — endpoint, tool reference and client setup
 - [API reference](https://pulse.pubky.org/docs/api-reference) — the core REST routes with request and response examples (feedback, questionnaires and stats are covered by the MCP and concept pages)
 - [SDKs](https://pulse.pubky.org/docs/sdks) — web, Node.js, Swift and Android
 - [Self-hosting](https://pulse.pubky.org/docs/self-hosting) — VPS setup, nginx, pm2, SSL, configuration

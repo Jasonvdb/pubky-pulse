@@ -28,7 +28,7 @@ claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky
   --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
 ```
 
-See [Setup](/docs/mcp/setup) for the equivalent config in every other supported editor.
+See [Setup](/docs/mcp/setup) for the fastest supported method and safe fallbacks for every other client.
 
 ## How it works
 
@@ -40,7 +40,7 @@ Agents authenticate with a `pulse_agent_*` API key passed as a Bearer token. The
 
 Reads are wide and writes are narrow. A key reads every project in the configured team, but an ordinary write additionally requires the **human who created the key** to currently own the target project — and that is re-read on every request, so adding or removing them takes effect on the next tool call with no key re-issued. `create-project` makes the creator the new project's first owner. Changing an owner list, and deleting projects, apps, feedback, questionnaires, responses, attachments or another author's comment, are human-only and always return `403` to an agent. See [Setup](/docs/mcp/setup#access-model-read-wide-write-narrow) for the full rule.
 
-The endpoint needs only a URL and an API key pasted into your editor's config file once — no package to install, no periodic updates, and no interactive login flow.
+The endpoint needs only a URL and an API key added through your client's supported setup flow once — no Pubky Pulse package to install and no periodic updates.
 
 ## Available tools
 

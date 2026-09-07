@@ -3,6 +3,8 @@ title: Configuration
 description: Configure the Node.js SDK with Pulse.configure() — API key, endpoint, isDev, and flush options.
 ---
 
+import EndpointDefault from '../../../_snippets/sdk-endpoint.mdx';
+
 Call `Pulse.configure()` once at application startup before logging any events.
 
 ## Basic Configuration
@@ -11,18 +13,19 @@ Call `Pulse.configure()` once at application startup before logging any events.
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   serviceName: "payment-service",
   appVersion: "1.4.0",
 });
 ```
 
+<EndpointDefault />
+
 ## Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `endpoint` | `string` | *required* | Pubky Pulse server URL. Trailing slashes are stripped automatically. |
+| `endpoint` | `string` | `"https://ingest.pubkypulse.com"` | Pubky Pulse ingest server URL. Trailing slashes are stripped automatically. Omit it to use Pubky's hosted instance; self-hosters must set their own. |
 | `apiKey` | `string` | *required* | Client API key for a backend-platform app. Must start with `pulse_client_`. |
 | `serviceName` | `string` | `"unknown"` | Name of this service. Useful for identifying which backend emitted an event when you run multiple services. |
 | `appVersion` | `string` | `undefined` | Version string included on every event. |
@@ -60,7 +63,8 @@ Override it explicitly if you need different behavior:
 
 ```typescript
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
+  // Explicit host: required when you run your own instance.
+  endpoint: "https://ingest.yourdomain.com",
   apiKey: "pulse_client_...",
   isDev: false, // always production, regardless of NODE_ENV
 });

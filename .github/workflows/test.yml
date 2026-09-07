@@ -36,6 +36,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The bracketed regex keeps this step from matching its own source line,
+      # so the workflow file itself stays covered by the sweep. Case-insensitive
+      # because the stale domain also appeared capitalised in prose. This grep is
+      # the only check covering apps/web and packages/db, which have no tests.
+      - name: Stale domain guard
+        run: |
+          if grep -rniI "pulse[.]pubky[.]org" \
+            --exclude-dir=node_modules --exclude-dir=.git \
+            --exclude-dir=.next --exclude-dir=dist .; then
+            echo "::error::Stale domain reintroduced above; use pubkypulse.com."
+            exit 1
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -74,8 +87,8 @@ jobs:
           # Identity configuration is required — apps/server/src/config.ts
           # validates it at module load. These mirror the values in
           # apps/server/vitest.config.ts and the domains the fixtures use.
-          PULSE_ALLOWED_EMAIL_DOMAINS: pulse.pubky.org,example.com
-          PULSE_TEAM_OWNER_EMAIL: test@pulse.pubky.org
+          PULSE_ALLOWED_EMAIL_DOMAINS: pulse.test,example.com
+          PULSE_TEAM_OWNER_EMAIL: test@pulse.test
           PULSE_DEFAULT_TEAM_SLUG: test-team
           PULSE_DEFAULT_TEAM_NAME: Test Team
         run: pnpm test

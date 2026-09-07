@@ -499,7 +499,7 @@ describe("DELETE /v1/projects/:id", () => {
   });
 
   it("member cannot delete project", async () => {
-    const { userId: memberUserId, token: memberToken } = await createUserAndGetToken(app, "member@pulse.pubky.org", "Member");
+    const { userId: memberUserId, token: memberToken } = await createUserAndGetToken(app, "member@pulse.test", "Member");
     await addTeamMember(testData.teamId, memberUserId, "member");
 
     const res = await app.inject({

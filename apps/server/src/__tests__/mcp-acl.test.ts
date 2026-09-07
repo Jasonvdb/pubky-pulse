@@ -34,8 +34,9 @@ import {
  * so a refusal is never ambiguous between "missing permission" and "creator
  * does not own the project".
  *
- * `pulse.pubky.org` and `example.com` are the suite's configured allowed
- * domains (vitest.config.ts); no deployment domain appears here.
+ * `pulse.test` and `example.com` are the suite's configured allowed domains
+ * (vitest.config.ts), both reserved for testing; no deployment domain appears
+ * here, so no fixture address is ever deliverable.
  */
 
 const MCP_HEADERS = {

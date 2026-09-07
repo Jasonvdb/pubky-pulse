@@ -43,6 +43,17 @@ A few features add categories you should declare yourself in addition to the tab
 
 If you instead set `showsContactFields: false`, or call `Pulse.sendFeedback(_:)` programmatically without forwarding contact info, neither needs to be declared.
 
+## Where your data goes
+
+The Nutrition Label rows above describe *what* the SDK collects. *Where* it ends up depends on the `endpoint` you configure:
+
+- **You pass your own `endpoint`.** Events go only to your own Pubky Pulse instance, on infrastructure you control — a first-party destination.
+- **You omit `endpoint`.** The SDK falls back to `https://ingest.pubkypulse.com`, [Pubky's own hosted instance](/docs/getting-started/hosted), which is operated by Pubky — a separate company from you.
+
+The fallback is **silent**: nothing is logged, warned, or thrown, so you can be relying on Pubky's instance without noticing. Pass `endpoint` explicitly in `Pulse.configure` if you want to be sure you are not.
+
+Either way, Apple asks you to declare data collected by a third-party SDK as your *own* collection, so the table above stands unchanged — and so do the tracking answers below, since neither destination links your users' data to third-party data for advertising or hands it to a data broker. What does change is your privacy policy and any data-deletion commitment you make: on the hosted default the backend is not yours to purge, so name the real recipient and describe the deletion path you actually have. And wherever a store, partner, or compliance questionnaire asks who receives the data, answer for Pubky's hosted instance rather than for infrastructure you control.
+
 ## App Tracking Transparency
 
 The SDK does **not** require an ATT prompt:
@@ -71,7 +82,7 @@ Apple requires a privacy policy URL on your App Store listing. If your current p
 
 > We use Pubky Pulse, a self-hosted analytics service, to understand how users interact with our app and to diagnose errors. Pubky Pulse collects diagnostic data (including crash reports and event logs), product interaction data (such as screen views), and any user feedback you choose to submit. If you sign in, your user identifier is linked to this data so we can support you and improve the product. Pubky Pulse does not use the data for cross-app tracking or advertising and does not access your device's advertising identifier (IDFA).
 
-Adjust to match your app's voice and the specific Pubky Pulse features you use.
+Adjust to match your app's voice and the specific Pubky Pulse features you use. If you rely on the hosted endpoint default, drop "self-hosted" and name the real recipient — the data goes to Pubky Pulse's hosted instance, operated by Pubky.
 
 ## What carries forward
 

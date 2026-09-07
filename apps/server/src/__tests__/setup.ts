@@ -56,12 +56,12 @@ export const TEST_WEB_CLIENT_KEY =
 export const TEST_ANDROID_BUNDLE_ID = "org.pubky.pulse.test.android";
 export const TEST_BUNDLE_ID = "org.pubky.pulse.test";
 // Web apps identify themselves by site, not by reverse-DNS bundle.
-export const TEST_WEB_BUNDLE_ID = "test.pulse.pubky.org";
+export const TEST_WEB_BUNDLE_ID = "test.pulse.test";
 /** The one origin `seedWebTestApp` registers on the web fixture app. */
-export const TEST_WEB_ORIGIN = "https://test.pulse.pubky.org";
+export const TEST_WEB_ORIGIN = "https://test.pulse.test";
 export const TEST_SESSION_ID = "00000000-0000-0000-0000-000000000001";
 export const TEST_USER = {
-  email: "test@pulse.pubky.org",
+  email: "test@pulse.test",
   name: "Test User",
 };
 
@@ -644,7 +644,7 @@ export async function createForeignTeam(opts: {
 }> {
   const suffix = randomUUID().slice(0, 8);
   const {
-    email = `foreign-${suffix}@pulse.pubky.org`,
+    email = `foreign-${suffix}@pulse.test`,
     teamName = `Foreign Team ${suffix}`,
     teamSlug = `foreign-team-${suffix}`,
   } = opts;

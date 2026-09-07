@@ -815,9 +815,9 @@ describe("JWT user permission bypass", () => {
     const { token, teamId } = await getTokenAndTeamId(app);
 
     // Create a second user and add as member
-    const member = await createUserAndGetToken(app, "member@pulse.pubky.org", "Member");
+    const member = await createUserAndGetToken(app, "member@pulse.test", "Member");
     await addTeamMember(teamId, member.userId, "member");
-    const { token: memberToken } = await createUserAndGetToken(app, "member@pulse.pubky.org");
+    const { token: memberToken } = await createUserAndGetToken(app, "member@pulse.test");
 
     // Member can read
     const readRes = await app.inject({
@@ -1075,9 +1075,9 @@ describe("PATCH /v1/auth/keys/:id", () => {
     const { keyId } = await createKeyAndGetId(token, teamId);
 
     // Create second user and add as member
-    const memberUser = await createUserAndGetToken(app, "member-update@pulse.pubky.org", "Member");
+    const memberUser = await createUserAndGetToken(app, "member-update@pulse.test", "Member");
     await addTeamMember(teamId, memberUser.userId, "member");
-    const { token: memberToken } = await createUserAndGetToken(app, "member-update@pulse.pubky.org");
+    const { token: memberToken } = await createUserAndGetToken(app, "member-update@pulse.test");
 
     const res = await app.inject({
       method: "PATCH",

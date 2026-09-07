@@ -171,7 +171,8 @@ async function resolveTarget(db: ReturnType<typeof createDatabaseConnection>) {
   // Optional command-line arg: project slug. Default: the first project owned by the
   // seeded admin account (see seed.ts).
   const slugArg = process.argv[2];
-  const emailDefault = "admin@pulse.pubky.org";
+  // Must match the SEED_ADMIN_EMAIL literal in seed.ts, which inserts this user.
+  const emailDefault = "admin@pulse.test";
 
   if (slugArg) {
     const [project] = await db.select().from(projects).where(eq(projects.slug, slugArg));

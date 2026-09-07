@@ -17,14 +17,16 @@ The MCP endpoint lives at `POST /mcp` on your Pubky Pulse API server, and client
 
 | Instance | MCP endpoint |
 |----------|--------------|
-| Pubky's instance (placeholder — substitute your own host) | `https://api.pulse.pubky.org/mcp` |
+| Pubky's instance (Pubky's apps only) | `https://api.pubkypulse.com/mcp` |
 | Self-hosted | `https://api.yourdomain.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
+
+`api.pubkypulse.com` is Pubky's live instance, reachable only by accounts on Pubky's team — the examples below use it as a concrete, working URL. Self-hosters substitute their own `api.` host wherever it appears.
 
 For Claude Code, adding it is one command:
 
 ```bash
-claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky.org/mcp \
+claude mcp add --transport http --scope user pubky-pulse https://api.pubkypulse.com/mcp \
   --header "Authorization: Bearer pulse_agent_YOUR_KEY_HERE"
 ```
 

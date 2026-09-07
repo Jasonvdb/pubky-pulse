@@ -32,7 +32,7 @@ beforeEach(async () => {
   const result = await getTokenAndTeamId(app);
   teamId = result.teamId;
   // Resolve owner user ID for ownership checks.
-  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@pulse.pubky.org'`;
+  const [owner] = await dbClient`SELECT id FROM users WHERE email = 'test@pulse.test'`;
   ownerUserId = owner.id;
 });
 
@@ -42,7 +42,7 @@ async function setUserPreference(userId: string, prefs: Record<string, unknown>)
 
 describe("NotificationDispatcher", () => {
   it("creates one inbox row + per-channel deliveries for each user", async () => {
-    const u2 = await createUserAndGetToken(app, "member2@pulse.pubky.org");
+    const u2 = await createUserAndGetToken(app, "member2@pulse.test");
     await addTeamMember(teamId, u2.userId, "member");
 
     const result = await app.notificationDispatcher.enqueue({
@@ -114,7 +114,7 @@ describe("NotificationDispatcher", () => {
     // Seed 20 extra members on the same team.
     const memberIds: string[] = [];
     for (let i = 0; i < 20; i++) {
-      const u = await createUserAndGetToken(app, `bulk${i}@pulse.pubky.org`);
+      const u = await createUserAndGetToken(app, `bulk${i}@pulse.test`);
       await addTeamMember(teamId, u.userId, "member");
       memberIds.push(u.userId);
     }

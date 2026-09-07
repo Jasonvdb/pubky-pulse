@@ -3,6 +3,8 @@ title: Configuration
 description: Configure the Web SDK with Pulse.configure() — endpoint, API key, bundle id, tracking toggles, and flush options.
 ---
 
+import EndpointDefault from '../../../_snippets/sdk-endpoint.mdx';
+
 Call `Pulse.configure()` once, as early in the page's life as you can, before logging any events.
 
 ## Basic Configuration
@@ -11,18 +13,19 @@ Call `Pulse.configure()` once, as early in the page's life as you can, before lo
 import { Pulse } from "@synonymdev/pubky-pulse-web";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   bundleId: "app.example.com",
   appVersion: "1.4.0",
 });
 ```
 
+<EndpointDefault />
+
 ## Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `endpoint` | `string` | *required* | Pubky Pulse server URL. A trailing slash is stripped. |
+| `endpoint` | `string` | `"https://ingest.pubkypulse.com"` | Pubky Pulse ingest server URL. A trailing slash is stripped. Omit it to use Pubky's hosted instance; self-hosters must set their own. |
 | `apiKey` | `string` | *required* | Client API key for a web-platform app. Must start with `pulse_client_`. |
 | `bundleId` | `string` | *required* | Site identifier of the Pulse app receiving the events (`app.example.com`). Must match the app's `bundle_id` exactly — it is a name, not a URL, and is not checked against the page's origin. |
 | `appVersion` | `string` | `undefined` | Version reported with every event. Set it, and make it increase between releases — see [App version](#app-version). |
@@ -67,7 +70,8 @@ It also has to **increase** between releases. Versions compare segment by segmen
 
 ```typescript
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
+  // Explicit host: required when you run your own instance.
+  endpoint: "https://ingest.yourdomain.com",
   apiKey: "pulse_client_...",
   bundleId: "app.example.com",
   // Injected at build time from package.json — not the commit SHA.
@@ -106,7 +110,6 @@ Calling `configure()` again replaces the pipeline: the old transport is drained 
 
 ```typescript
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   bundleId: "app.example.com",
   isDev: location.hostname.endsWith(".staging.example.com"),
@@ -119,7 +122,6 @@ The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and the `data_
 
 ```typescript
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   bundleId: "app.example.com",
   networkTracking: true,

@@ -30,10 +30,7 @@ import SwiftUI
 @main
 struct WorkoutWatchApp: App {
     init() {
-        try? Pulse.configure(
-            endpoint: "https://ingest.pulse.pubky.org",
-            apiKey: "pulse_client_..."
-        )
+        try? Pulse.configure(apiKey: "pulse_client_...")
     }
 
     var body: some Scene {

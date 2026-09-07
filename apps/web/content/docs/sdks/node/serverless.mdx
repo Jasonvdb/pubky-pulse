@@ -23,7 +23,6 @@ The SDK buffers events and flushes them on a timer (default every 5 seconds) or 
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   serviceName: "order-lambda",
 });
@@ -95,7 +94,6 @@ import express from "express";
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   serviceName: "express-api",
 });
@@ -126,7 +124,6 @@ import Fastify from "fastify";
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   serviceName: "fastify-api",
 });
@@ -150,7 +147,6 @@ An AWS Lambda function with user scoping, operation tracking, and automatic flus
 import { Pulse } from "@synonymdev/pubky-pulse-node";
 
 Pulse.configure({
-  endpoint: "https://ingest.pulse.pubky.org",
   apiKey: "pulse_client_...",
   serviceName: "checkout-lambda",
   appVersion: "2.1.0",

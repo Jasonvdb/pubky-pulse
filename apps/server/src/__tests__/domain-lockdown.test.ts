@@ -14,13 +14,16 @@ import {
   TEST_DB_URL,
   TEST_SESSION_ID,
   TEST_USER,
+  TEST_WEB_BUNDLE_ID,
+  TEST_WEB_ORIGIN,
 } from "./setup.js";
 import { config } from "../config.js";
 
 /**
- * `pulse.pubky.org` and `example.com` are the configured allowed domains for the
- * test suite (see vitest.config.ts). Everything below leans on `blocked.test`
- * being outside that list.
+ * `pulse.test` and `example.com` are the configured allowed domains for the
+ * test suite (see vitest.config.ts), both reserved for testing so no fixture
+ * address is ever deliverable. Everything below leans on `blocked.test` being
+ * outside that list.
  */
 const DISALLOWED_EMAIL = "intruder@blocked.test";
 
@@ -53,6 +56,38 @@ async function injectCode(email: string, code = "424242"): Promise<void> {
   `;
 }
 
+/**
+ * The suite's own identity, pinned. Every domain it configures or embeds sits
+ * under a name reserved for testing — RFC 6761 `.test`, RFC 2606
+ * `example.com` — so a fixture mailbox is never routable and the suite never
+ * encodes a deployment name. Swapping any of them for a real domain would make
+ * these addresses deliverable the day that domain is verified with the mail
+ * provider, silently turning fixtures into live recipients.
+ */
+describe("test fixture identity", () => {
+  const RESERVED = /(?:^|\.)(?:test|example\.com)$/;
+
+  it("allows only domains reserved for testing", () => {
+    expect(config.allowedEmailDomains.length).toBeGreaterThan(0);
+    for (const domain of config.allowedEmailDomains) {
+      expect(domain).toMatch(RESERVED);
+    }
+  });
+
+  it("keeps every fixture address, bundle and origin on a reserved domain", () => {
+    const hosts = [
+      config.teamOwnerEmail.split("@")[1],
+      TEST_USER.email.split("@")[1],
+      TEST_WEB_BUNDLE_ID,
+      new URL(TEST_WEB_ORIGIN).hostname,
+    ];
+
+    for (const host of hosts) {
+      expect(host).toMatch(RESERVED);
+    }
+  });
+});
+
 describe("POST /v1/auth/send-code domain policy", () => {
   it("rejects a disallowed domain without creating a code or sending mail", async () => {
     const res = await app.inject({
@@ -74,7 +109,7 @@ describe("POST /v1/auth/send-code domain policy", () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "someone@mail.pulse.pubky.org" },
+      payload: { email: "someone@mail.pulse.test" },
     });
 
     expect(res.statusCode).toBe(403);
@@ -85,16 +120,16 @@ describe("POST /v1/auth/send-code domain policy", () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "  MixedCase@Pulse.Pubky.Org  " },
+      payload: { email: "  MixedCase@Pulse.Test  " },
     });
 
     expect(res.statusCode).toBe(200);
-    expect(testEmailService.lastEmail).toBe("mixedcase@pulse.pubky.org");
+    expect(testEmailService.lastEmail).toBe("mixedcase@pulse.test");
 
     // The stored code is keyed by the normalized address, so verification finds it.
     const codes = await client`SELECT email FROM email_verification_codes`;
     expect(codes).toHaveLength(1);
-    expect(codes[0].email).toBe("mixedcase@pulse.pubky.org");
+    expect(codes[0].email).toBe("mixedcase@pulse.test");
   });
 
   it("does not consume a rate-limit slot for a disallowed address", async () => {
@@ -135,19 +170,19 @@ describe("POST /v1/auth/verify-code domain policy", () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "casing@pulse.pubky.org" },
+      payload: { email: "casing@pulse.test" },
     });
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/verify-code",
-      payload: { email: "  CASING@PULSE.PUBKY.ORG ", code: testEmailService.lastCode },
+      payload: { email: "  CASING@PULSE.TEST ", code: testEmailService.lastCode },
     });
 
     expect(res.statusCode).toBe(201);
-    expect(res.json().user.email).toBe("casing@pulse.pubky.org");
+    expect(res.json().user.email).toBe("casing@pulse.test");
 
-    const users = await client`SELECT id FROM users WHERE email ILIKE 'casing@pulse.pubky.org'`;
+    const users = await client`SELECT id FROM users WHERE email ILIKE 'casing@pulse.test'`;
     expect(users).toHaveLength(1);
   });
 });
@@ -176,13 +211,13 @@ describe("POST /v1/auth/agent-login domain policy", () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "agentjoin@pulse.pubky.org" },
+      payload: { email: "agentjoin@pulse.test" },
     });
 
     const res = await app.inject({
       method: "POST",
       url: "/v1/auth/agent-login",
-      payload: { email: "agentjoin@pulse.pubky.org", code: testEmailService.lastCode },
+      payload: { email: "agentjoin@pulse.test", code: testEmailService.lastCode },
     });
 
     expect(res.statusCode).toBe(201);
@@ -306,7 +341,7 @@ describe("per-request agent-key revalidation", () => {
   }
 
   it("rejects the key once its creator loses membership", async () => {
-    const { secret, userId } = await agentKeyFor("agentcreator@pulse.pubky.org");
+    const { secret, userId } = await agentKeyFor("agentcreator@pulse.test");
 
     const before = await app.inject({
       method: "GET",
@@ -326,7 +361,7 @@ describe("per-request agent-key revalidation", () => {
   });
 
   it("rejects the key once its creator's email leaves the allowlist", async () => {
-    const { secret, userId } = await agentKeyFor("agentdomain@pulse.pubky.org");
+    const { secret, userId } = await agentKeyFor("agentdomain@pulse.test");
 
     await client`UPDATE users SET email = ${DISALLOWED_EMAIL} WHERE id = ${userId}`;
 
@@ -376,12 +411,12 @@ describe("default agent key isolation", () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "colleague@pulse.pubky.org" },
+      payload: { email: "colleague@pulse.test" },
     });
     const colleague = await app.inject({
       method: "POST",
       url: "/v1/auth/verify-code",
-      payload: { email: "colleague@pulse.pubky.org", code: testEmailService.lastCode },
+      payload: { email: "colleague@pulse.test", code: testEmailService.lastCode },
     });
     const colleagueToken = colleague.json().token;
 
@@ -411,12 +446,12 @@ describe("default agent key isolation", () => {
     await app.inject({
       method: "POST",
       url: "/v1/auth/send-code",
-      payload: { email: "concurrent@pulse.pubky.org" },
+      payload: { email: "concurrent@pulse.test" },
     });
     const login = await app.inject({
       method: "POST",
       url: "/v1/auth/verify-code",
-      payload: { email: "concurrent@pulse.pubky.org", code: testEmailService.lastCode },
+      payload: { email: "concurrent@pulse.test", code: testEmailService.lastCode },
     });
     const concurrentToken = login.json().token;
     void token;
@@ -435,7 +470,7 @@ describe("default agent key isolation", () => {
     const secrets = new Set(results.map((r) => r.json().secret));
     expect(secrets.size).toBe(1);
 
-    const [user] = await client`SELECT id FROM users WHERE email = 'concurrent@pulse.pubky.org'`;
+    const [user] = await client`SELECT id FROM users WHERE email = 'concurrent@pulse.test'`;
     const keys = await client`
       SELECT id FROM api_keys WHERE created_by = ${user.id} AND key_type = 'agent' AND deleted_at IS NULL
     `;

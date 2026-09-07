@@ -2,7 +2,7 @@
 
 Self-hosted, agent-first observability for web, backend and mobile apps.
 
-[![Tests](https://github.com/pubky/pubky-pulse/actions/workflows/test.yml/badge.svg)](https://github.com/pubky/pubky-pulse/actions/workflows/test.yml)
+[![Tests](https://github.com/Jasonvdb/pubky-pulse/actions/workflows/test.yml/badge.svg)](https://github.com/Jasonvdb/pubky-pulse/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 > Alpha software. APIs, database schema and configuration can change without notice. Run it, but expect breakage.
@@ -37,11 +37,11 @@ MCP is the only agent interface. Point your agent at a running instance:
 
 ```bash
 claude mcp add --transport http --scope user pubky-pulse \
-  https://api.pulse.pubky.org/mcp \
+  https://api.pubkypulse.com/mcp \
   --header "Authorization: Bearer pulse_agent_..."
 ```
 
-`api.pulse.pubky.org` is a placeholder — self-hosters use their own instance URL, and local development uses `http://localhost:4000/mcp`. The key is an agent key (`pulse_agent_*`) created from the dashboard; client and import keys are rejected by the MCP endpoint.
+`api.pubkypulse.com` is this project's own instance — self-hosters use their own instance URL, and local development uses `http://localhost:4000/mcp`. The key is an agent key (`pulse_agent_*`) created from the dashboard; client and import keys are rejected by the MCP endpoint.
 
 Then tell your agent what you want. It reads the `pubky-pulse://guide` resource on connect, so it knows the resource hierarchy and conventions, and it has 62 tools covering projects, apps, events, metrics, funnels, issues, feedback, questionnaires, attachments, jobs, audit logs, stats and identity. Ask it to create a project and an app, wire the SDK into your codebase, and from then on ask it questions instead of opening charts: what broke since the last release, which funnel step people abandon, what a specific user did in the ten minutes before the crash.
 
@@ -51,7 +51,7 @@ Reads are wide and writes are narrow. An agent key reads every project in the te
 
 Three other key types exist alongside agent keys: `pulse_client_*` for SDKs sending data (scoped to one app's bundle ID), `pulse_import_*` for backfilling history, and a passwordless email code that signs you into the dashboard. Only agent keys reach MCP.
 
-The fastest supported setup for each MCP client lives at [pulse.pubky.org/docs/mcp/setup](https://pulse.pubky.org/docs/mcp/setup); the walkthrough from empty database to first event is at [pulse.pubky.org/docs/getting-started](https://pulse.pubky.org/docs/getting-started).
+The fastest supported setup for each MCP client lives at [pubkypulse.com/docs/mcp/setup](https://pubkypulse.com/docs/mcp/setup); the walkthrough from empty database to first event is at [pubkypulse.com/docs/getting-started](https://pubkypulse.com/docs/getting-started).
 
 The MCP server tells an agent what it can do; the [agent skills](https://github.com/Jasonvdb/pubky-pulse-skills) tell it how to instrument a codebase, cover every error path, and triage issues. Install both.
 
@@ -85,10 +85,10 @@ The MCP server is not a separate process. It lives inside `apps/server` as a Str
 
 | SDK | Status | Docs | Repo |
 | --- | --- | --- | --- |
-| Web | Docs describe the current API surface | [/docs/sdks/web](https://pulse.pubky.org/docs/sdks/web) | [Jasonvdb/pubky-pulse-web](https://github.com/Jasonvdb/pubky-pulse-web) |
-| Node.js | Docs describe the current API surface | [/docs/sdks/node](https://pulse.pubky.org/docs/sdks/node) | [Jasonvdb/pubky-pulse-node](https://github.com/Jasonvdb/pubky-pulse-node) |
-| Swift | Docs describe the current API surface | [/docs/sdks/swift](https://pulse.pubky.org/docs/sdks/swift) | [Jasonvdb/pubky-pulse-swift](https://github.com/Jasonvdb/pubky-pulse-swift) |
-| Android | Docs describe the current API surface | [/docs/sdks/android](https://pulse.pubky.org/docs/sdks/android) | [Jasonvdb/pubky-pulse-android](https://github.com/Jasonvdb/pubky-pulse-android) |
+| Web | Docs describe the current API surface | [/docs/sdks/web](https://pubkypulse.com/docs/sdks/web) | [Jasonvdb/pubky-pulse-web](https://github.com/Jasonvdb/pubky-pulse-web) |
+| Node.js | Docs describe the current API surface | [/docs/sdks/node](https://pubkypulse.com/docs/sdks/node) | [Jasonvdb/pubky-pulse-node](https://github.com/Jasonvdb/pubky-pulse-node) |
+| Swift | Docs describe the current API surface | [/docs/sdks/swift](https://pubkypulse.com/docs/sdks/swift) | [Jasonvdb/pubky-pulse-swift](https://github.com/Jasonvdb/pubky-pulse-swift) |
+| Android | Docs describe the current API surface | [/docs/sdks/android](https://pubkypulse.com/docs/sdks/android) | [Jasonvdb/pubky-pulse-android](https://github.com/Jasonvdb/pubky-pulse-android) |
 
 All four SDK repositories live under [Jasonvdb](https://github.com/Jasonvdb) and are not published yet, pending a move to the [pubky](https://github.com/pubky) org, so package names and coordinates may still change. Ingest is plain HTTP, so you do not have to wait for one.
 
@@ -110,7 +110,14 @@ pnpm dev:server               # API on http://localhost:4000
 pnpm dev:web                  # dashboard and docs on http://localhost:3000
 ```
 
-Sign-in is restricted to the email domains you configure. `PULSE_ALLOWED_EMAIL_DOMAINS`, `PULSE_DEFAULT_TEAM_NAME`, `PULSE_DEFAULT_TEAM_SLUG` and `PULSE_TEAM_OWNER_EMAIL` are required in every environment including local development — there are no defaults, and the server refuses to start without them. The seed inserts its own team (`Default Team` / `default`, owned by `admin@pulse.pubky.org`), so point those four at that team and domain if you seed, otherwise the startup bootstrap finds two active teams and stops.
+Sign-in is restricted to the email domains you configure. `PULSE_ALLOWED_EMAIL_DOMAINS`, `PULSE_DEFAULT_TEAM_NAME`, `PULSE_DEFAULT_TEAM_SLUG` and `PULSE_TEAM_OWNER_EMAIL` are required in every environment including local development — there are no defaults, and the server refuses to start without them. The seed inserts its own team (`Default Team` / `default`, owned by `admin@pulse.test`), so point those four at that team and domain if you seed, otherwise the startup bootstrap finds two active teams and stops. `pulse.test` is reserved and non-routable, so the seeded mailbox never receives mail:
+
+```bash
+PULSE_ALLOWED_EMAIL_DOMAINS=pulse.test
+PULSE_DEFAULT_TEAM_NAME=Default Team
+PULSE_DEFAULT_TEAM_SLUG=default
+PULSE_TEAM_OWNER_EMAIL=admin@pulse.test
+```
 
 `pnpm dev:seed` gives you a working account, team, project, app and API keys, and prints them; with no `RESEND_API_KEY` set, the sign-in code for the dashboard is printed to the API server console and written to `.dev-verification-code` instead of being mailed. To get data to look at, `pnpm dev:seed-events`, `pnpm dev:seed-issues` and `pnpm dev:seed-aggregates` generate synthetic events, error clusters and stats rollups.
 
@@ -128,7 +135,7 @@ CI pins pnpm 10.33.0 through corepack. Match it locally (`corepack prepare pnpm@
 
 ## Self-hosting
 
-The full walkthrough — system dependencies, PostgreSQL, nginx, SSL, environment variables, maintenance — is at [pulse.pubky.org/docs/self-hosting](https://pulse.pubky.org/docs/self-hosting).
+The full walkthrough — system dependencies, PostgreSQL, nginx, SSL, environment variables, maintenance — is at [pubkypulse.com/docs/self-hosting](https://pubkypulse.com/docs/self-hosting).
 
 Configuration is environment variables only. Four of them decide who may use the instance at all — `PULSE_ALLOWED_EMAIL_DOMAINS`, `PULSE_DEFAULT_TEAM_NAME`, `PULSE_DEFAULT_TEAM_SLUG` and `PULSE_TEAM_OWNER_EMAIL` — and the server refuses to start if any is missing or invalid. Point them at a fresh database: the bootstrap adopts or creates the team with the configured slug and fails if another active team already exists. Beyond those and `DATABASE_URL`, `JWT_SECRET`, `PORT`, `HOST` and `CORS_ORIGINS`, a production instance wants `PULSE_ATTACHMENTS_PATH` and `PULSE_ATTACHMENTS_SIGNING_SECRET` (the server refuses to start without the latter, and it must differ from `JWT_SECRET`), `API_PUBLIC_URL` and `WEB_APP_URL`, `COOKIE_DOMAIN`, `MAX_DATABASE_SIZE_GB` for the pruning safety net, `TRUST_PROXY=127.0.0.1,::1` when a proxy terminates in front of the API (it is what makes `request.ip`, and therefore a browser visitor's rate-limit bucket, follow `X-Forwarded-For`; name the addresses the proxy reaches node from, because a bare `TRUST_PROXY=true` takes the leftmost header entry, which the caller writes; the proxy in turn has to put a visitor address there, so the documented nginx config recovers the visitor from `CF-Connecting-IP` on Cloudflare's published ranges and *sets* `X-Forwarded-For` to it instead of appending its own peer, which is the Cloudflare edge), and `RESEND_API_KEY` plus `EMAIL_FROM` if you want email out. `.env.example` documents each one. The dashboard is separate: its only variable, `NEXT_PUBLIC_API_URL`, goes in `apps/web/.env` (Next.js resolves env files relative to `apps/web`) and is inlined at build time, so set it before `pnpm build`.
 
@@ -138,15 +145,15 @@ The short version: `deploy/setup-ubuntu-vps.sh` provisions a fresh Ubuntu host (
 
 ## Documentation
 
-Documentation is served by the dashboard app and published at [pulse.pubky.org/docs](https://pulse.pubky.org/docs) (placeholder until DNS is set up):
+Documentation is served by the dashboard app and published at [pubkypulse.com/docs](https://pubkypulse.com/docs):
 
-- [Getting started](https://pulse.pubky.org/docs/getting-started) — from empty database to first event
-- [Concepts](https://pulse.pubky.org/docs/concepts) — events, issues, feedback, attachments, metrics, funnels, jobs and more
-- [MCP](https://pulse.pubky.org/docs/mcp) — endpoint, tool reference and client setup
-- [API reference](https://pulse.pubky.org/docs/api-reference) — the core REST routes with request and response examples (feedback, questionnaires and stats are covered by the MCP and concept pages)
-- [SDKs](https://pulse.pubky.org/docs/sdks) — web, Node.js, Swift and Android
-- [Self-hosting](https://pulse.pubky.org/docs/self-hosting) — VPS setup, nginx, pm2, SSL, configuration
-- [FAQ](https://pulse.pubky.org/docs/faq) — platforms, licensing, and how this differs from hosted analytics tools
+- [Getting started](https://pubkypulse.com/docs/getting-started) — from empty database to first event
+- [Concepts](https://pubkypulse.com/docs/concepts) — events, issues, feedback, attachments, metrics, funnels, jobs and more
+- [MCP](https://pubkypulse.com/docs/mcp) — endpoint, tool reference and client setup
+- [API reference](https://pubkypulse.com/docs/api-reference) — the core REST routes with request and response examples (feedback, questionnaires and stats are covered by the MCP and concept pages)
+- [SDKs](https://pubkypulse.com/docs/sdks) — web, Node.js, Swift and Android
+- [Self-hosting](https://pubkypulse.com/docs/self-hosting) — VPS setup, nginx, pm2, SSL, configuration
+- [FAQ](https://pubkypulse.com/docs/faq) — platforms, licensing, and how this differs from hosted analytics tools
 
 Running locally, the same pages are at `http://localhost:3000/docs`. They are MDX files under `apps/web/content/docs`, so a documentation fix is an ordinary pull request.
 

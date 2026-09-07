@@ -57,8 +57,9 @@ import {
  *   ownerA    — member, first owner of Project A;
  *   ownerB    — member, first owner of Project B, so a viewer of Project A.
  *
- * `pulse.pubky.org` and `example.com` are the suite's configured allowed
- * domains (vitest.config.ts); no deployment domain appears here.
+ * `pulse.test` and `example.com` are the suite's configured allowed domains
+ * (vitest.config.ts), both reserved for testing; no deployment domain appears
+ * here, so no fixture address is ever deliverable.
  *
  * `POST /v1/identity/properties` is the one mutation in these modules with no
  * owner/viewer/agent axis at all — it is the SDK ingestion data plane, keyed by

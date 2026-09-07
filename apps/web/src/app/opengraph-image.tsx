@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { OG_SIZE, OG_TOKENS } from "@/lib/og/og-constants";
 import { getOgFonts } from "@/lib/og/og-fonts";
+import { SITE_URL } from "@/lib/site";
 
 export const alt =
   "Pubky Pulse — agent-first observability for web, backend and mobile apps";
@@ -8,6 +9,9 @@ export const size = OG_SIZE;
 export const contentType = "image/png";
 
 const PILLS = ["Events", "Metrics", "Funnels", "Issues"];
+
+/** Footer wordmark, derived so a domain move stays a `site.ts`-only change. */
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
 /**
  * The pulse mark as a self-contained SVG data URI.
@@ -97,7 +101,7 @@ export default function OGImage() {
             letterSpacing: "0.5px",
           }}
         >
-          pulse.pubky.org
+          {SITE_HOST}
         </div>
       </div>
     ),

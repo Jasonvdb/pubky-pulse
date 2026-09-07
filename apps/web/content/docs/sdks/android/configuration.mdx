@@ -3,6 +3,8 @@ title: Configuration
 description: Configure the Android SDK with Pulse.configure() — context, endpoint, API key, and options.
 ---
 
+import EndpointDefault from '../../../_snippets/sdk-endpoint.mdx';
+
 Call `Pulse.configure()` once, as early as possible — in your `Application` subclass's `onCreate()`. This initializes the SDK, starts a new session, and begins capturing events.
 
 ## Basic Setup
@@ -20,7 +22,6 @@ class MyApp : Application() {
         try {
             Pulse.configure(
                 context = this,
-                endpoint = "https://ingest.pubkypulse.com",
                 apiKey = "pulse_client_...",
             )
         } catch (e: PulseConfigurationError) {
@@ -41,12 +42,14 @@ Register the `Application` subclass in your manifest:
 
 > **Do not defer configuration** to a later point (the first `Activity`, after async setup, or after user consent). The SDK measures app launch time (`_launch_ms`) from process start to the `configure()` call, so placing it early gives an accurate cold-start metric — and ensures no events are dropped before configuration.
 
+<EndpointDefault />
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `context` | `Context` | required | An Android `Context`. `configure()` uses `applicationContext` internally, so passing `this` from `Application` is correct. |
-| `endpoint` | `String` | required | Your Pubky Pulse ingest server URL. |
+| `endpoint` | `String` | `"https://ingest.pubkypulse.com"` | Your Pubky Pulse ingest server URL. Omit it to use Pubky's hosted instance; self-hosters must set their own. |
 | `apiKey` | `String` | required | Client API key. Must start with `pulse_client_`. |
 | `flushOnBackground` | `Boolean` | `true` | Automatically flush buffered events when the app enters the background. |
 | `compressionEnabled` | `Boolean` | `true` | Gzip-compress request bodies before sending. |
@@ -58,7 +61,7 @@ Register the `Application` subclass in your manifest:
 ```kotlin
 Pulse.configure(
     context = this,
-    endpoint = "https://ingest.pubkypulse.com",
+    endpoint = "https://ingest.yourdomain.com",  // required when you run your own instance
     apiKey = "pulse_client_...",
     flushOnBackground = true,
     compressionEnabled = true,

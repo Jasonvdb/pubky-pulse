@@ -90,6 +90,15 @@ project and an app, then instrument the code with the SDK for this platform.
 
 Supported clients read the `pubky-pulse://guide` resource automatically on connection, so your agent already knows the concepts, resource hierarchy, and conventions — it takes it from there: `create-project`, `create-app`, then installing the SDK and wiring up event tracking.
 
+For a deeper, repeatable procedure, install the [Pubky Pulse agent skills](https://github.com/Jasonvdb/pubky-pulse-skills). The guide tells the agent what the tools do; the skills tell it how to work: audit the codebase for surfaces, draft a tracking plan, wire each SDK with every error path covered, verify data arrives, and later triage issues. In Claude Code:
+
+```
+/plugin marketplace add Jasonvdb/pubky-pulse-skills
+/plugin install pubky-pulse-skills@pubky-pulse-skills
+```
+
+Other agents install from the same repo; its README has the per-client commands.
+
 | SDK | Platforms | Docs |
 |-----|-----------|------|
 | Web | Browser apps | [/docs/sdks/web](/docs/sdks/web) |

@@ -85,10 +85,10 @@ The MCP server is not a separate process. It lives inside `apps/server` as a Str
 | --- | --- | --- | --- |
 | Web | Docs describe the current API surface | [/docs/sdks/web](https://pulse.pubky.org/docs/sdks/web) | [Jasonvdb/pubky-pulse-web](https://github.com/Jasonvdb/pubky-pulse-web) |
 | Node.js | Docs describe the current API surface | [/docs/sdks/node](https://pulse.pubky.org/docs/sdks/node) | [Jasonvdb/pubky-pulse-node](https://github.com/Jasonvdb/pubky-pulse-node) |
-| Swift | Docs describe the current API surface | [/docs/sdks/swift](https://pulse.pubky.org/docs/sdks/swift) | [pubky/pubky-pulse-swift](https://github.com/pubky/pubky-pulse-swift) |
-| Android | Docs describe the current API surface | [/docs/sdks/android](https://pulse.pubky.org/docs/sdks/android) | [pubky/pubky-pulse-android](https://github.com/pubky/pubky-pulse-android) |
+| Swift | Docs describe the current API surface | [/docs/sdks/swift](https://pulse.pubky.org/docs/sdks/swift) | [Jasonvdb/pubky-pulse-swift](https://github.com/Jasonvdb/pubky-pulse-swift) |
+| Android | Docs describe the current API surface | [/docs/sdks/android](https://pulse.pubky.org/docs/sdks/android) | [Jasonvdb/pubky-pulse-android](https://github.com/Jasonvdb/pubky-pulse-android) |
 
-The SDK repositories are being rebuilt under the [pubky](https://github.com/pubky) org and are not published yet, so package names and coordinates may still change; the Node.js and Web repos live under [Jasonvdb](https://github.com/Jasonvdb) until they move. Ingest is plain HTTP, so you do not have to wait for one.
+All four SDK repositories live under [Jasonvdb](https://github.com/Jasonvdb) and are not published yet, pending a move to the [pubky](https://github.com/pubky) org, so package names and coordinates may still change. Ingest is plain HTTP, so you do not have to wait for one.
 
 ## Local development
 

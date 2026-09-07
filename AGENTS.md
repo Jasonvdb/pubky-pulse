@@ -23,6 +23,12 @@ For MCP capability changes, update tool/resource registration in `apps/server/sr
 
 Keep `README.md` and `.env.example` aligned with configuration and operational changes. Shared conceptual prose used by multiple documentation surfaces belongs in `apps/web/content/_snippets/`; update the snippet rather than duplicating it across pages.
 
+## GitHub Repository Ownership
+
+Every Pubky Pulse repository lives under the personal `Jasonvdb` account until the project is officially transferred to the `pubky` org: the `pubky-pulse` monorepo and all four SDK repos (`pubky-pulse-web`, `-node`, `-swift`, `-android`). Create new repositories there too, and write `Jasonvdb/...` in every URL — README badges, docs install instructions, `apps/server/src/mcp/guide.ts`, SPM package URLs, and Maven POM `scm` coordinates.
+
+Never infer the owner from the `pubky` name, from a doc placeholder, or from a rename mapping; `pubky/pubky-pulse-swift` and `pubky/pubky-pulse-android` were created in the org that way and had to be transferred back. Confirm the owning account with the user before running `gh repo create`, and pass `--repo Jasonvdb/<name>` in the SDK clones, where the `upstream` remote otherwise wins.
+
 ## Build, Test, and Development Commands
 
 Use Node.js 20+, PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).

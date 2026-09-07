@@ -134,11 +134,14 @@ const EXPECTED_GUIDE_IDENTITY_CONSENT = [
   "## Identity Is Opt-In",
   "**Anonymous is the default.**",
   "Pulse.setUser()",
-  "Pulse.clearUser()",
   "Pulse.withUser()",
   // `setUserProperties` rides on whichever id is in play, so it is deliberately
   // NOT on the gated list — pin the sentence that says so.
   "`Pulse.setUserProperties()` is not gated separately",
+  // `clearUser` REMOVES a link rather than creating one, so gating it would
+  // strand an identifier a previous `setUser` persisted — pin the sentence that
+  // keeps it off the gated list.
+  "`Pulse.clearUser()` is never gated",
   "explicit yes",
   "commented one-liner",
   "// TODO(pulse):",

@@ -45,14 +45,12 @@ If you instead set `showsContactFields: false`, or call `Pulse.sendFeedback(_:)`
 
 ## Where your data goes
 
-The Nutrition Label rows above describe *what* the SDK collects. *Where* it ends up depends on the `endpoint` you configure:
+The Nutrition Label rows above describe *what* the SDK collects. *Where* it ends up is settled by your own configuration: `endpoint` is required in `Pulse.configure` and the Swift SDK has no default and no fallback, so events reach exactly one recipient — the Pubky Pulse instance you name. Requiring the argument says nothing about who runs the host you supply, and that is what the rest of your answers turn on:
 
-- **You pass your own `endpoint`.** Events go only to your own Pubky Pulse instance, on infrastructure you control — a first-party destination.
-- **You omit `endpoint`.** The SDK falls back to `https://ingest.pubkypulse.com`, [Pubky's own hosted instance](/docs/getting-started/hosted), which is operated by Pubky — a separate company from you.
+- **You run that instance.** Events go only to infrastructure you control — a first-party destination.
+- **Someone else runs it.** [Pubky's hosted instance](/docs/getting-started/hosted) and any other managed Pubky Pulse provider are separate companies from you; name one in `endpoint` and it is the recipient.
 
-The fallback is **silent**: nothing is logged, warned, or thrown, so you can be relying on Pubky's instance without noticing. Pass `endpoint` explicitly in `Pulse.configure` if you want to be sure you are not.
-
-Either way, Apple asks you to declare data collected by a third-party SDK as your *own* collection, so the table above stands unchanged — and so do the tracking answers below, since neither destination links your users' data to third-party data for advertising or hands it to a data broker. What does change is your privacy policy and any data-deletion commitment you make: on the hosted default the backend is not yours to purge, so name the real recipient and describe the deletion path you actually have. And wherever a store, partner, or compliance questionnaire asks who receives the data, answer for Pubky's hosted instance rather than for infrastructure you control.
+Either way, Apple asks you to declare data collected by a third-party SDK as your *own* collection, so the table above stands unchanged — and so do the tracking answers below, since neither destination links your users' data to third-party data for advertising or hands it to a data broker. What does change is your privacy policy and any data-deletion commitment you make: on a backend you run you can purge a user's events server-side, so describe that path and point users at it, while on an instance you do not run the data is not yours to purge — name the real recipient and describe the deletion path you actually have. And wherever a store, partner, or compliance questionnaire asks who receives the data, answer for whoever operates the instance you configured.
 
 ## App Tracking Transparency
 
@@ -82,7 +80,7 @@ Apple requires a privacy policy URL on your App Store listing. If your current p
 
 > We use Pubky Pulse, a self-hosted analytics service, to understand how users interact with our app and to diagnose errors. Pubky Pulse collects diagnostic data (including crash reports and event logs), product interaction data (such as screen views), and any user feedback you choose to submit. If you sign in, your user identifier is linked to this data so we can support you and improve the product. Pubky Pulse does not use the data for cross-app tracking or advertising and does not access your device's advertising identifier (IDFA).
 
-Adjust to match your app's voice and the specific Pubky Pulse features you use. If you rely on the hosted endpoint default, drop "self-hosted" and name the real recipient — the data goes to Pubky Pulse's hosted instance, operated by Pubky.
+Adjust to match your app's voice and the specific Pubky Pulse features you use. "Self-hosted" only fits if you operate the instance you configured; if `endpoint` points at Pubky's hosted instance or another provider's, drop the word and name the real recipient.
 
 ## What carries forward
 

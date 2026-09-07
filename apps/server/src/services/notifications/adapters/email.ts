@@ -1,3 +1,4 @@
+import { PUBLIC_WEB_URL } from "../../../config.js";
 import type { EmailService, IssueDigestEmailParams, JobAlertEmailParams } from "../../email.js";
 import type { ChannelAdapter, ChannelDeliveryContext, ChannelDeliveryResult } from "../types.js";
 
@@ -26,7 +27,7 @@ export function createEmailAdapter(emailService: EmailService): ChannelAdapter {
               subject: ctx.payload.title,
               body: ctx.payload.body ?? "",
               link: ctx.payload.link
-                ? `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}${ctx.payload.link}`
+                ? `${process.env.WEB_APP_URL ?? PUBLIC_WEB_URL}${ctx.payload.link}`
                 : undefined,
               link_text: "View feedback",
             });
@@ -37,7 +38,7 @@ export function createEmailAdapter(emailService: EmailService): ChannelAdapter {
               subject: ctx.payload.title,
               body: ctx.payload.body ?? "",
               link: ctx.payload.link
-                ? `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}${ctx.payload.link}`
+                ? `${process.env.WEB_APP_URL ?? PUBLIC_WEB_URL}${ctx.payload.link}`
                 : undefined,
               link_text: "View issues",
             });
@@ -69,7 +70,7 @@ function extractIssueDigestParams(ctx: ChannelDeliveryContext): IssueDigestEmail
     dashboard_url:
       typeof data.dashboard_url === "string"
         ? data.dashboard_url
-        : `${process.env.WEB_APP_URL ?? "https://pulse.pubky.org"}/dashboard/issues`,
+        : `${process.env.WEB_APP_URL ?? PUBLIC_WEB_URL}/dashboard/issues`,
   };
 }
 

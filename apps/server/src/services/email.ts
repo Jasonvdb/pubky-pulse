@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { DEFAULT_EMAIL_FROM } from "../config.js";
 
 export interface JobAlertEmailParams {
   job_type: string;
@@ -176,7 +177,7 @@ export class ResendEmailService implements EmailService {
 
 export function createEmailService(resendApiKey?: string, emailFrom?: string): EmailService {
   if (resendApiKey) {
-    return new ResendEmailService(resendApiKey, emailFrom || "noreply@pulse.pubky.org");
+    return new ResendEmailService(resendApiKey, emailFrom || DEFAULT_EMAIL_FROM);
   }
   return new ConsoleEmailService();
 }

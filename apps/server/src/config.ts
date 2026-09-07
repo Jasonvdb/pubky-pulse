@@ -6,6 +6,19 @@ dotenvConfig({ path: resolve(import.meta.dirname, "../../../.env"), quiet: true 
 
 const isProduction = process.env.NODE_ENV === "production";
 
+/**
+ * Public deployment defaults, exported so the modules that need them stop
+ * keeping private copies of the same literal. Each is only a fallback: the
+ * matching environment variable wins wherever one is set.
+ *
+ * `PUBLIC_WEB_URL` is deliberately not `config.webAppUrl`, which falls back to
+ * `http://localhost:3000` for local development. The notification senders want
+ * the public dashboard when `WEB_APP_URL` is unset, not a localhost link.
+ */
+export const DEFAULT_EMAIL_FROM = "noreply@pubkypulse.com";
+export const DEFAULT_API_PUBLIC_URL = "https://api.pubkypulse.com";
+export const PUBLIC_WEB_URL = "https://pubkypulse.com";
+
 function resolveAttachmentsSigningSecret(): string {
   const explicit = process.env.PULSE_ATTACHMENTS_SIGNING_SECRET;
   if (explicit) return explicit;
@@ -119,10 +132,10 @@ export const config = {
   cookieSecure: isProduction,
   cookieDomain: process.env.COOKIE_DOMAIN || undefined,
   resendApiKey: process.env.RESEND_API_KEY || "",
-  emailFrom: process.env.EMAIL_FROM || "noreply@pulse.pubky.org",
+  emailFrom: process.env.EMAIL_FROM || DEFAULT_EMAIL_FROM,
   webAppUrl: process.env.WEB_APP_URL || "http://localhost:3000",
   systemJobsAlertEmail: process.env.SYSTEM_JOBS_ALERT_EMAIL || "",
-  publicUrl: process.env.API_PUBLIC_URL || "https://api.pulse.pubky.org",
+  publicUrl: process.env.API_PUBLIC_URL || DEFAULT_API_PUBLIC_URL,
   attachmentsPath:
     process.env.PULSE_ATTACHMENTS_PATH ||
     (isProduction ? "/opt/pubky-pulse-attachments" : "./data/attachments"),

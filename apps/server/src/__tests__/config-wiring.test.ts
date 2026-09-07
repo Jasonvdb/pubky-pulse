@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { parseCorsOrigins, resolveIdentityConfig, resolveTrustProxy } from "../config.js";
+import {
+  DEFAULT_API_PUBLIC_URL,
+  DEFAULT_EMAIL_FROM,
+  PUBLIC_WEB_URL,
+  parseCorsOrigins,
+  resolveIdentityConfig,
+  resolveTrustProxy,
+} from "../config.js";
 
 /**
  * Startup wiring for the identity configuration.
@@ -176,5 +183,20 @@ describe("resolveTrustProxy", () => {
     expect(() => resolveTrustProxy("1")).toThrow(/hop count/);
     expect(() => resolveTrustProxy(" 2 ")).toThrow(/127\.0\.0\.1,::1/);
     expect(() => resolveTrustProxy("0")).toThrow(/TRUST_PROXY/);
+  });
+});
+
+/**
+ * The public deployment defaults. Asserted as the exported constants rather
+ * than through the resolved `config` object for the same reason the cases above
+ * take explicit records: `config.ts` dotenv-loads the repo-root `.env` at
+ * import, so reading `config.emailFrom` here would pass in CI and fail on a
+ * developer machine whose `.env` sets `EMAIL_FROM`.
+ */
+describe("public deployment defaults", () => {
+  it("point at the pubkypulse.com domain", () => {
+    expect(DEFAULT_EMAIL_FROM).toBe("noreply@pubkypulse.com");
+    expect(DEFAULT_API_PUBLIC_URL).toBe("https://api.pubkypulse.com");
+    expect(PUBLIC_WEB_URL).toBe("https://pubkypulse.com");
   });
 });

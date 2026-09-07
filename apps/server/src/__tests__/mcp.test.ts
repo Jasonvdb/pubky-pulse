@@ -122,6 +122,54 @@ const EXPECTED_GUIDE_WEB_TOPICS = [
 ] as const;
 
 /**
+ * The load-bearing clauses of the guide's "## Identity Is Opt-In" section
+ * (apps/server/src/mcp/guide.ts). That section is the only thing standing
+ * between an agent and an unrequested `setUser()` call in someone's app, and
+ * prose with no test rots: pin the anonymous default, the calls it covers, the
+ * explicit-yes gate, the no-human fallback, each thing consent must not be
+ * inferred from, and the Node asymmetry. Substrings, checked verbatim with
+ * `.toContain(...)`.
+ */
+const EXPECTED_GUIDE_IDENTITY_CONSENT = [
+  "## Identity Is Opt-In",
+  "**Anonymous is the default.**",
+  "Pulse.setUser()",
+  "Pulse.withUser()",
+  // `setUserProperties` rides on whichever id is in play, so it is deliberately
+  // NOT on the gated list — pin the sentence that says so.
+  "`Pulse.setUserProperties()` is not gated separately",
+  // `clearUser` never creates a link, so gating it would strand an identifier a
+  // previous `setUser` persisted — pin the sentence that keeps it off the gated
+  // list. It is not an unlink either: ingest re-resolves the restored anonymous
+  // id back to the account that claimed it (resolveClaimedUserIds), so pin the
+  // correction too — the guide must never call `clearUser` an unlink or a
+  // deletion control again.
+  "`Pulse.clearUser()` is never gated",
+  "It is not an unlink",
+  "`newAnonymousId: true`",
+  "not a privacy or data-deletion control",
+  "explicit yes",
+  "commented one-liner",
+  "// TODO(pulse):",
+  "Consent is never inferred",
+  "auth system",
+  "already in scope at the callsite",
+  "another analytics vendor",
+  "Node is the asymmetry",
+] as const;
+
+/**
+ * Sections an agent is standing in when it decides to write an identity call.
+ * Each must name **Identity Is Opt-In** so the rule is one hop away wherever
+ * the decision is made; the value is the heading that ends the slice.
+ */
+const GUIDE_IDENTITY_CROSS_REFS: ReadonlyArray<readonly [string, string]> = [
+  ["### Setting up a new project", "### Defining what to track"],
+  ["## SDK Integration Guides", "## Key Notes"],
+  ["## Key Notes", "## Bulk Import"],
+];
+
+/**
  * Every feature surface named in `SERVER_INSTRUCTIONS` (apps/server/src/mcp/server.ts).
  * When you add a domain to that bullet list, add its substring here.
  * Strings must match verbatim — they're checked with `.toContain(...)`.
@@ -137,6 +185,11 @@ const EXPECTED_INSTRUCTION_KEYWORDS = [
   "Locale demand",
   "Time-series rollups",
   "Attachments",
+  // Identity consent: the rule itself, plus the pointer that makes the guide
+  // section findable. Matched case-sensitively — keep both spellings in sync
+  // with SERVER_INSTRUCTIONS.
+  "Identity is opt-in",
+  "**Identity Is Opt-In** rule",
 ];
 
 /** Send an MCP JSON-RPC request to /mcp */
@@ -172,6 +225,12 @@ async function callTool(
     name: toolName,
     arguments: args,
   });
+}
+
+/** Read the `pubky-pulse://guide` resource text */
+async function readGuide(): Promise<string> {
+  const res = await mcpRequest(TEST_AGENT_KEY, "resources/read", { uri: "pubky-pulse://guide" });
+  return res.json().result.contents[0].text as string;
 }
 
 /** Parse MCP tool result text content */
@@ -344,6 +403,27 @@ describe("MCP endpoint", () => {
       // its browser origins on the app record, so the guide must not send an
       // agent back to the env var it cannot edit.
       expect(contents[0].text).not.toContain("add the site's origin to the server's");
+    });
+
+    it("states the identity opt-in rule in the guide", async () => {
+      const guide = await readGuide();
+      for (const clause of EXPECTED_GUIDE_IDENTITY_CONSENT) {
+        expect(guide, `MCP guide missing identity-consent clause "${clause}"`).toContain(clause);
+      }
+    });
+
+    it("cross-references Identity Is Opt-In from every section that leads to an identity call", async () => {
+      const guide = await readGuide();
+      for (const [heading, nextHeading] of GUIDE_IDENTITY_CROSS_REFS) {
+        const start = guide.indexOf(heading);
+        expect(start, `MCP guide missing section "${heading}"`).toBeGreaterThanOrEqual(0);
+        const end = guide.indexOf(nextHeading, start + heading.length);
+        expect(end, `MCP guide missing section "${nextHeading}"`).toBeGreaterThan(start);
+        expect(
+          guide.slice(start, end),
+          `MCP guide section "${heading}" no longer points at Identity Is Opt-In`,
+        ).toContain("Identity Is Opt-In");
+      }
     });
   });
 

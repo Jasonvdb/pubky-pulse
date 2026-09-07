@@ -30,6 +30,8 @@ The SDKs send events, metrics, and funnels to Pubky Pulse from web, backend, and
 | Compression | Gzip | Gzip | Gzip | Gzip |
 | Min runtime | Evergreen browsers | Node.js 20 | iOS 16 / macOS 13 | Android 7 (API 24) |
 
+User scoping is opt-in in every SDK: nothing sends an identifier of yours until you wire up an identity call, so get the developer's explicit yes first — [Web](/docs/sdks/web/identity), [Node.js](/docs/sdks/node/identity), [Swift](/docs/sdks/swift/identity), [Android](/docs/sdks/android/identity).
+
 ## Choosing an SDK
 
 - Building a **web app** → [Web SDK](/docs/sdks/web). A Next.js app uses both: the Web SDK in client components and the [Node.js SDK](/docs/sdks/node) in route handlers, joined by a shared session id — see the [Next.js guide](/docs/sdks/web/nextjs).

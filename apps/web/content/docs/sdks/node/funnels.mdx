@@ -3,6 +3,8 @@ title: Funnels
 description: Record funnel step completions with Pulse.step() in the Node.js SDK.
 ---
 
+import IdentityConsent from '../../../_snippets/identity-consent.mdx';
+
 Use `Pulse.step()` to emit named step completions that feed into [funnel analytics](/docs/concepts/funnels). The step name you pass must match the `step_name` in your funnel definition's `event_filter`.
 
 ## Tracking Steps
@@ -20,6 +22,8 @@ Pulse.step("plan-selected", { plan: "pro", interval: "annual" });
 ```
 
 ## Per-User Funnel Tracking
+
+<IdentityConsent />
 
 Funnels are most useful when steps are associated with a specific user. Use a scoped instance so every step carries the user ID:
 

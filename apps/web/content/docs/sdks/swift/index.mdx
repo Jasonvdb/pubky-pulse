@@ -21,7 +21,7 @@ The SDK is a static `Pulse` enum. All calls are non-blocking -- events are buffe
 - **[Structured metrics](/docs/sdks/swift/metrics)** -- lifecycle operations (`startOperation` / `complete` / `fail` / `cancel`) with automatic duration tracking, and single-shot measurements via `recordMetric`.
 - **[Funnel tracking](/docs/sdks/swift/funnels)** -- track user progression through multi-step flows with `Pulse.step()`.
 - **[Screen tracking](/docs/sdks/swift/screen-tracking)** -- `.pulseScreen()` SwiftUI view modifier for automatic screen view and time-on-screen tracking.
-- **[Identity management](/docs/sdks/swift/identity)** -- anonymous IDs generated and persisted in Keychain, with server-side claim to link anonymous events to real users after login.
+- **[Identity management](/docs/sdks/swift/identity)** (opt-in) -- anonymous IDs generated and persisted in Keychain, with server-side claim to link anonymous events to real users after login.
 - **[User properties](/docs/sdks/swift/user-properties)** -- attach custom key-value metadata to the current user with `Pulse.setUserProperties()`.
 - **File attachments** -- attach files (logs, failed inputs, binaries) to `Pulse.error()` events via `PulseAttachment`. See [Attachments](/docs/concepts/attachments).
 - **Network monitoring** -- connection type (wifi, cellular, ethernet, offline) included on every event via `NWPathMonitor`.

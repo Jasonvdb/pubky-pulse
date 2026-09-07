@@ -12,7 +12,7 @@ The system is backed by two tables. Keeping them separate means a failed email r
 | Table | Purpose |
 |-------|---------|
 | `notifications` | Per-user inbox row. One per recipient, written synchronously on enqueue. Carries the pre-rendered `title`, `body`, optional deep `link`, structured `data`, `read_at`, `deleted_at`. |
-| `notification_deliveries` | Per-channel attempt log. One row per `(notification, channel)`. Status moves `pending → sent | failed | skipped`. The `in_app` row is created and marked `sent` synchronously alongside the inbox insert. |
+| `notification_deliveries` | Per-channel attempt log. One row per enabled `(notification, channel)`. Status moves `pending → sent | failed | skipped`. When `in_app` is enabled, its delivery marker is created and marked `sent` synchronously alongside the unconditional inbox insert. |
 
 ## Channels
 
@@ -20,17 +20,17 @@ Notifications fan out across **channels**. The current set is `in_app` and `emai
 
 | Channel | Description |
 |---------|-------------|
-| `in_app` | Inbox row in the dashboard at `/dashboard/notifications`, with an unread badge on the user-menu avatar (polled every 30s). Always written synchronously. |
+| `in_app` | Internal delivery marker for the inbox at `/dashboard/notifications`, with an unread badge on the user-menu avatar (polled every 30s). The inbox row itself is always written synchronously, independent of the stored `in_app` preference. |
 | `email` | HTML email via Resend (or console logger in dev). Per-type formatters (`sendIssueDigest`, `sendJobAlert`) plus a generic fallback. |
 
 ## Notification Types
 
-Each notification has a `type` that determines its formatters and which channels users can toggle.
+Each notification has a `type` that determines its formatters and declared delivery channels.
 
 | Type | Trigger | Channels | Default On |
 |------|---------|----------|------------|
 | `issue.new` | Fires from the `issue_scan` job at the end of every run when one or more **production** issues were created or regressed. One notification per team per scan, summarizing all of that run's new + regressed issues — bypasses the per-project digest cadence so it lands in close to real time. Dev-build crashes are excluded. | `in_app`, `email` | `in_app` (email off by default) |
-| `issue.digest` | Per-project periodic digest of new and regressed issues, sent by the `issue_notify` job at the project's configured frequency. | `in_app`, `email` | `email` only (in_app off so the digest doesn't double up with the instant `issue.new` alert) |
+| `issue.digest` | Per-project periodic digest of new and regressed issues, sent by the `issue_notify` job at the project's configured frequency. | `in_app`, `email` | `email` only |
 | `feedback.new` | A user submitted feedback in one of the team's apps. | `in_app`, `email` | Both |
 | `questionnaire.response_new` | A user submitted a questionnaire response in one of the team's apps. Defaults skew to in-app only because responses can be high-volume — email is opt-in. | `in_app`, `email` | `in_app` only (email off by default) |
 | `job.completed` | A manual job run triggered with `notify: true` finished — only the triggering user is notified, never the whole team. | `in_app`, `email` | Both |
@@ -42,18 +42,18 @@ Adding a new type is three steps: append to `NOTIFICATION_TYPES`, add an entry t
 Channel preferences live under `users.preferences.notifications.types` as a sparse override map: missing entries fall back to the type's defaults from `NOTIFICATION_TYPE_META`. Read and update via the standard user-prefs endpoints:
 
 - `GET /v1/auth/me` returns the merged preferences blob.
-- `PATCH /v1/auth/me` shallow-merges the top level and deep-replaces nested objects, so two browser tabs editing different sub-objects don't clobber each other.
+- `PATCH /v1/auth/me` merges preference subtrees, including notification types and sibling channel overrides, so updating email does not discard an existing `in_app` value.
 
-The dashboard's profile page at `/dashboard/profile/notifications` renders one row per type per channel and PATCHes the override.
+The dashboard's profile page at `/dashboard/profile/notifications` exposes only the email preference for each email-capable type and PATCHes that override. Existing `in_app` values remain stored for compatibility, but the dashboard does not expose them as preferences. An eligible recipient's inbox row is always created, regardless of either channel preference.
 
-## Per-Project Alert Frequency vs Per-User Channels
+## Per-Project Alert Frequency vs Per-User Email
 
 Two knobs cooperate:
 
 - **Per-project `issue_alert_frequency`** (`none`, `hourly`, `6_hourly`, `daily`, `weekly`) is the **rate-limit / batching policy** — how often the `issue_notify` job assembles a digest for that project. It applies to all team members.
-- **Per-user channel toggles** decide **where the digest goes** for each recipient — inbox only, email only, or both.
+- **Per-user email toggles** decide whether the digest is also delivered by email. Dashboard inbox rows are always created.
 
-A project on `daily` digests with three team members where one disables email and another disables the inbox row will send three digests at the same hour, each over the channels the recipient has enabled.
+A project on `daily` digests with three eligible team members creates an inbox notification for each member at the same hour. Email delivery follows each member's preference.
 
 ## System-Job Alerts Stay Direct
 
@@ -79,7 +79,7 @@ Notifications are **user-scoped, not team-scoped**. The REST routes accept JWT c
 ## Related Resources
 
 - [`/dashboard/notifications`](/dashboard/notifications) — inbox UI
-- [`/dashboard/profile/notifications`](/dashboard/profile/notifications) — per-channel preferences
+- [`/dashboard/profile/notifications`](/dashboard/profile/notifications) — email preferences
 - [Notifications API](/docs/api-reference/notifications) — REST reference
 - [Issues](/docs/concepts/issues) — `issue.digest` producer + per-project alert frequency
 - [Feedback](/docs/concepts/feedback) — `feedback.new` producer

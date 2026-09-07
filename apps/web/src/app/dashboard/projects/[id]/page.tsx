@@ -568,11 +568,11 @@ function IssueAlertSettings({
         {error && <p className="text-sm text-destructive">{error}</p>}
         <p className="text-xs text-muted-foreground">
           Controls how often new or regressed issues batch into a notification for this project.
-          Per-channel toggles (in-app, email) live on your{" "}
+          Email delivery is configured in your{" "}
           <Link href="/dashboard/profile/notifications" className="underline">
             notification preferences
           </Link>{" "}
-          page.
+          while notifications always appear in your dashboard inbox.
         </p>
       </CardContent>
     </Card>

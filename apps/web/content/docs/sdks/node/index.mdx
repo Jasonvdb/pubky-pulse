@@ -12,7 +12,7 @@ The `@synonymdev/pubky-pulse-node` SDK instruments Node.js backend services -- E
 - **[File Attachments](/docs/concepts/attachments)** -- attach files from disk or in-memory buffers to any event via the `attachments` option on every log method
 - **[Structured Metrics](/docs/sdks/node/metrics)** -- track operation lifecycles (start, complete, fail, cancel) and record single-shot measurements
 - **[Funnels](/docs/sdks/node/funnels)** -- emit named step completions for backend conversion tracking
-- **[User Scoping](/docs/sdks/node/identity)** -- `Pulse.withUser(userId)` returns a scoped instance that tags every event with a user ID
+- **[User Scoping](/docs/sdks/node/identity)** (opt-in) -- `Pulse.withUser(userId)` returns a scoped instance that tags every event with a user ID
 - **[Session Scoping](/docs/sdks/node/identity#withsession)** -- `Pulse.withSession(sessionId)` links backend events to a client's session for cross-SDK correlation
 - **[User Properties](/docs/sdks/node/user-properties)** -- attach custom metadata to users via `Pulse.setUserProperties()`
 - **[Serverless Support](/docs/sdks/node/serverless)** -- `Pulse.wrapHandler()` guarantees event flush before your function returns

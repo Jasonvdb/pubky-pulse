@@ -42,7 +42,9 @@ Access model — read wide, write narrow:
 - Human-only, always 403 for an agent key: changing a project's owner list, and deleting projects, apps, feedback items, questionnaires, questionnaire responses, attachments, or another author's comment.
 - Agent-supported writes include deleting metric and funnel definitions, merging issues, changing issue/feedback/questionnaire-response status, triggering and cancelling project jobs, and deleting comments this exact key authored.
 
-For concepts, resource hierarchy, naming conventions, soft-delete rules, key types, data modes, and end-to-end workflows, fetch the \`pubky-pulse://guide\` resource — it covers everything tool descriptions don't.`;
+Identity is opt-in: every SDK works anonymously by default, so never write \`setUser\`/\`withUser\` into an app without asking the developer and getting an explicit yes — with no human to ask, leave a commented one-liner at the callsite and nothing else.
+
+For concepts, resource hierarchy, naming conventions, soft-delete rules, key types, data modes, the **Identity Is Opt-In** rule, and end-to-end workflows, fetch the \`pubky-pulse://guide\` resource — it covers everything tool descriptions don't.`;
 
 export function createMcpServer(app: FastifyInstance, agentKey: string): McpServer {
   const server = new McpServer(

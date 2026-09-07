@@ -8,7 +8,7 @@ Pubky Pulse is designed to be set up by your coding agent. There are four steps:
 1. Run or access a Pubky Pulse instance
 2. Sign in to the dashboard
 3. Add the MCP server to your client
-4. Tell your agent to create a project and an app, then integrate an SDK
+4. Tell your agent to create a project and an app, then integrate an SDK — it will ask you whether to link events to your real user ids
 
 ## 1. Run or access an instance
 
@@ -92,6 +92,8 @@ project and an app, then instrument the code with the SDK for this platform.
 
 Supported clients read the `pubky-pulse://guide` resource automatically on connection, so your agent already knows the concepts, resource hierarchy, and conventions — it takes it from there: `create-project`, `create-app`, then installing the SDK and wiring up event tracking.
 
+Identity is the one thing the agent will not decide alone. Every SDK is anonymous by default, and the guide instructs the agent to ask before linking events to your own user ids — and to leave the integration anonymous-only if nobody answers.
+
 For a deeper, repeatable procedure, install the [Pubky Pulse agent skills](https://github.com/Jasonvdb/pubky-pulse-skills). The guide tells the agent what the tools do; the skills tell it how to work: audit the codebase for surfaces, draft a tracking plan, wire each SDK with every error path covered, verify data arrives, and later triage issues. In Claude Code:
 
 ```
@@ -114,6 +116,8 @@ Other agents install from the same repo; its README has the per-client commands.
 ### Pubky Pulse
 Use the Pubky Pulse MCP tools for any analytics work — read the `pubky-pulse://guide`
 resource first, and see https://pubkypulse.com/docs/sdks for SDK integration.
+Analytics are anonymous by default: get an explicit yes from a human before calling
+`Pulse.setUser` / `Pulse.withUser` to link events to real user ids.
 ```
 
 Every future session then knows Pubky Pulse is integrated and picks up the right context automatically — including the full tool surface, funnel design rules, and lifecycle metric patterns.

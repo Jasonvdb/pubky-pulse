@@ -13,7 +13,7 @@ Events are stamped with `environment: "web"` and `sdk_name: "pubky-pulse-web"`, 
 - **[Screens and route tracking](/docs/sdks/web/screens)** — History API navigations emit `sdk:screen_appeared` / `sdk:screen_disappeared` on their own; `Pulse.trackScreen()` names anything the URL does not describe
 - **[Structured metrics](/docs/sdks/web/metrics)** — `Pulse.startOperation()` measures work with a beginning and an end; `Pulse.recordMetric()` records a measurement you already have
 - **[Funnels](/docs/sdks/web/funnels)** — `Pulse.step()` emits named step completions for conversion tracking
-- **[Identity](/docs/sdks/web/identity)** — an anonymous id per browser, and `Pulse.setUser()` flushes, claims the anonymous history server-side, then switches the id
+- **[Identity](/docs/sdks/web/identity)** (opt-in) — an anonymous id per browser, and `Pulse.setUser()` flushes, claims the anonymous history server-side, then switches the id
 - **[User properties](/docs/sdks/web/user-properties)** — `Pulse.setUserProperties()` merges custom metadata onto the current user
 - **[Feedback](/docs/sdks/web/feedback)** — `Pulse.sendFeedback()` submits free text with optional name and email, and returns a receipt
 - **[Questionnaires](/docs/sdks/web/questionnaires)** — fetch a survey by slug, render it yourself, and save drafts or submissions with the pure answer helpers

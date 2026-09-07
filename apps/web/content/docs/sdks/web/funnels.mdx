@@ -3,6 +3,8 @@ title: Funnels
 description: Record funnel step completions from the browser with Pulse.step().
 ---
 
+import IdentityConsent from '../../../_snippets/identity-consent.mdx';
+
 Use `Pulse.step()` to emit named step completions that feed into [funnel analytics](/docs/concepts/funnels). Each call logs `step:<name>` at info level.
 
 ## Tracking Steps
@@ -16,6 +18,8 @@ Pulse.step("onboarding_done");
 Use the same names every time and the server can draw the drop-off between them. Step names are free-form and kept verbatim — unlike metric slugs, nothing is normalised — so a typo becomes its own step.
 
 ## Steps and Identity
+
+<IdentityConsent />
 
 Funnel analytics correlate steps by user id. In the browser every step already carries one: the anonymous id before sign-in, the real id after [`Pulse.setUser()`](/docs/sdks/web/identity). Because `setUser` claims the anonymous history server-side, steps taken before sign-up still belong to the same person afterwards — which is what makes a sign-up funnel measurable at all.
 

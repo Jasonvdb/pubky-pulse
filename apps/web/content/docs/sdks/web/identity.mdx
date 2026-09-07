@@ -3,6 +3,10 @@ title: Identity
 description: Anonymous ids, Pulse.setUser(), clearUser(), and reading the current session id in the browser.
 ---
 
+import IdentityConsent from '../../../_snippets/identity-consent.mdx';
+
+<IdentityConsent />
+
 Every browser gets an anonymous id at `configure()` time and events are attributed to it right away. When the person signs in, `setUser` links the two so the session that led to the sign-up is not orphaned.
 
 ## Anonymous Ids

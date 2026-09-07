@@ -3,6 +3,10 @@ title: Identity
 description: Manage anonymous and known user identities in the Node.js SDK.
 ---
 
+import IdentityConsent from '../../../_snippets/identity-consent.mdx';
+
+<IdentityConsent />
+
 The Node.js SDK provides `Pulse.withUser()` to associate events with a specific user. This is the primary mechanism for per-user analytics, funnel tracking, and session tracing.
 
 ## withUser
@@ -184,7 +188,7 @@ Both the `start` and `complete` (or `fail`) events will have `user_id` set.
 
 ## User Scoping with Funnels
 
-Funnel analytics correlate steps by user ID. Always use a scoped instance when tracking funnel steps:
+Funnel analytics correlate steps by user ID, and the server ignores steps that carry none. Unlike the browser and mobile SDKs, Node has no anonymous ID to fall back on -- so scope funnel steps with `withUser` **if and only if** identity was opted into:
 
 ```typescript
 const pulse = Pulse.withUser(userId);
@@ -194,4 +198,11 @@ pulse.step("email-verified");
 pulse.step("first-project-created");
 ```
 
-Without a user ID, the server cannot determine which user completed which steps. See the [Funnels guide](/docs/sdks/node/funnels) for more backend funnel patterns.
+If it was not, keep the backend anonymous and define the funnel on the client, where the web, Swift, and Android SDKs supply the anonymous ID that correlates the steps. Backend work still shows up next to it -- scope the request with `Pulse.withSession(clientSessionId)` and the server's events land in the browser's session, without any user identifier:
+
+```typescript
+const pulse = Pulse.withSession(clientSessionId);
+pulse.info("Verification email sent");
+```
+
+See the [Funnels guide](/docs/sdks/node/funnels) for more backend funnel patterns.

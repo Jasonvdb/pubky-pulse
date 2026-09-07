@@ -12,9 +12,10 @@ export const MCP_URL = `${API_URL}/mcp`;
 const IS_DEV = process.env.NODE_ENV === "development";
 export const SERVER_NAME = IS_DEV ? "pubky-pulse-local-dev" : "pubky-pulse";
 
-export type SetupMethod = "command" | "native-ui" | "config" | "unsupported";
+export type SetupMethod = "prompt" | "command" | "native-ui" | "config" | "unsupported";
 
 export const SETUP_METHOD_LABELS: Record<SetupMethod, string> = {
+  prompt: "Prompt",
   command: "Command",
   "native-ui": "Native UI",
   config: "Config",
@@ -37,6 +38,31 @@ export interface EditorConfig {
 }
 
 export const EDITORS: EditorConfig[] = [
+  {
+    name: "Prompt",
+    callout:
+      "Works in any agent that can run a command or edit a file. It writes the server to your user-level config, so every project picks it up.",
+    scopes: [
+      {
+        label: "Any agent",
+        method: "prompt",
+        language: "markdown",
+        note: "No CLI flags or config files to look up — paste this into your agent and let it configure itself:",
+        content: (key, url, name) =>
+          `Add the Pubky Pulse MCP server to my global (user-level) agent config, so it loads in every project:
+
+- Name: ${name}
+- Transport: remote streamable HTTP
+- URL: ${url}
+- Header: Authorization: Bearer ${key}
+
+Use whatever mechanism this harness supports — its own \`mcp add\` command if it has
+one, otherwise the user-level config file. Do not write it into the project or
+commit the key anywhere; it is a secret. Then reload the MCP servers and call the
+\`whoami\` tool to confirm the connection works.`,
+      },
+    ],
+  },
   {
     name: "Claude Code",
     callout: "Verify the connection by typing /mcp in Claude Code.",

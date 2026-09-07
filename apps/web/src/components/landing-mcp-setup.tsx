@@ -43,6 +43,7 @@ export function LandingMcpSetup() {
   const setupText = scope.content(activeKey, MCP_URL, SERVER_NAME);
   const setupDisplay = scope.content(displayKey, MCP_URL, SERVER_NAME);
   const isUnsupported = scope.method === "unsupported";
+  const isPrompt = scope.method === "prompt";
 
   return (
     <div>
@@ -97,7 +98,11 @@ export function LandingMcpSetup() {
           </span>
           {scope.note}
         </p>
-        <pre className="overflow-x-auto px-5 py-4 font-mono text-[13px] leading-relaxed">
+        <pre
+          className={`px-5 py-4 font-mono text-[13px] leading-relaxed ${
+            isPrompt ? "break-words whitespace-pre-wrap" : "overflow-x-auto"
+          }`}
+        >
           <code className="text-card-foreground" data-language={scope.language}>
             {hasRealKey
               ? setupDisplay.split(displayKey).map((part, i, arr) => (

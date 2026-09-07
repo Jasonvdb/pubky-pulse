@@ -155,7 +155,13 @@ export function McpSetupInstructions() {
 
               {/* Copyable setup content */}
               <div className="relative">
-                <pre className="overflow-x-auto rounded-lg border border-border bg-fd-code-background p-4 text-sm">
+                <pre
+                  className={`rounded-lg border border-border bg-fd-code-background p-4 text-sm ${
+                    scope.method === "prompt"
+                      ? "break-words whitespace-pre-wrap"
+                      : "overflow-x-auto"
+                  }`}
+                >
                   <code data-language={scope.language}>{setupDisplay}</code>
                 </pre>
                 {!isUnsupported && (

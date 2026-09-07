@@ -50,7 +50,23 @@ The [MCP endpoint](/docs/mcp/setup) is the agent interface: one HTTP URL gives y
 | Self-hosted | `https://api.yourdomain.com/mcp` |
 | Local development | `http://localhost:4000/mcp` |
 
-For Claude Code, the whole setup is one command:
+The quickest path is to let the agent configure itself — paste this into any agent, with your own key:
+
+```text
+Add the Pubky Pulse MCP server to my global (user-level) agent config, so it loads in every project:
+
+- Name: pubky-pulse
+- Transport: remote streamable HTTP
+- URL: https://api.pulse.pubky.org/mcp
+- Header: Authorization: Bearer pulse_agent_YOUR_KEY_HERE
+
+Use whatever mechanism this harness supports — its own `mcp add` command if it has
+one, otherwise the user-level config file. Do not write it into the project or
+commit the key anywhere; it is a secret. Then reload the MCP servers and call the
+`whoami` tool to confirm the connection works.
+```
+
+For Claude Code, the equivalent is one command:
 
 ```bash
 claude mcp add --transport http --scope user pubky-pulse https://api.pulse.pubky.org/mcp \

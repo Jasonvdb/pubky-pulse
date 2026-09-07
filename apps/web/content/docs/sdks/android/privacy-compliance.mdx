@@ -11,21 +11,18 @@ The SDK collects analytics on your behalf, so its collection becomes *your* coll
 
 - The SDK collects **analytics events, diagnostics/crash data, and product interaction** — and, only if you opt in, a **user id** (`Pulse.setUser`) and **feedback name/email** (the `PulseFeedbackView` contact fields).
 - It is **not** used for tracking or advertising. No Advertising ID, no `AD_ID` permission, no cross-app/cross-site tracking, no ad SDKs.
-- Whether the data is **shared** depends on the `endpoint` you configure: your own ingest host is first-party and *not* shared; the hosted default sends it to Pubky, a separate company, which Play counts as sharing. See [Where your data goes](#where-your-data-goes).
+- The data goes only to the ingest host you configure — your own instance, a first-party destination — so it is **"Collected,"** never **"Shared."** See [Where your data goes](#where-your-data-goes).
 - All transport is **encrypted in transit** over HTTPS.
 
 ## Where your data goes
 
-Your Data safety answers turn on one thing: which ingest endpoint the SDK sends to.
+`endpoint` is required in `Pulse.configure` — the Android SDK has no default and no fallback — so there is only one destination to answer for: *your* Pubky Pulse instance, on infrastructure you control.
 
-- **You pass your own `endpoint`.** Data goes only to *your* Pubky Pulse instance, on infrastructure you control. That is a first-party destination — declare the data as **"Collected,"** not **"Shared."**
-- **You omit `endpoint`.** The SDK falls back to `https://ingest.pubkypulse.com`, [Pubky's own hosted instance](/docs/getting-started/hosted). Pubky is a separate company from you, and Play defines *sharing* as transfer to a separate company — so that data is **shared**, and the form has to say so.
-
-The fallback is **silent**: nothing is logged, warned, or thrown, so you can be in the second case without ever noticing. The reliable way to stay in the first is to always pass `endpoint` explicitly in `Pulse.configure`.
+That is a first-party destination, so declare the SDK's data as **"Collected,"** not **"Shared."** Play defines *sharing* as transfer to a separate company, and the SDK sends to no recipient other than the ingest host you configured.
 
 ## What the SDK collects
 
-Map each row below to a **Data type** in the Play Data safety form. For every type you declare, Google asks: *collected or shared?*, *required or optional?*, *processed ephemerally?*, and *purposes?*. The SDK answers are the same across the board: **collected** — and **shared** as well, for every row, if you rely on the hosted endpoint default ([see above](#where-your-data-goes)) — and the purposes are **App functionality** and **Analytics**.
+Map each row below to a **Data type** in the Play Data safety form. For every type you declare, Google asks: *collected or shared?*, *required or optional?*, *processed ephemerally?*, and *purposes?*. The SDK answers are the same across the board: **collected**, not shared, for every row ([see above](#where-your-data-goes)) — and the purposes are **App functionality** and **Analytics**.
 
 | What the SDK sends | Play "Data type" category | When | Purpose |
 |---|---|---|---|
@@ -45,7 +42,7 @@ Map each row below to a **Data type** in the Play Data safety form. For every ty
 
 - **Not used for tracking.** No advertising/marketing across apps or sites, no data brokering. In the form, do **not** check "Used for advertising or marketing" for any SDK-collected type. (Android analog of the Swift manifest's `NSPrivacyTracking = false`.)
 - **No Advertising ID.** The SDK does not request, read, or transmit the Google Advertising ID (GAID). It declares no `AD_ID` permission and links no ad SDKs.
-- **No ad networks, no data brokers.** The SDK transmits to one place only: the Pubky Pulse ingest endpoint in effect for your app. Nothing is sold, brokered, or fanned out to advertising partners. Whether that single destination counts as *sharing* depends on which endpoint it is — "sharing" in Play's sense means transfer to a *separate* company, so your own instance is **"Collected"** only, while the hosted default is **"Collected"** *and* **"Shared."** See [Where your data goes](#where-your-data-goes).
+- **No ad networks, no data brokers.** The SDK transmits to one place only: the Pubky Pulse ingest endpoint in effect for your app. Nothing is sold, brokered, or fanned out to advertising partners. That single destination is your own instance, and "sharing" in Play's sense means transfer to a *separate* company — so the SDK's data is **"Collected"** only, never **"Shared."** See [Where your data goes](#where-your-data-goes).
 - **No location, contacts, photos, files, messages, or audio** are collected by the SDK. (Your app may attach files to events via the [attachments](/docs/concepts/attachments) API — those are content *you* choose to upload, not anything the SDK harvests.)
 
 ## Security & deletion answers
@@ -53,7 +50,7 @@ Map each row below to a **Data type** in the Play Data safety form. For every ty
 The Data safety form has a **Security practices** section. For the SDK's data:
 
 - **Encrypted in transit: Yes.** All requests to the ingest endpoint go over HTTPS (TLS). Use an `https://` endpoint in `Pulse.configure` — the SDK does not send analytics over cleartext.
-- **You can request that data be deleted: Yes (best-effort) — if the backend is yours.** When you pass your own `endpoint`, you can honor deletion requests server-side: purge a user's events and `app_users` row by their id. Provide a deletion request path (an in-app control or a documented contact) and point Google's "users can request deletion" answer at it. Note this is best-effort: events already aggregated into anonymous time-series rollups are not personally identifiable and may be retained. If you rely on the hosted default, the backend is **not** yours to purge — answer according to the deletion path you actually have, which means arranging it with whoever operates that instance rather than promising a server-side purge you cannot perform.
+- **You can request that data be deleted: Yes (best-effort).** The backend is yours, so you can honor deletion requests server-side: purge a user's events and `app_users` row by their id. Provide a deletion request path (an in-app control or a documented contact) and point Google's "users can request deletion" answer at it. Note this is best-effort: events already aggregated into anonymous time-series rollups are not personally identifiable and may be retained.
 
 ## Permissions the SDK adds
 
@@ -74,6 +71,6 @@ Google Play requires a privacy policy URL. If your current policy does not alrea
 
 > We use Pubky Pulse, a self-hosted analytics service, to understand how users interact with our app and to diagnose errors. Pubky Pulse collects diagnostic data (including crash reports and event logs), product interaction data (such as screen views), and any feedback you choose to submit. If you sign in, your user identifier is linked to this data so we can support you and improve the product. Pubky Pulse does not use the data for cross-app tracking or advertising and does not access your device's advertising identifier.
 
-Adjust to match your app's voice and the specific Pubky Pulse features you use. If you rely on the hosted endpoint default, drop "self-hosted" and name the real recipient — the data goes to Pubky Pulse's hosted instance, operated by Pubky.
+Adjust to match your app's voice and the specific Pubky Pulse features you use.
 
 > When in doubt, declare more rather than less. Revisit the Data safety form only when you start using a new Pubky Pulse feature that introduces a category you have not yet declared (for example, enabling `PulseFeedbackView` contact fields for the first time).

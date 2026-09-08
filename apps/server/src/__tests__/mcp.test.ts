@@ -113,7 +113,7 @@ const EXPECTED_GUIDE_SDKS = ["**Web**", "**Node**", "**Swift**", "**Android**"] 
  */
 const EXPECTED_GUIDE_WEB_TOPICS = [
   "allowed_origins",
-  "site identifier",
+  "client key identifies the receiving app",
   "Chrome 120",
   "macOS 10.15.7",
   "_page_url",
@@ -175,6 +175,7 @@ const GUIDE_IDENTITY_CROSS_REFS: ReadonlyArray<readonly [string, string]> = [
  * Strings must match verbatim — they're checked with `.toContain(...)`.
  */
 const EXPECTED_INSTRUCTION_KEYWORDS = [
+  "SDK app association",
   "Projects & apps",
   "allowed_origins",
   "Events & analytics",
@@ -573,17 +574,17 @@ describe("MCP endpoint", () => {
       expect(updated.name).toBe("Renamed App");
     });
 
-    it("creates backend app without bundle_id", async () => {
+    it.each(["web", "backend"])("creates %s app without bundle_id", async (platform) => {
       const { key } = await createFullAgentKey();
       const { parsed, isError } = parseToolResult(
         await callTool(key, "create-app", {
           name: "Backend Service",
-          platform: "backend",
+          platform,
           project_id: testData.projectId,
         }),
       );
       expect(isError).toBe(false);
-      expect(parsed.platform).toBe("backend");
+      expect(parsed.platform).toBe(platform);
       expect(parsed.bundle_id).toBeNull();
     });
 

@@ -37,7 +37,6 @@ No bundler needed; import the module straight from a CDN.
 
   Pulse.configure({
     apiKey: "pulse_client_...",
-    bundleId: "app.example.com",
   });
 
   document.querySelector("#buy").addEventListener("click", () => {
@@ -59,7 +58,6 @@ export function App() {
     Pulse.configure({
       endpoint: import.meta.env.VITE_PULSE_ENDPOINT,
       apiKey: import.meta.env.VITE_PULSE_KEY,
-      bundleId: "app.example.com",
       appVersion: __APP_VERSION__,
     });
   }, []);
@@ -87,7 +85,6 @@ If your router does not use the History API (some hash routers do not), turn `tr
     Pulse.configure({
       endpoint: PUBLIC_PULSE_ENDPOINT,
       apiKey: PUBLIC_PULSE_KEY,
-      bundleId: "app.example.com",
     });
 
     return () => void Pulse.shutdown();
@@ -114,7 +111,6 @@ export const appConfig: ApplicationConfig = {
         Pulse.configure({
           endpoint: environment.pulseEndpoint,
           apiKey: environment.pulseKey,
-          bundleId: "app.example.com",
           appVersion: environment.version,
         });
       },
@@ -134,7 +130,7 @@ Any evergreen browser is supported; the build targets ES2020. Two features degra
 - **gzip** needs `CompressionStream`. Where it is missing, bodies are sent as plain JSON. Bodies under 512 bytes and the unload path are never compressed anyway.
 - **Attachments** need `crypto.subtle`, which requires a secure context (HTTPS or `localhost`). Elsewhere uploads are skipped and the event is still sent.
 
-The package is safe to import on the server. `configure()` validates its arguments first, so an invalid configuration — a missing or blank `apiKey` or `bundleId`, a blank or malformed `endpoint`, or a key without the `pulse_client_` prefix — throws with or without a `window`. A valid one then checks for `window` and, when there is none, returns without installing anything, so a Next.js or SvelteKit server render does no work. Log calls made before a successful `configure()` are ignored, so shared code that logs on both sides needs no guard of its own.
+The package is safe to import on the server. `configure()` validates its arguments first, so an invalid configuration — a missing or blank `apiKey`, a blank or malformed `endpoint`, or a key without the `pulse_client_` prefix — throws with or without a `window`. A valid one then checks for `window` and, when there is none, returns without installing anything, so a Next.js or SvelteKit server render does no work. Log calls made before a successful `configure()` are ignored, so shared code that logs on both sides needs no guard of its own.
 
 ## Next Steps
 

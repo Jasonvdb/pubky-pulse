@@ -131,11 +131,11 @@ export async function appsRoutes(app: FastifyInstance) {
           .send({ error: `Invalid platform. Must be one of: ${APP_PLATFORMS.join(", ")}` });
       }
 
-      // Backend apps don't need a bundle_id; all other platforms require it
-      if (platform !== "backend" && !bundle_id) {
+      // Native identifiers remain app metadata; SDK requests are scoped by their key.
+      if ((platform === "apple" || platform === "android") && !bundle_id) {
         return reply
           .code(400)
-          .send({ error: "bundle_id is required for non-backend platforms" });
+          .send({ error: "bundle_id is required for native platforms" });
       }
 
       let origins: string[] = [];

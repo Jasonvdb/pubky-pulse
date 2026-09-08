@@ -62,19 +62,6 @@ const DEFAULT_RETENTION_DAYS_EVENTS = 120;
 const DEFAULT_RETENTION_DAYS_METRICS = 365;
 const DEFAULT_RETENTION_DAYS_FUNNELS = 365;
 
-/**
- * A web app's `bundle_id` is a site identifier (`app.example.com`), not a
- * reverse-DNS bundle, and only a web app carries browser origins. The form
- * changes wording rather than growing a second form.
- */
-function identifierLabel(platform: string): string {
-  return platform === "web" ? "Site identifier" : "Bundle ID";
-}
-
-function identifierPlaceholder(platform: string): string {
-  return platform === "web" ? "app.example.com" : "com.example.myapp";
-}
-
 /** One origin per line in the textarea; blank lines are ignored. */
 function parseOriginLines(value: string): string[] {
   return value
@@ -163,7 +150,7 @@ export default function ProjectDetailPage() {
       const res = await api.post<{ app: AppResponse }>("/v1/apps", {
         name: appName,
         platform: appPlatform,
-        ...(appPlatform !== "backend" ? { bundle_id: appBundleId } : {}),
+        ...(appPlatform === "apple" || appPlatform === "android" ? { bundle_id: appBundleId } : {}),
         ...(appPlatform === "web"
           ? { allowed_origins: parseOriginLines(appAllowedOrigins) }
           : {}),
@@ -320,12 +307,12 @@ export default function ProjectDetailPage() {
                   ))}
                 </select>
               </div>
-              {appPlatform !== "backend" && (
+              {(appPlatform === "apple" || appPlatform === "android") && (
                 <div className="space-y-2">
-                  <Label htmlFor="app-bundle-id">{identifierLabel(appPlatform)}</Label>
+                  <Label htmlFor="app-bundle-id">Bundle ID</Label>
                   <Input
                     id="app-bundle-id"
-                    placeholder={identifierPlaceholder(appPlatform)}
+                    placeholder="com.example.myapp"
                     value={appBundleId}
                     onChange={(e) => setAppBundleId(e.target.value)}
                     required
@@ -780,7 +767,7 @@ function AppCard({
         </div>
         {app.bundle_id && (
           <div className="flex justify-between">
-            <span className="text-muted-foreground">{identifierLabel(app.platform)}</span>
+            <span className="text-muted-foreground">{app.platform === "web" ? "Legacy identifier" : "Bundle ID"}</span>
             <span className="font-mono text-xs">{app.bundle_id}</span>
           </div>
         )}

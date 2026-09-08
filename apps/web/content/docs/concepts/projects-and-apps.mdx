@@ -61,7 +61,7 @@ Every app has a broad `platform` that categorizes what kind of build it is:
 |---|---|---|
 | `apple` | iOS, iPadOS, or macOS app | Yes |
 | `android` | Android app | Yes |
-| `web` | Web application | Yes |
+| `web` | Web application | No |
 | `backend` | Server-side application | No |
 
 ### Environments
@@ -93,7 +93,7 @@ Each platform allows a specific set of environments:
 
 ## Bundle ID
 
-Apps with a platform other than `backend` require a `bundle_id`. The ingest endpoint validates that the `bundle_id` in each request matches the app's registered bundle ID on every ingestion request.
+Only native `apple` and `android` apps require a `bundle_id` at registration, as app metadata. SDK requests on every platform use their client key to identify the app; legacy request `bundle_id` fields are ignored, including mismatched values.
 
 What that string looks like follows the platform:
 
@@ -101,12 +101,12 @@ What that string looks like follows the platform:
 |---|---|---|
 | `apple` | Reverse-DNS bundle identifier | `com.example.acme` |
 | `android` | Application ID | `com.example.acme` |
-| `web` | Site identifier — the site's host reads best | `app.acme.com` |
+| `web` | None required | -- |
 | `backend` | None | -- |
 
-A web app's identifier is a name, not an address: it is not parsed as a URL, no scheme or path belongs in it, and it is not what authorises the browser to send. That is [allowed origins](#allowed-origins), below. Keep it stable — it is the value you pass as `bundleId` in `Pulse.configure()`.
+Web apps need no synthetic bundle or site identifier. Their client key selects the app; [allowed origins](#allowed-origins) controls which browser origins may send with it. Existing registered identifiers can remain as legacy metadata.
 
-Backend-platform apps have no bundle ID, and the ingest route skips this validation for them.
+Backend-platform apps likewise need no bundle ID.
 
 Bundle IDs are **immutable after creation**. The update endpoint accepts a `name` change and, for web apps, an `allowed_origins` change — never a bundle ID. If you need to change one, delete the app and create a new one.
 
@@ -154,7 +154,7 @@ A common configuration for a cross-platform product:
 |---|---|---|---|
 | Acme | Acme iOS | apple | `com.example.acme` |
 | Acme | Acme Android | android | `com.example.acme` |
-| Acme | Acme Web | web | `app.acme.com` |
+| Acme | Acme Web | web | -- |
 | Acme | Acme API | backend | -- |
 
 All four apps share the same project, so metric definitions, funnel definitions, and cross-platform analytics are unified under "Acme." Only the web app carries allowed origins; the other three send no `Origin` header.

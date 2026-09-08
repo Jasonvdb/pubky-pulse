@@ -25,7 +25,6 @@ export function PulseProvider({ userId }: { userId?: string }) {
     Pulse.configure({
       endpoint: process.env.NEXT_PUBLIC_PULSE_ENDPOINT!,
       apiKey: process.env.NEXT_PUBLIC_PULSE_KEY!,
-      bundleId: "app.example.com",
       propagateSessionTo: ["/api"],
     });
   }, []);

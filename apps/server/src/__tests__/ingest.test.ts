@@ -430,7 +430,7 @@ describe("POST /v1/ingest", () => {
     expect(res.json()).toEqual({ accepted: 1, rejected: 0 });
   });
 
-  it("rejects request with missing bundle_id", async () => {
+  it("accepts request with missing bundle_id", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/ingest",
@@ -438,19 +438,19 @@ describe("POST /v1/ingest", () => {
       payload: { events: [{ level: "info", message: "test", session_id: TEST_SESSION_ID }] },
     });
 
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/bundle_id/);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ accepted: 1, rejected: 0 });
   });
 
-  it("rejects request with mismatched bundle_id", async () => {
+  it("accepts request with mismatched legacy bundle_id", async () => {
     const res = await ingest(
       [{ level: "info", message: "test", session_id: TEST_SESSION_ID }],
       TEST_CLIENT_KEY,
       "com.wrong.bundle"
     );
 
-    expect(res.statusCode).toBe(403);
-    expect(res.json().error).toMatch(/bundle_id/);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ accepted: 1, rejected: 0 });
   });
 
   it("stores is_dev flag from event payload", async () => {
@@ -750,15 +750,15 @@ describe("POST /v1/ingest", () => {
       expect(body.rejected).toBe(1);
     });
 
-    it("android app validates bundle_id", async () => {
+    it("android app ignores legacy bundle_id", async () => {
       const res = await ingest(
         [{ level: "info", message: "test", session_id: TEST_SESSION_ID, environment: "android" }],
         TEST_ANDROID_CLIENT_KEY,
         "com.wrong.bundle"
       );
 
-      expect(res.statusCode).toBe(403);
-      expect(res.json().error).toMatch(/bundle_id/);
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ accepted: 1, rejected: 0 });
     });
 
     it("backend app rejects all non-backend environments", async () => {

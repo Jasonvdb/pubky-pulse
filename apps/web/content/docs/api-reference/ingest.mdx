@@ -49,7 +49,6 @@ A batch from a browser looks the same, with the values a browser can report:
 
 ```json
 {
-  "bundle_id": "app.acme.com",
   "events": [
     {
       "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -77,13 +76,13 @@ A batch from a browser looks the same, with the values a browser can report:
 }
 ```
 
-`bundle_id` is the app's site identifier, `device_model` is the browser, `os_version` is the OS name and version, `screen_name` is the recorded screen name (URL path by default), and there is no `build_number`. See [Field semantics by platform](/docs/concepts/events#field-semantics-by-platform).
+`device_model` is the browser, `os_version` is the OS name and version, `screen_name` is the recorded screen name (URL path by default), and there is no `build_number`. See [Field semantics by platform](/docs/concepts/events#field-semantics-by-platform).
 
 ### Field reference
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `bundle_id` | string | Conditional | Required for non-backend apps. Must match the app's registered bundle_id. |
+| `bundle_id` | string | No | Deprecated and ignored, including mismatched legacy values. The API key identifies the app. |
 | `events` | array | Yes | Array of event objects (max 100 per batch). |
 
 ### Event fields
@@ -129,7 +128,7 @@ A batch from a browser looks the same, with the values a browser can report:
 - **Custom attributes:** Values are coerced to strings and truncated to 200 characters. Reserved keys have their own caps: `_error_stack` 16000, `_page_url` and `_referrer` 2048 each.
 - **Device and version fields:** `device_model`, `os_version`, `app_version`, `build_number`, `sdk_name`, `sdk_version`, `locale`, and `preferred_language` are truncated to their column widths rather than rejected, so an unusually long user-agent-derived value never fails a batch.
 - **Deduplication:** Events with a `client_event_id` that matches an existing event (within the last 48 hours) are silently skipped.
-- **Bundle ID:** For non-backend apps, the `bundle_id` in the request must match the app's registered bundle_id exactly.
+- **App association:** The authenticated API key selects the receiving app. Legacy `bundle_id` values are ignored; they cannot select another app.
 
 Per-event failures are reported in the response's `errors` array; they never fail the whole batch.
 

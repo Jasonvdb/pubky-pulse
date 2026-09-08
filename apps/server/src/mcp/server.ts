@@ -23,6 +23,7 @@ import { registerStatsTools } from "./tools/stats.js";
 const SERVER_INSTRUCTIONS = `Pubky Pulse — self-hosted analytics for web, backend and mobile apps. Use these tools to manage projects/apps, query analytics, and triage user-facing surfaces.
 
 Capabilities:
+- SDK app association — the client key alone identifies its app. Web apps need no bundle or site identifier; legacy request bundle_id values are ignored.
 - Projects & apps — create/update projects and apps, create import keys, read the per-project owner list. A web app also carries allowed_origins, the browser origins that may send with the app's client key — a web app with none refuses every browser request, and create-app/update-app set the list
 - Events & analytics — ingest history, breadcrumb timelines, cross-app session investigation (investigate-event)
 - Metrics & funnels — definitions + query rollups (counts, durations, conversion %)

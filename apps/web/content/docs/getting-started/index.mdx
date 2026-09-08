@@ -141,7 +141,7 @@ From your project's detail page, click **Create App**. Choose the platform that 
 | Web | Browser-based apps |
 | Backend | API servers, workers, serverless functions |
 
-For Apple, Android, and Web platforms, provide a **bundle ID**. On Apple and Android that's the reverse-DNS identifier (`com.example.myapp`); on Web it's the site identifier, and the site's host reads best (`app.example.com`). Backend apps don't need one.
+For Apple and Android registration, provide the native **bundle ID** (`com.example.myapp`) as app metadata. Web and backend apps need no bundle or site identifier. SDK requests identify their app using the client key alone.
 
 A **Web** app also asks for **allowed origins** — the browser origins the SDK may send from, one per line, including your dev server (`http://localhost:5173`). A web app's client key ships inside the page, so this list is what scopes it to sites you own; leave it empty and the browser gets a `403`. You can edit it any time from the app's card. See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins).
 

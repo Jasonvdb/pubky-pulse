@@ -40,7 +40,7 @@ Create a new app under a project. Returns a `client_secret` for SDK use. Require
 | `name` | string | Yes | App name |
 | `platform` | string | Yes | `apple`, `android`, `web`, or `backend` |
 | `project_id` | UUID | Yes | Parent project ID |
-| `bundle_id` | string | Conditional | Required for non-backend platforms. Immutable after creation. Reverse-DNS on `apple`/`android`, the site identifier on `web`. |
+| `bundle_id` | string | Conditional | Required only when registering `apple`/`android` apps; native app metadata, immutable after creation. Optional for `web`/`backend`. Never used to authorize SDK requests. |
 | `allowed_origins` | string[] | No | `web` only. Browser origins this site may send from. |
 
 ```json
@@ -62,14 +62,13 @@ Backend apps omit `bundle_id`:
 }
 ```
 
-A web app's `bundle_id` is the site identifier, and its origins go on the app:
+A web app needs no bundle or site identifier. Register its allowed browser origins on the app:
 
 ```json
 {
   "name": "Acme Web",
   "platform": "web",
   "project_id": "550e8400-...",
-  "bundle_id": "app.acme.com",
   "allowed_origins": ["https://app.acme.com", "http://localhost:5173"]
 }
 ```

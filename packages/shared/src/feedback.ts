@@ -9,7 +9,8 @@ export const MAX_FEEDBACK_EMAIL_LENGTH = 320;
 // --- Ingest (SDK → server, synchronous) ---
 
 export interface IngestFeedbackRequest {
-  bundle_id: string;
+  /** @deprecated Ignored. The API key identifies the receiving app. */
+  bundle_id?: string;
   message: string;
   session_id?: string | null;
   user_id?: string | null;

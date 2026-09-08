@@ -40,7 +40,6 @@ export async function feedbackIngestRoutes(app: FastifyInstance) {
       }
 
       const body = request.body ?? ({} as IngestFeedbackRequest);
-      const { bundle_id } = body;
 
       if (!auth.app_id) {
         return reply.code(400).send({ error: "API key must be scoped to an app" });
@@ -50,7 +49,6 @@ export async function feedbackIngestRoutes(app: FastifyInstance) {
         .select({
           id: apps.id,
           name: apps.name,
-          bundle_id: apps.bundle_id,
           platform: apps.platform,
           project_id: apps.project_id,
           team_id: apps.team_id,
@@ -69,17 +67,6 @@ export async function feedbackIngestRoutes(app: FastifyInstance) {
         request.headers["cf-ipcountry"],
         appRow.platform
       );
-
-      if (appRow.bundle_id) {
-        if (!bundle_id || typeof bundle_id !== "string") {
-          return reply.code(400).send({ error: "bundle_id is required" });
-        }
-        if (bundle_id !== appRow.bundle_id) {
-          return reply.code(403).send({
-            error: "bundle_id does not match the app associated with this API key",
-          });
-        }
-      }
 
       const rawMessage = typeof body.message === "string" ? body.message.trim() : "";
       if (!rawMessage) {

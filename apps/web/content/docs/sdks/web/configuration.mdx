@@ -14,7 +14,6 @@ import { Pulse } from "@synonymdev/pubky-pulse-web";
 
 Pulse.configure({
   apiKey: "pulse_client_...",
-  bundleId: "app.example.com",
   appVersion: "1.4.0",
 });
 ```
@@ -27,7 +26,7 @@ Pulse.configure({
 |---|---|---|---|
 | `endpoint` | `string` | `"https://ingest.pubkypulse.com"` | Pubky Pulse ingest server URL. A trailing slash is stripped. Omit it to use Pubky's hosted instance; self-hosters must set their own. |
 | `apiKey` | `string` | *required* | Client API key for a web-platform app. Must start with `pulse_client_`. |
-| `bundleId` | `string` | *required* | Site identifier of the Pulse app receiving the events (`app.example.com`). Must match the app's `bundle_id` exactly — it is a name, not a URL, and is not checked against the page's origin. |
+| `bundleId` | `string` | — | Deprecated compatibility option. Not needed: the client key identifies the app. Legacy servers may still require it until upgraded. |
 | `appVersion` | `string` | `undefined` | Version reported with every event. Set it, and make it increase between releases — see [App version](#app-version). |
 | `isDev` | `boolean` | `true` on `localhost`, `127.0.0.1`, or a `file:` URL | Marks events as development traffic. See [Data Mode](/docs/concepts/data-mode). |
 | `debug` | `boolean` | `false` | Print the SDK's own diagnostics to the console. |
@@ -43,6 +42,8 @@ Pulse.configure({
 | `maxBufferSize` | `number` | `10000` | Buffered events kept before the oldest are dropped. |
 | `sessionTimeoutMs` | `number` | `1800000` | Idle time (30 minutes) after which a new session starts. |
 | `supportedLanguages` | `string[]` | *not sent* | The locales your app ships. Written through to the app record and used for localization-gap analysis. |
+
+Client-key-only examples in these docs target the forthcoming Web SDK release supporting optional `bundleId`; published Web SDK 0.4.0 still requires it. They also require a server with the client-key-only contract deployed. Upgrade the server before rolling out that SDK configuration; merging the server change alone does not upgrade a running installation. Existing SDKs that still send `bundle_id` remain compatible.
 
 Every numeric option must be a positive integer, and `flushThreshold` must not exceed `maxBufferSize`; invalid values throw at `configure()` time with a `Pubky Pulse: ...` message, so a typo surfaces on the first page load rather than silently dropping your data.
 
@@ -74,7 +75,6 @@ Pulse.configure({
   // Explicit host: required when you run your own instance.
   endpoint: "https://ingest.yourdomain.com",
   apiKey: "pulse_client_...",
-  bundleId: "app.example.com",
   // Injected at build time from package.json — not the commit SHA.
   appVersion: __APP_VERSION__,
 });
@@ -112,7 +112,6 @@ Calling `configure()` again replaces the pipeline: the old transport is drained 
 ```typescript
 Pulse.configure({
   apiKey: "pulse_client_...",
-  bundleId: "app.example.com",
   isDev: location.hostname.endsWith(".staging.example.com"),
 });
 ```
@@ -124,7 +123,6 @@ The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and the `data_
 ```typescript
 Pulse.configure({
   apiKey: "pulse_client_...",
-  bundleId: "app.example.com",
   networkTracking: true,
   propagateSessionTo: ["https://api.example.com"],
 });

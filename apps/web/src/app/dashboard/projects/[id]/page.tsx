@@ -147,7 +147,7 @@ export default function ProjectDetailPage() {
     setAppLoading(true);
 
     try {
-      const res = await api.post<{ app: AppResponse }>("/v1/apps", {
+      const res = await api.post<AppResponse>("/v1/apps", {
         name: appName,
         platform: appPlatform,
         ...(appPlatform === "apple" || appPlatform === "android" ? { bundle_id: appBundleId } : {}),
@@ -156,7 +156,7 @@ export default function ProjectDetailPage() {
           : {}),
         project_id: id,
       });
-      setNewClientSecret(res.app.client_secret);
+      setNewClientSecret(res.client_secret);
       setAppName("");
       setAppBundleId("");
       setAppAllowedOrigins("");

@@ -35,6 +35,7 @@ Pulse.configure({
 | `compressionEnabled` | `boolean` | `true` | gzip request bodies where the browser supports it. |
 | `captureUnhandled` | `boolean` | `true` | Capture uncaught errors and unhandled rejections. See [Events](/docs/sdks/web/events#unhandled-errors). |
 | `trackPageViews` | `boolean` | `true` | Emit screen events for History API navigations. See [Screens](/docs/sdks/web/screens). |
+| `screenNameForPath` | `(pathname: string) => string` | `undefined` | Map automatic routes to stable screen names. Must be a synchronous function. See [Mapping route names](/docs/sdks/web/screens#mapping-route-names). |
 | `networkTracking` | `boolean` | `false` | Emit an `sdk:network_request` event per `fetch` call. |
 | `propagateSessionTo` | `string[]` | `[]` | URL prefixes whose `fetch` requests receive the `X-Pulse-Session-Id` header. |
 | `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes. |
@@ -83,7 +84,7 @@ Pulse.configure({
 
 ## Page Context Attributes
 
-`screen_name` on a web event holds the URL **path** only — `/checkout/payment`, never the query string. When you need the rest, two reserved `custom_attributes` keys carry it, each capped at 2048 characters instead of the usual 200:
+`screen_name` defaults to the URL **path** — `/checkout/payment`, without the query string — and can use a mapped or manual name. Mapping changes only screen naming; it does not sanitize URL-bearing attributes. Two reserved `custom_attributes` keys can carry the full page URL and referrer, each capped at 2048 characters instead of the usual 200:
 
 ```typescript
 Pulse.info("checkout_started", {

@@ -29,7 +29,7 @@ function parseLevelParam(
 /**
  * Match a `screen_name` exactly, or anything nested beneath it.
  *
- * On web the column holds a URL path, so filtering by `/checkout` is expected to
+ * On web the column defaults to a URL path, so filtering by `/checkout` should
  * cover `/checkout/payment` too. The boundary is the slash, so `/checkout` does
  * not sweep in `/checkout-abandoned`, and a native screen name with no slash in
  * it keeps behaving as an exact match. `starts_with` rather than `LIKE`, so a

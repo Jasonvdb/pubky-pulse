@@ -77,8 +77,8 @@ export function environmentLabel(environment: string | null | undefined): string
  * Whether an event came from a browser.
  *
  * Web events reuse the native columns for browser facts — `device_model` holds
- * the browser, `os_version` the OS name and version, `screen_name` the URL path
- * — so the label a row gets depends on this answer.
+ * the browser, `os_version` the OS name and version, and `screen_name` the screen
+ * name (URL path by default) — so the label a row gets depends on this answer.
  */
 export function isWebEnvironment(environment: string | null | undefined): boolean {
   return environment === "web";

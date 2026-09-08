@@ -3,7 +3,31 @@ title: Screens
 description: Automatic route tracking for single-page apps, plus Pulse.trackScreen() for anything the URL does not describe.
 ---
 
-With `trackPageViews` on (the default), the SDK patches `pushState` / `replaceState` and listens for `popstate`, emitting a screen event whenever `location.pathname` changes. Hash-only changes — in-page anchors — are ignored.
+With `trackPageViews` on (the default), the SDK patches `pushState` / `replaceState` and listens for `popstate`, tracking `location.pathname` as the screen name by default. Hash-only changes — in-page anchors — are ignored. Use `screenNameForPath` to map routes to stable names without adding your own router observer.
+
+## Mapping Route Names
+
+Dynamic paths can contain user IDs, post IDs, or invitation codes. Map them to stable screen names at configuration time:
+
+```typescript
+Pulse.configure({
+  apiKey: "pulse_client_...",
+  bundleId: "app.example.com",
+  screenNameForPath: (pathname) => {
+    if (/^\/profile\/[^/]+\/?$/.test(pathname)) return "profile";
+    if (/^\/post\/[^/]+\/[^/]+\/?$/.test(pathname)) return "post";
+    if (/^\/collections\/[^/]+\/[^/]+\/?$/.test(pathname)) return "collections";
+    if (/^\/invite\/[^/]+\/?$/.test(pathname)) return "invite";
+    return "other";
+  },
+});
+```
+
+The callback receives only the pathname, without the origin, query string, or hash. It runs for the initial page and History API navigation (`pushState`, `replaceState`, and `popstate`). The mapped name is used for screen events, durations, and the default `screen_name` on subsequent events. Navigating between paths mapped to the same name preserves the current duration and emits no screen transition.
+
+The callback must be synchronous and return a non-blank string; invalid callback types are rejected by `configure()`. If it throws or returns a non-string or blank name, the SDK ends the previous screen, clears the default screen name, and emits no new `sdk:screen_appeared` until a valid mapping or manual screen is recorded. It does not fall back to the raw path. Omitting the option retains the default pathname behavior; with `trackPageViews: false`, the mapper is not used.
+
+Mapping applies only to automatic screen names. It leaves `Pulse.trackScreen()` and per-event `screenName` overrides as supplied. It does not sanitize `_page_url`, `_referrer`, `_http_url`, error stacks, or application attributes; review those separately before recording URLs containing identifiers or tokens.
 
 ## What It Emits
 

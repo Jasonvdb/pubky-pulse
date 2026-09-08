@@ -109,8 +109,8 @@ export const EVENT_COLUMN_REGISTRY: Record<string, EventColumnDef> = {
     render: (event) => event.user_id ?? "—",
   },
   screen: {
-    // Wide enough for a URL path, which is what a web event puts here, and the
-    // title attribute carries the rest when the path still overflows.
+    // Wide enough for a screen name or URL path; the title attribute carries
+    // the rest when the value still overflows.
     id: "screen",
     label: "Screen / Path",
     headerClassName: "w-[180px]",

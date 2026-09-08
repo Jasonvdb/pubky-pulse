@@ -34,7 +34,7 @@ Query analytics events with flexible filters. Defaults to the last 24 hours.
 
 Returns `{ events: [...], cursor, has_more }`. Pass `cursor` to the next call for pagination.
 
-`device_model`, `os_version`, and `screen_name` hold different things per platform — the browser, the OS name and version, and the URL path on `web`; the hardware model, the OS version, and the screen name on native. Both device filters are exact matches, so filter on the value as recorded (`Chrome 120`, not `Chrome`). See [Field semantics by platform](/docs/concepts/events#field-semantics-by-platform).
+`device_model`, `os_version`, and `screen_name` hold different things per platform — the browser, the OS name and version, and the screen name (URL path by default) on `web`; the hardware model, the OS version, and the screen name on native. Both device filters are exact matches, so filter on the value as recorded (`Chrome 120`, not `Chrome`). See [Field semantics by platform](/docs/concepts/events#field-semantics-by-platform).
 
 ### Session reconstruction
 

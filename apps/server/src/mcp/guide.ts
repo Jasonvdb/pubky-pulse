@@ -72,7 +72,7 @@ Events are raw log records emitted by SDKs — every \`Pulse.info()\`, \`Pulse.e
 - **message**: the log message or event name
 - **session_id**: unique per SDK \`configure()\` call, groups events in a session. See **Cross-SDK Session Correlation** below for the client-to-backend pattern.
 - **user_id**: optional, set via identity claim
-- **screen_name**: optional, from SDK screen tracking. On \`web\` this is the URL **path** (\`/checkout/payment\`) — no origin, no query string
+- **screen_name**: optional, from SDK screen tracking. On \`web\` this defaults to the URL **path** (\`/checkout/payment\`) without origin or query string; \`screenNameForPath\` can map routes to stable names, and manual screen names are supported
 - **environment**: the runtime — \`ios\`, \`ipados\`, \`macos\`, \`watchos\`, \`android\`, \`web\`, \`backend\`
 - **device_model** / **os_version**: the reporting device. On native apps the hardware model (\`iPhone15,2\`) and OS version (\`18.0\`); on \`web\` the **browser** and its major version (\`Chrome 120\`) and the OS name and version (\`macOS 10.15.7\`), both parsed from the user agent and both absent when the browser reports too little to parse
 - **build_number**: native only — web events never carry one, so use \`app_version\` for browser releases
@@ -84,7 +84,7 @@ Query events when debugging specific issues, investigating user behavior, or rev
 
 - \`_error_type\` / \`_error_stack\` / \`_error_code\` / \`_error_domain\` — extracted when a consumer passes an error object to \`Pulse.error()\`. \`_error_stack\` is capped at 16000 instead of 200. \`_unhandled\` marks an error the SDK caught rather than one the app logged.
 - \`_http_url\` / \`_http_method\` / \`_http_status\` / \`_http_duration_ms\` — auto-instrumented network requests. \`_http_status\` is \`"0"\` when the request never completed.
-- \`_page_url\` / \`_referrer\` — browser page context, capped at 2048 each. \`screen_name\` holds only the path, so these are where the full URL (query string included) and the referrer live.
+- \`_page_url\` / \`_referrer\` — browser page context, capped at 2048 each. \`screen_name\` defaults to the path and can be mapped or set manually. Screen mapping does not sanitize these attributes, which carry the full URL (query string included) and the referrer.
 
 ### Cross-SDK Session Correlation
 

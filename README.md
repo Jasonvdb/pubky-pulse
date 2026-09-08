@@ -49,7 +49,7 @@ Permissions are enforced per tool, not per connection: a key without `projects:w
 
 Reads are wide and writes are narrow. An agent key reads every project in the team, but an ordinary write also requires the *person who created the key* to currently own the target project — so an agent is never more powerful than the colleague it belongs to, and adding or removing that person from a project takes effect on the next call with no new key. Deleting projects, apps, feedback, questionnaires, responses and attachments, and changing a project's owner list, stay human-only.
 
-Three other key types exist alongside agent keys: `pulse_client_*` for SDKs sending data (scoped to one app's bundle ID), `pulse_import_*` for backfilling history, and a passwordless email code that signs you into the dashboard. Only agent keys reach MCP.
+Three other key types exist alongside agent keys: `pulse_client_*` for SDKs sending data (scoped to one app), `pulse_import_*` for backfilling history, and a passwordless email code that signs you into the dashboard. Only agent keys reach MCP.
 
 The fastest supported setup for each MCP client lives at [pubkypulse.com/docs/mcp/setup](https://pubkypulse.com/docs/mcp/setup); the walkthrough from empty database to first event is at [pubkypulse.com/docs/getting-started](https://pubkypulse.com/docs/getting-started).
 

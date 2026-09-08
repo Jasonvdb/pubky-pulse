@@ -40,7 +40,7 @@ Create a new app under a project. Returns a `client_secret` for SDK use. Require
 | `name` | string | Yes | App name |
 | `platform` | string | Yes | `apple`, `android`, `web`, or `backend` |
 | `project_id` | UUID | Yes | Parent project ID |
-| `bundle_id` | string | Conditional | Required only when registering `apple`/`android` apps; native app metadata, immutable after creation. Optional for `web`/`backend`. Never used to authorize SDK requests. |
+| `bundle_id` | string | Conditional | Required only when registering `apple`/`android` apps; immutable after creation and checked against supplied native request identifiers. Optional for `web`/`backend`. |
 | `allowed_origins` | string[] | No | `web` only. Browser origins this site may send from. |
 
 ```json

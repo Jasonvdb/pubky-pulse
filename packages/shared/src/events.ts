@@ -102,7 +102,7 @@ export interface StoredEvent {
 }
 
 export interface IngestRequest {
-  /** @deprecated Ignored. The API key identifies the receiving app. */
+  /** Optional native configuration check: supplied values must match the key's apple/android app. Ignored for web/backend. */
   bundle_id?: string;
   events: IngestEventPayload[];
 }

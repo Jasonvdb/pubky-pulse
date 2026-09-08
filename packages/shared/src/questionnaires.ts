@@ -428,7 +428,7 @@ export interface IngestQuestionnaireInProgress {
 }
 
 export interface IngestQuestionnaireSubmitRequest {
-  /** @deprecated Ignored. The API key identifies the receiving app. */
+  /** Optional native configuration check: supplied values must match the key's apple/android app. Ignored for web/backend. */
   bundle_id?: string;
   session_id?: string | null;
   user_id?: string | null;
@@ -457,7 +457,7 @@ export interface IngestQuestionnaireSubmitResponse {
 }
 
 export interface IngestQuestionnaireDismissRequest {
-  /** @deprecated Ignored. The API key identifies the receiving app. */
+  /** Optional native configuration check: supplied values must match the key's apple/android app. Ignored for web/backend. */
   bundle_id?: string;
   user_id?: string | null;
 }

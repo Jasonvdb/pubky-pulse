@@ -114,7 +114,7 @@ A web app needs only its name, platform, project, and the origins its client key
 |-------|------|----------|-------------|
 | `name` | string | Yes | Display name for the app. |
 | `platform` | string | Yes | One of: `apple`, `android`, `web`, `backend`. |
-| `bundle_id` | string | Conditional | Required only when registering `apple`/`android` apps; native app metadata, immutable after creation. Optional for `web`/`backend`. Never used to authorize SDK requests. |
+| `bundle_id` | string | Conditional | Required only when registering `apple`/`android` apps; immutable after creation and checked against supplied native request identifiers. Optional for `web`/`backend`. |
 | `allowed_origins` | string[] | No | `web` only. Browser origins this site may send from. Defaults to `[]`. |
 | `project_id` | string | Yes | The project this app belongs to. Team is derived from the project. |
 

@@ -10,7 +10,7 @@ Pubky Pulse organises resources in a **Team → Project → Apps** hierarchy:
 
 - **Team** — the deployment's single configured team. Every allowed user belongs to it, and all resources (projects, apps, keys) are team-scoped. Use \`whoami\` to see your team and permissions.
 - **Project** — groups related apps under one product (e.g., "MyApp" project). Metrics and funnels are defined at the project level so they span all apps in the project. Each project has configurable data retention policies for events (default: 120 days), metrics (default: 365 days), and funnels (default: 365 days).
-- **App** — represents a single deployable artifact with a \`platform\` (\`apple\`, \`android\`, \`web\`, \`backend\`) and an app-scoped \`client_secret\` for SDK use. Native apps require a \`bundle_id\` at registration as immutable metadata. Web/backend apps need no bundle or site identifier. The client key identifies the receiving app; legacy request \`bundle_id\` values are ignored. A \`web\` app carries editable \`allowed_origins\` for browser requests.
+- **App** — represents a single deployable artifact with a \`platform\` (\`apple\`, \`android\`, \`web\`, \`backend\`) and an app-scoped \`client_secret\` for SDK use. Native apps require an immutable \`bundle_id\` at registration. The client key selects the receiving app. For apple/android keys, a supplied SDK identifier must match (403 otherwise); omitted identifiers are accepted, but empty/null/non-string values are rejected. Web/backend keys ignore request bundle metadata. This configuration safeguard applies to ingest, feedback, and questionnaire fetch/response/dismissal; it is not proof of app identity. A \`web\` app carries editable \`allowed_origins\` for browser requests.
 
 Projects group apps cross-platform: a web front-end, a mobile app, and their backend API can share the same project, enabling unified funnel and metric analysis across all of them.
 
@@ -257,7 +257,7 @@ Every mutation (create, update, delete) on resources is recorded in audit logs w
 - \`get-app\` — Get app by ID (includes \`client_secret\`)
 - \`create-app\` — Create app (needs \`apps:write\` **and** ownership of \`project_id\`): \`name\`, \`platform\`, \`project_id\`, optional \`bundle_id\`, optional \`allowed_origins\`
   - Platforms: \`apple\`, \`android\`, \`web\`, \`backend\`
-  - \`bundle_id\` required only for native apple/android registration; immutable metadata. Web/backend apps need none.
+  - \`bundle_id\` required only for native apple/android registration; immutable and checked against supplied native SDK identifiers. Web/backend apps need none.
   - \`allowed_origins\` — \`web\` only, rejected for other platforms. Full origins with no path and no trailing slash (\`["https://app.acme.com", "http://localhost:3000"]\`), at most 50; they are lowercased and their default ports dropped on write. A web app whose list is empty refuses every request carrying an \`Origin\` header, which is every request a browser makes — so create the app with the site's origins, including the developer's localhost port
   - Returns \`client_secret\` for SDK configuration
   - **Naming (strict)**: app names MUST always be \`<project name> <platform>\` — e.g. "Lofi iOS", "Lofi Android", "Lofi Web", "Lofi Backend". Never omit the platform suffix, even if the project name seems to imply a platform.

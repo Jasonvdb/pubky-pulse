@@ -93,7 +93,7 @@ Each platform allows a specific set of environments:
 
 ## Bundle ID
 
-Only native `apple` and `android` apps require a `bundle_id` at registration, as app metadata. SDK requests on every platform use their client key to identify the app; legacy request `bundle_id` fields are ignored, including mismatched values.
+Only native `apple` and `android` apps require a `bundle_id` at registration. SDK requests use the client key to identify the app; a supplied native identifier is checked for a match, while web/backend keys ignore it. See the [app association rules](/docs/mcp/apps).
 
 What that string looks like follows the platform:
 

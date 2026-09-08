@@ -18,6 +18,7 @@ import type {
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { enforceWebAppOrigin } from "../middleware/origin.js";
+import { hasNativeBundleMismatch } from "../utils/bundle-validation.js";
 import { resolveIngestCountryCode } from "../utils/event-processing.js";
 import { resolveClaimedUserIds } from "../utils/claimed-identity.js";
 import { resolveTeamMemberUserIds } from "../utils/team-members.js";
@@ -68,12 +69,16 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
 
       const body = request.body ?? ({} as IngestQuestionnaireDismissRequest);
       const [appRow] = await app.db
-        .select({ id: apps.id, project_id: apps.project_id })
+        .select({ id: apps.id, project_id: apps.project_id, platform: apps.platform, bundle_id: apps.bundle_id })
         .from(apps)
         .where(and(eq(apps.id, auth.app_id), isNull(apps.deleted_at)))
         .limit(1);
       if (!appRow) {
         return reply.code(400).send({ error: "App associated with this API key no longer exists" });
+      }
+
+      if (hasNativeBundleMismatch(appRow, body.bundle_id)) {
+        return reply.code(403).send({ error: "bundle_id does not match the app associated with this API key" });
       }
 
       let userId: string | null = typeof body.user_id === "string" && body.user_id.length > 0 ? body.user_id : null;
@@ -120,6 +125,8 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
         .select({
           id: apps.id,
           project_id: apps.project_id,
+          platform: apps.platform,
+          bundle_id: apps.bundle_id,
         })
         .from(apps)
         .where(and(eq(apps.id, auth.app_id), isNull(apps.deleted_at)))
@@ -127,6 +134,10 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
 
       if (!appRow) {
         return reply.code(400).send({ error: "App associated with this API key no longer exists" });
+      }
+
+      if (hasNativeBundleMismatch(appRow, request.query.bundle_id)) {
+        return reply.code(403).send({ error: "bundle_id does not match the app associated with this API key" });
       }
 
       const { user_id } = request.query;
@@ -256,6 +267,7 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
           id: apps.id,
           name: apps.name,
           platform: apps.platform,
+          bundle_id: apps.bundle_id,
           project_id: apps.project_id,
           team_id: apps.team_id,
         })
@@ -265,6 +277,10 @@ export async function questionnaireIngestRoutes(app: FastifyInstance) {
 
       if (!appRow) {
         return reply.code(400).send({ error: "App associated with this API key no longer exists" });
+      }
+
+      if (hasNativeBundleMismatch(appRow, body.bundle_id)) {
+        return reply.code(403).send({ error: "bundle_id does not match the app associated with this API key" });
       }
 
       // Questionnaire lookup + claim resolution run in parallel — neither

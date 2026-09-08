@@ -73,7 +73,7 @@ Pulse.configure(
 ## What Happens on Configure
 
 1. **Session ID** — a fresh UUID is generated to group all events from this launch. Readable at runtime via `Pulse.sessionId`.
-2. **Package ID** — automatically read from `context.packageName` (e.g. `com.example.app`).
+2. **Package ID** — automatically read from `context.packageName` (e.g. `com.example.app`) and sent when available. With the compatible server, it must match the client key's registered Android app; developers do not configure it manually.
 3. **Debug mode** — `is_dev` is set to `true` when the host app is debuggable (the `FLAG_DEBUGGABLE` manifest flag — true for debug builds, false for release).
 4. **Launch time** — the SDK measures the time from process start (`Process.getStartUptimeMillis()`) to the `configure()` call and includes it as `_launch_ms` on the `session_started` event. Place `configure()` as early as possible for an accurate cold-start measurement.
 5. **Session event** — a `sdk:session_started` event is emitted immediately with the `_launch_ms` attribute.
@@ -89,7 +89,9 @@ Pulse.configure(
 |-------|---------------|
 | `PulseConfigurationError.InvalidEndpoint` | The endpoint string is not a valid absolute http(s) URL with a host. |
 | `PulseConfigurationError.InvalidApiKey` | The API key does not start with `pulse_client_`. |
-| `PulseConfigurationError.MissingBundleId` | The package name could not be determined (rare — empty `context.packageName`). |
+| `PulseConfigurationError.MissingBundleId` | Older releases throw when the package name is unavailable. The forthcoming best-effort release retains this class for compatibility but omits unavailable metadata instead. |
+
+Omitting unavailable identifiers requires the compatible server to be deployed first; see the [app association rules](/docs/mcp/apps).
 
 Wrap the call in `try`/`catch` as shown above.
 

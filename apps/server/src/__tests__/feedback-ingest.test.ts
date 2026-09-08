@@ -191,14 +191,15 @@ describe("POST /v1/feedback", () => {
     expect(res.statusCode).toBe(201);
   });
 
-  it("ignores mismatched legacy bundle_id", async () => {
+  it("rejects mismatched native bundle_id", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/feedback",
       headers: { Authorization: `Bearer ${TEST_CLIENT_KEY}` },
       payload: { bundle_id: "com.wrong.id", message: "oops" },
     });
-    expect(res.statusCode).toBe(201);
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/bundle_id does not match/);
   });
 
   it("accepts missing bundle_id for backend apps (bundle_id is null)", async () => {

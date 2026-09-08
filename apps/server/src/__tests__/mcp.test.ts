@@ -113,7 +113,9 @@ const EXPECTED_GUIDE_SDKS = ["**Web**", "**Node**", "**Swift**", "**Android**"] 
  */
 const EXPECTED_GUIDE_WEB_TOPICS = [
   "allowed_origins",
-  "client key identifies the receiving app",
+  "client key selects the receiving app",
+  "a supplied SDK identifier must match (403 otherwise)",
+  "Web/backend keys ignore request bundle metadata",
   "Chrome 120",
   "macOS 10.15.7",
   "_page_url",
@@ -176,6 +178,7 @@ const GUIDE_IDENTITY_CROSS_REFS: ReadonlyArray<readonly [string, string]> = [
  */
 const EXPECTED_INSTRUCTION_KEYWORDS = [
   "SDK app association",
+  "Native bundle mismatch checks",
   "Projects & apps",
   "allowed_origins",
   "Events & analytics",

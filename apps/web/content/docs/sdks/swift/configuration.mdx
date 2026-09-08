@@ -80,7 +80,7 @@ try Pulse.configure(
 ## What Happens on Configure
 
 1. **Session ID** -- a fresh UUID is generated to group all events from this launch.
-2. **Bundle ID** -- automatically read from `Bundle.main.bundleIdentifier`.
+2. **Bundle ID** -- automatically detected and sent when available. With the compatible server, a supplied identifier must match the client key's registered Apple app; developers do not configure it manually.
 3. **Debug mode** -- `is_dev` is set to `true` in DEBUG builds (`#if DEBUG`), `false` in release builds.
 4. **Launch time** -- the SDK measures the time from process start to the `configure()` call and includes it as `_launch_ms` on the `session_started` event. Place `configure()` as early as possible for an accurate cold-start measurement.
 5. **Session event** -- a `sdk:session_started` event is emitted immediately with the `_launch_ms` attribute.
@@ -95,7 +95,9 @@ try Pulse.configure(
 |-------|---------------|
 | `invalidEndpoint` | The endpoint string is not a valid URL. |
 | `invalidApiKey` | The API key does not start with `pulse_client_`. |
-| `missingBundleId` | `Bundle.main.bundleIdentifier` is nil or empty. This can happen in command-line tools or certain test environments. |
+| `missingBundleId` | Older releases throw when the bundle identifier is unavailable. The forthcoming best-effort release retains this enum case for compatibility but omits unavailable metadata instead. |
+
+Omitting unavailable identifiers requires the compatible server to be deployed first; see the [app association rules](/docs/mcp/apps). Normal app and watch companion identifier detection is preserved.
 
 ## Calling Configure More Than Once
 

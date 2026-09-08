@@ -9,6 +9,7 @@ import type { IngestRequest, IngestEventPayload } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { enforceWebAppOrigin } from "../middleware/origin.js";
+import { hasNativeBundleMismatch } from "../utils/bundle-validation.js";
 import {
   validateEventPayload,
   buildEventRow,
@@ -50,7 +51,7 @@ export async function ingestRoutes(app: FastifyInstance) {
       }
 
       const [appRow] = await app.db
-        .select({ platform: apps.platform, project_id: apps.project_id })
+        .select({ bundle_id: apps.bundle_id, platform: apps.platform, project_id: apps.project_id })
         .from(apps)
         .where(and(eq(apps.id, app_id), isNull(apps.deleted_at)))
         .limit(1);
@@ -59,6 +60,10 @@ export async function ingestRoutes(app: FastifyInstance) {
         return reply
           .code(400)
           .send({ error: "App associated with this API key no longer exists" });
+      }
+
+      if (hasNativeBundleMismatch(appRow, request.body.bundle_id)) {
+        return reply.code(403).send({ error: "bundle_id does not match the app associated with this API key" });
       }
 
       const countryCode = resolveIngestCountryCode(

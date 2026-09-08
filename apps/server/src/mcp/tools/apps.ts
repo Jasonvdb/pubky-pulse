@@ -40,13 +40,13 @@ export function registerAppsTools(server: McpServer, app: FastifyInstance, agent
 
   server.registerTool("create-app", {
     description:
-      "Create a new app under a project. Returns a client_secret for SDK use. Platforms: apple, android, web, backend. bundle_id is required only for native apple/android registration and is immutable metadata. Web/backend apps need no bundle_id; client keys identify their app. " +
+      "Create a new app under a project. Returns a client_secret for SDK use. Platforms: apple, android, web, backend. bundle_id is required only for native apple/android registration, is immutable, and must match when supplied on native SDK requests. Web/backend keys ignore request bundle_id; client keys identify their app. " +
       "Requires apps:write permission AND that the human who created this key currently owns the parent project.",
     inputSchema: {
       name: z.string().describe("App name"),
       platform: z.enum(APP_PLATFORMS).describe("Target platform"),
       project_id: z.string().uuid().describe("Parent project ID"),
-      bundle_id: z.string().optional().describe("Native app metadata (required for apple/android registration, immutable; optional for web/backend)"),
+      bundle_id: z.string().optional().describe("Native identifier (required for apple/android registration, immutable; supplied native SDK identifiers must match; optional for web/backend)"),
       allowed_origins: ALLOWED_ORIGINS_SCHEMA,
     },
   }, async ({ name, platform, project_id, bundle_id, allowed_origins }) => {

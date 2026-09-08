@@ -102,6 +102,7 @@ export interface StoredEvent {
 }
 
 export interface IngestRequest {
+  /** Optional native configuration check: supplied values must match the key's apple/android app. Ignored for web/backend. */
   bundle_id?: string;
   events: IngestEventPayload[];
 }

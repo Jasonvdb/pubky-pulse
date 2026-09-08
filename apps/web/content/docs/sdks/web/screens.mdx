@@ -12,7 +12,6 @@ Dynamic paths can contain user IDs, post IDs, or invitation codes. Map them to s
 ```typescript
 Pulse.configure({
   apiKey: "pulse_client_...",
-  bundleId: "app.example.com",
   screenNameForPath: (pathname) => {
     if (/^\/profile\/[^/]+\/?$/.test(pathname)) return "profile";
     if (/^\/post\/[^/]+\/[^/]+\/?$/.test(pathname)) return "post";
@@ -55,7 +54,6 @@ Some hash routers never touch `pushState`, so there is nothing for the SDK to ob
 ```typescript
 Pulse.configure({
   apiKey: "pulse_client_...",
-  bundleId: "app.example.com",
   trackPageViews: false,
 });
 

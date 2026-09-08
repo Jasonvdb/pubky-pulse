@@ -73,7 +73,7 @@ Pulse.configure(
 ## What Happens on Configure
 
 1. **Session ID** — a fresh UUID is generated to group all events from this launch. Readable at runtime via `Pulse.sessionId`.
-2. **Package ID** — automatically read from `context.packageName` (e.g. `com.example.app`).
+2. **Package ID** — automatically read from `context.packageName` (e.g. `com.example.app`) and sent. It must match the client key's registered Android app; developers do not configure it manually.
 3. **Debug mode** — `is_dev` is set to `true` when the host app is debuggable (the `FLAG_DEBUGGABLE` manifest flag — true for debug builds, false for release).
 4. **Launch time** — the SDK measures the time from process start (`Process.getStartUptimeMillis()`) to the `configure()` call and includes it as `_launch_ms` on the `session_started` event. Place `configure()` as early as possible for an accurate cold-start measurement.
 5. **Session event** — a `sdk:session_started` event is emitted immediately with the `_launch_ms` attribute.

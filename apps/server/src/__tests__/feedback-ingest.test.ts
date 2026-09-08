@@ -181,18 +181,17 @@ describe("POST /v1/feedback", () => {
     expect(rows[0].user_id).toBe("user-42");
   });
 
-  it("rejects missing bundle_id when app has bundle_id", async () => {
+  it("accepts missing bundle_id when app has registered metadata", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/feedback",
       headers: { Authorization: `Bearer ${TEST_CLIENT_KEY}` },
       payload: { message: "oops" },
     });
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/bundle_id/);
+    expect(res.statusCode).toBe(201);
   });
 
-  it("rejects mismatched bundle_id with 403", async () => {
+  it("rejects mismatched native bundle_id", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/feedback",
@@ -200,6 +199,7 @@ describe("POST /v1/feedback", () => {
       payload: { bundle_id: "com.wrong.id", message: "oops" },
     });
     expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/bundle_id does not match/);
   });
 
   it("accepts missing bundle_id for backend apps (bundle_id is null)", async () => {

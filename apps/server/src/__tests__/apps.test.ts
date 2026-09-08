@@ -262,17 +262,43 @@ describe("POST /v1/apps", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("rejects missing bundle_id", async () => {
+  it.each(["apple", "android"])("requires native metadata for %s registration", async (platform) => {
     const token = await getToken(app);
     const res = await app.inject({
       method: "POST",
       url: "/v1/apps",
       headers: { authorization: `Bearer ${token}` },
-      payload: { name: "No Bundle", platform: "apple", project_id: testData.projectId },
+      payload: { name: "No Bundle", platform, project_id: testData.projectId },
     });
 
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/bundle_id/);
+  });
+
+  it("creates a web app without a synthetic identifier and ingests using its key", async () => {
+    const token = await getToken(app);
+    const created = await app.inject({
+      method: "POST",
+      url: "/v1/apps",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: "Key-only web app", platform: "web", project_id: testData.projectId,
+        allowed_origins: ["https://key-only.example.com"],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().bundle_id).toBeNull();
+    const ingested = await app.inject({
+      method: "POST",
+      url: "/v1/ingest",
+      headers: {
+        authorization: `Bearer ${created.json().client_secret}`,
+        origin: "https://key-only.example.com",
+      },
+      payload: { events: [{ level: "info", message: "key-only", session_id: TEST_SESSION_ID }] },
+    });
+    expect(ingested.statusCode).toBe(200);
+    expect(ingested.json()).toEqual({ accepted: 1, rejected: 0 });
   });
 
   it("rejects client key (no apps:write permission)", async () => {

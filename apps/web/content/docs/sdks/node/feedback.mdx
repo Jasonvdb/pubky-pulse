@@ -86,7 +86,7 @@ Pass any option explicitly in the second argument to override what the scope pro
 | `email` | — | Submitter email. Validated server-side. |
 | `userId` | scope's userId | Attach to an end-user in the project. |
 | `sessionId` | scope's sessionId | UUID — links feedback to the event timeline for that session. Non-UUIDs are silently ignored. |
-| `bundleId` | — | Only needed when forwarding for a mobile frontend whose Pubky Pulse app has a bundle_id set. |
+| `bundleId` | — | Optional when forwarding native feedback: if the key belongs to an apple/android app, a supplied identifier must match it. Ignored for web/backend keys. |
 | `environment` | `"backend"` | Must be allowed for the API key's app platform. |
 | `appVersion` | `config.appVersion` | |
 | `deviceModel` | — | Pass-through when forwarding from a mobile frontend. |

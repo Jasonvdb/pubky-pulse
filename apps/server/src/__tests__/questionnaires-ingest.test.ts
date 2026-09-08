@@ -284,17 +284,17 @@ describe("GET /v1/questionnaires/:slug — eligibility", () => {
     expect(body.in_progress).toBeUndefined();
   });
 
-  it("rejects mismatched bundle_id with 403", async () => {
+  it.each([["", 200], ["?bundle_id=wrong.bundle", 403]])("validates supplied native bundle metadata: %s", async (query, status) => {
     const projectRow = await dbClient`SELECT id FROM projects WHERE slug='test-project'`;
     const projectId = projectRow[0]!.id as string;
     await seedQuestionnaire(projectId);
 
     const res = await app.inject({
       method: "GET",
-      url: "/v1/questionnaires/post-onboarding?bundle_id=wrong.bundle&user_id=user_42",
+      url: "/v1/questionnaires/post-onboarding" + query,
       headers: { Authorization: `Bearer ${TEST_CLIENT_KEY}` },
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(status);
   });
 
   it("rejects agent keys with 403", async () => {

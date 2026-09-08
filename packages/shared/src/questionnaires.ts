@@ -428,7 +428,8 @@ export interface IngestQuestionnaireInProgress {
 }
 
 export interface IngestQuestionnaireSubmitRequest {
-  bundle_id: string;
+  /** Optional native configuration check: supplied values must match the key's apple/android app. Ignored for web/backend. */
+  bundle_id?: string;
   session_id?: string | null;
   user_id?: string | null;
   answers: QuestionnaireAnswers;
@@ -456,7 +457,8 @@ export interface IngestQuestionnaireSubmitResponse {
 }
 
 export interface IngestQuestionnaireDismissRequest {
-  bundle_id: string;
+  /** Optional native configuration check: supplied values must match the key's apple/android app. Ignored for web/backend. */
+  bundle_id?: string;
   user_id?: string | null;
 }
 

@@ -9,6 +9,7 @@ import type { IngestRequest, IngestEventPayload } from "@pubky-pulse/shared";
 import { requirePermission } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rate-limit.js";
 import { enforceWebAppOrigin } from "../middleware/origin.js";
+import { hasNativeBundleMismatch } from "../utils/bundle-validation.js";
 import {
   validateEventPayload,
   buildEventRow,
@@ -28,7 +29,7 @@ export async function ingestRoutes(app: FastifyInstance) {
     { preHandler: [requirePermission("events:write"), rateLimit, enforceWebAppOrigin] },
     async (request, reply) => {
       const auth = request.auth;
-      const { bundle_id, events: payloads } = request.body;
+      const { events: payloads } = request.body;
 
       if (!Array.isArray(payloads) || payloads.length === 0) {
         return reply.code(400).send({ error: "events array is required" });
@@ -61,25 +62,14 @@ export async function ingestRoutes(app: FastifyInstance) {
           .send({ error: "App associated with this API key no longer exists" });
       }
 
+      if (hasNativeBundleMismatch(appRow, request.body.bundle_id)) {
+        return reply.code(403).send({ error: "bundle_id does not match the app associated with this API key" });
+      }
+
       const countryCode = resolveIngestCountryCode(
         request.headers["cf-ipcountry"],
         appRow.platform
       );
-
-      if (appRow.bundle_id) {
-        if (!bundle_id || typeof bundle_id !== "string") {
-          return reply
-            .code(400)
-            .send({ error: "bundle_id is required" });
-        }
-        if (bundle_id !== appRow.bundle_id) {
-          return reply
-            .code(403)
-            .send({
-              error: "bundle_id does not match the app associated with this API key",
-            });
-        }
-      }
 
       const errors: Array<{ index: number; message: string }> = [];
       const validated: Array<{ index: number; event: IngestEventPayload }> = [];

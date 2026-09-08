@@ -29,7 +29,7 @@ The 90-day window keeps partition pruning effective and matches the cadence at w
   "id": "...",
   "name": "Lofi Web",
   "platform": "web",
-  "bundle_id": "app.lofi.com",
+  "bundle_id": null,
   "allowed_origins": ["https://app.lofi.com"],
   "latest_app_version": "1.4.2",
   "latest_app_version_updated_at": "2026-04-23T06:15:00.000Z"
@@ -46,7 +46,6 @@ A native app gets its version from its bundle and a build number alongside it. A
 Pulse.configure({
   endpoint: "https://ingest.pubkypulse.com",
   apiKey: "pulse_client_...",
-  bundleId: "app.acme.com",
   appVersion: "1.4.0", // wire this to your build's version, not to a git SHA
 });
 ```

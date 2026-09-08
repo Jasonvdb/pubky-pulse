@@ -3,7 +3,7 @@ title: Import
 description: POST /v1/import — bulk-import historical events with no timestamp restrictions. Designed for data migration scripts.
 ---
 
-Bulk-import historical event data from external systems. Unlike `/v1/ingest` (designed for live SDK traffic), the import endpoint has no timestamp restrictions, no rate limiting, and does not require a `bundle_id`.
+Bulk-import historical event data from external systems. Unlike `/v1/ingest` (designed for live SDK traffic), the import endpoint has no timestamp restrictions or rate limiting.
 
 ## POST /v1/import
 
@@ -79,7 +79,7 @@ Import keys are server-side credentials, so an import request carries no `Origin
 | Key type | `pulse_client_*` | `pulse_import_*` |
 | Max batch size | 100 | 1,000 |
 | Timestamp restriction | 30 days past — 5 min future | Any past date — 5 min future |
-| Bundle ID validation | Required for non-backend apps | Not required |
+| Bundle ID validation | Native: checked when supplied; web/backend: ignored | Not required |
 | Rate limiting | Yes (100 tokens, 10/sec) | No |
 | Dedup behavior | Skip duplicates | Update duplicates |
 | Dedup window | 48 hours | Batch timestamp range |

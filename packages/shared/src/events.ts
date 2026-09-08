@@ -18,8 +18,8 @@ export const HTTP_METHOD_ATTRIBUTE = "_http_method";
 export const HTTP_STATUS_ATTRIBUTE = "_http_status";
 export const HTTP_DURATION_MS_ATTRIBUTE = "_http_duration_ms";
 
-// Browser page context. On web `screen_name` carries the URL path, so these
-// hold what a path alone loses: the full URL (query string included) and the
+// Browser page context, independent of the default path or mapped/manual
+// `screen_name`: these hold the full URL (query string included) and the
 // referrer. Both get a 2048-char cap in
 // RESERVED_ATTRIBUTE_VALUE_LENGTH_OVERRIDES.
 export const PAGE_URL_ATTRIBUTE = "_page_url";

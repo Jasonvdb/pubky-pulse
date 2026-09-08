@@ -19,9 +19,9 @@ interface DeviceDetailRowsProps {
  *
  * A browser reports through the same three columns a phone does: `device_model`
  * is the browser and its major version ("Chrome 120"), `os_version` is the OS
- * name and version ("macOS 10.15.7"), and `screen_name` is the URL path. Calling
- * a browser a "Device Model" reads as a bug in the SDK, so the labels follow the
- * environment instead. `DetailRow` renders nothing for a null value, which is
+ * name and version ("macOS 10.15.7"), and `screen_name` defaults to the URL path.
+ * Calling a browser a "Device Model" reads as a bug in the SDK, so the labels
+ * follow the environment instead. `DetailRow` renders nothing for a null value, which is
  * how a web event — which has no build number — drops that row.
  */
 export function DeviceDetailRows({
@@ -36,7 +36,7 @@ export function DeviceDetailRows({
   return (
     <>
       <DetailRow
-        label={isWeb ? "Path" : "Screen Name"}
+        label={isWeb ? "Screen / Path" : "Screen Name"}
         value={screenName}
         onFilter={screenName ? onFilterScreen : undefined}
       />

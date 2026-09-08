@@ -44,7 +44,7 @@ export function registerEventsTools(server: McpServer, app: FastifyInstance, age
       user_id: z.string().optional().describe("Filter by user ID"),
       session_id: z.string().uuid().optional().describe("Filter by session ID — for issue investigation, prefer `investigate-event` with the occurrence's `event_id` instead, which returns the same session plus cross-app enrichment"),
       environment: z.enum(ENVIRONMENTS).optional().describe("Filter by environment"),
-      screen_name: z.string().optional().describe("Filter by screen name. On web this is the URL path, and the match covers nested paths — \"/checkout\" also returns \"/checkout/payment\" (but not \"/checkout-abandoned\")."),
+      screen_name: z.string().optional().describe("Filter by screen name. Web defaults to the URL path and can use mapped/manual names. The match covers nested paths — \"/checkout\" also returns \"/checkout/payment\" (but not \"/checkout-abandoned\")."),
       device_model: z.string().optional().describe("Filter by device model, e.g. \"iPhone15,2\". On web this is the browser and its major version, e.g. \"Chrome 120\"."),
       os_version: z.string().optional().describe("Filter by OS version, e.g. \"18.0\". On web this is the OS name and version, e.g. \"macOS 10.15.7\"."),
       since: z.string().optional().describe("Start time (relative like '1h', '7d' or ISO 8601)"),

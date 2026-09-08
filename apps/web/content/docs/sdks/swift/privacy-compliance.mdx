@@ -45,12 +45,14 @@ If you instead set `showsContactFields: false`, or call `Pulse.sendFeedback(_:)`
 
 ## Where your data goes
 
-The Nutrition Label rows above describe *what* the SDK collects. *Where* it ends up is settled by your own configuration: `endpoint` is required in `Pulse.configure` and the Swift SDK has no default and no fallback, so events reach exactly one recipient — the Pubky Pulse instance you name. Requiring the argument says nothing about who runs the host you supply, and that is what the rest of your answers turn on:
+The Nutrition Label rows above describe *what* the SDK collects. *Where* it ends up is settled by your `Pulse.configure` call: events reach exactly one recipient, the Pubky Pulse instance behind the `endpoint` in effect. One destination is not the same as a destination you own, though, and who operates it is what the rest of your answers turn on:
 
 - **You run that instance.** Events go only to infrastructure you control — a first-party destination.
 - **Someone else runs it.** [Pubky's hosted instance](/docs/getting-started/hosted) and any other managed Pubky Pulse provider are separate companies from you; name one in `endpoint` and it is the recipient.
 
-Either way, Apple asks you to declare data collected by a third-party SDK as your *own* collection, so the table above stands unchanged — and so do the tracking answers below, since neither destination links your users' data to third-party data for advertising or hands it to a data broker. What does change is your privacy policy and any data-deletion commitment you make: on a backend you run you can purge a user's events server-side, so describe that path and point users at it, while on an instance you do not run the data is not yours to purge — name the real recipient and describe the deletion path you actually have. And wherever a store, partner, or compliance questionnaire asks who receives the data, answer for whoever operates the instance you configured.
+`endpoint` is optional, and that is how you land in the second case without meaning to: omit it and the SDK falls back to Pubky's hosted instance. The fallback is **silent** — nothing is logged, warned, or thrown — so pass your own ingest host explicitly in `Pulse.configure` if you want to be sure you are in the first case.
+
+Either way, Apple asks you to declare data collected by a third-party SDK as your *own* collection, so the table above stands unchanged — and so do the tracking answers below, since neither destination links your users' data to third-party data for advertising or hands it to a data broker. What does change is your privacy policy and any data-deletion commitment you make: on a backend you run you can purge a user's events server-side, so describe that path and point users at it, while on an instance you do not run the data is not yours to purge — name the real recipient and describe the deletion path you actually have. And wherever a store, partner, or compliance questionnaire asks who receives the data, answer for whoever operates the instance the SDK sends to.
 
 ## App Tracking Transparency
 
@@ -80,7 +82,7 @@ Apple requires a privacy policy URL on your App Store listing. If your current p
 
 > We use Pubky Pulse, a self-hosted analytics service, to understand how users interact with our app and to diagnose errors. Pubky Pulse collects diagnostic data (including crash reports and event logs), product interaction data (such as screen views), and any user feedback you choose to submit. If you sign in, your user identifier is linked to this data so we can support you and improve the product. Pubky Pulse does not use the data for cross-app tracking or advertising and does not access your device's advertising identifier (IDFA).
 
-Adjust to match your app's voice and the specific Pubky Pulse features you use. "Self-hosted" only fits if you operate the instance you configured; if `endpoint` points at Pubky's hosted instance or another provider's, drop the word and name the real recipient.
+Adjust to match your app's voice and the specific Pubky Pulse features you use. "Self-hosted" only fits if you operate the instance the SDK sends to; if `endpoint` points at Pubky's hosted instance or another provider's — or is left out, which takes the hosted default — drop the word and name the real recipient.
 
 ## What carries forward
 

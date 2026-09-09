@@ -1,0 +1,9 @@
+Telemetry logging, metrics, screen tracking, attachments and SDK diagnostics are best effort:
+failures can drop telemetry. History cleanup keeps wrappers installed by other libraries and makes
+retained Pulse hooks inactive. These boundaries cannot recover a browser process from memory
+exhaustion or interrupt a nonterminating application hook.
+
+Keep handling intentional API failures. `Pulse.configure()` remains strict and can throw; invalid
+`setUser()` input rejects; feedback and questionnaire requests reject on validation or request
+failure. Await them with application error handling, or attach `.catch(...)` when deliberately not
+awaiting. `Pulse.init()` reports setup failures through its diagnostic result.

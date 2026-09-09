@@ -4,6 +4,7 @@ description: Initialize the Web SDK with Pulse.init() — client key, optional e
 ---
 
 import EndpointDefault from '../../../_snippets/sdk-endpoint.mdx';
+import WebHostSafety from '../../../_snippets/web-host-safety.mdx';
 
 Use `Pulse.init()` early in the page lifecycle. These APIs require a package release containing
 `init`, `captureException`, `ignoreErrors`, the route helper and origin URL mode; Web SDK 0.5.1 does
@@ -60,6 +61,26 @@ then `init` again. To discard pending telemetry, disable before reinitializing.
 invalid options, including during SSR; valid repeated calls explicitly reconfigure the client.
 `captureException` is a quiet no-op before initialization, when disabled and outside the browser.
 
+## Host Application Boundaries
+
+<WebHostSafety />
+
+## Event Resource Limits
+
+The SDK limits each event to **128 KiB of serialized JSON**, its queued event buffer to **4 MiB**, and
+its offline queue to a **1 MiB budget**, independently of event counts. A separate in-flight batch
+can retain up to **2.5 MiB**; these payload limits are not a total heap cap. Oversized events are dropped
+before attachment scheduling; the buffer drops oldest events to admit newer ones. At most 100 own
+attributes are inspected, and keys over 256 UTF-16 code units are skipped. `beforeSend` continues to
+receive full message and admitted attribute strings; string truncation and the event byte check
+happen after it returns.
+
+Offline admission accounts for the shared queue and unload spill keys. Unload cannot rewrite a
+locked shared key, so fresh events can be dropped when that key fills the budget. The aggregate cap
+is best effort across concurrent tabs; quota failures can also discard telemetry. Raising
+`maxBufferSize` does not raise byte budgets. [Attachments](/docs/sdks/web/attachments#browser-resource-limits)
+have separate, intentionally smaller browser limits.
+
 ## Options
 
 | Option | Type | Default | Description |
@@ -82,7 +103,7 @@ invalid options, including during SSR; valid repeated calls explicitly reconfigu
 | `propagateSessionTo` | `string[]` | `[]` | URL prefixes whose `fetch` requests receive the `X-Pulse-Session-Id` header. |
 | `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes. |
 | `flushThreshold` | `number` | `20` | Buffered events that trigger an immediate flush. |
-| `maxBufferSize` | `number` | `10000` | Buffered events kept before the oldest are dropped. |
+| `maxBufferSize` | `number` | `10000` | Buffered event count ceiling; the 4 MiB byte cap can drop oldest events sooner. |
 | `sessionTimeoutMs` | `number` | `1800000` | Idle time (30 minutes) after which a new session starts. |
 | `supportedLanguages` | `string[]` | *not sent* | The locales your app ships. Written through to the app record and used for localization-gap analysis. |
 
@@ -179,7 +200,7 @@ URLs, resolving relative URLs against the page; malformed and non-HTTP(S) inputs
 rather than sending their raw value. The policy applies before hooks, console, buffering and
 persistence, including failed fetches.
 
-Method, status and duration remain available in `sdk:network_request`: debug for 2xx/3xx, warn for
+Available method, status and duration are reported in `sdk:network_request`: debug for 2xx/3xx, warn for
 other responses, error with status `0` on rejection. SDK endpoint requests remain excluded. Request
 URLs, bodies and response/rejection values are unchanged; headers change only for explicit session
 propagation. Origin hostnames may themselves contain identifiers, so this is not a general PII
@@ -188,13 +209,22 @@ guarantee. App-specific redaction may still be needed. Removing paths also means
 
 `propagateSessionTo` lists URL prefixes that receive the `X-Pulse-Session-Id` header on `fetch` requests, and works whether or not `networkTracking` is on. Propagation is implemented by wrapping `fetch`, so requests made with `XMLHttpRequest` or `sendBeacon` — including libraries such as axios that default to XHR in the browser — are not annotated and must set the header themselves. Only list origins you control: the header should not leak to third parties. See [Next.js](/docs/sdks/web/nextjs) for the server side of that trace.
 
+Metadata and propagation are best effort for inputs or host APIs the SDK cannot safely inspect.
+Tracking alone leaves method getters to native request conversion, so `_http_method` can be absent.
+Propagation preserves inherited/non-enumerable options and getter receivers without cloning Request
+bodies or replacing abort signals. Receiving handlers must accept requests without the session header.
+
 ## Flush and Shutdown
 
 Batches are sent every `flushIntervalMs`, or as soon as `flushThreshold` events are buffered. Both ends are available when you need them:
 
 ```typescript
-await Pulse.flush();    // send everything buffered, including attachments
+await Pulse.flush();    // attempt events; attachment waiting has a deadline
 await Pulse.shutdown(); // flush, then remove every page hook the SDK installed
 ```
 
 When the page is hidden or unloaded the SDK flushes on its own with a `keepalive` request and parks whatever does not fit in an offline queue in `localStorage`, which is drained on the next page load. Events logged while the browser reports itself offline queue up rather than fail.
+
+Attachment waits have a 120-second ceiling. Noncancelable work can retain its resource reservation
+and remaining accepted background work can continue afterward; see
+[Browser Resource Limits](/docs/sdks/web/attachments#browser-resource-limits).

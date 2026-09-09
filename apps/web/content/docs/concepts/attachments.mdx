@@ -39,9 +39,14 @@ Per project:
 
 Edit via the `update-project` MCP tool or `PATCH /v1/projects/:id`. The per-user quota caps how much any single end-user (`user_id` on the event) can store; the project quota is the hard ceiling for the whole project.
 
-Checks happen at reserve time against the client-declared `size_bytes`, before bytes stream over the wire. Reservations that would exceed the per-user bucket return `413 user_quota_exhausted`; ones that would exceed the project ceiling return `413 quota_exhausted`. The event itself still posts — only the attachment is dropped. SDKs silently swallow the rejection so the host app/process is never affected.
+Checks happen at reserve time against the client-declared `size_bytes`, before bytes stream over the wire. Reservations that would exceed the per-user bucket return `413 user_quota_exhausted`; ones that would exceed the project ceiling return `413 quota_exhausted`. The event itself still posts — only the attachment is dropped. SDKs treat quota rejection as an attachment failure; the associated event remains eligible for delivery.
 
 Reservations without a `user_id` (common on backends that don't track end-users) skip the per-user check and are bounded only by the project quota.
+
+The [Web SDK browser limits](/docs/sdks/web/attachments#browser-resource-limits) are additional local
+safeguards: 5 MiB per file, with bounded queued payload and waiting. This intentionally lowers the
+browser's earlier 2 GiB ceiling. It changes no server quota or wire format; Node.js, Swift and Android
+retain their existing SDK limits.
 
 ## SDK usage
 

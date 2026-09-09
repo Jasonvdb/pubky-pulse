@@ -210,9 +210,16 @@ guarantee. App-specific redaction may still be needed. Removing paths also means
 `propagateSessionTo` lists URL prefixes that receive the `X-Pulse-Session-Id` header on `fetch` requests, and works whether or not `networkTracking` is on. Propagation is implemented by wrapping `fetch`, so requests made with `XMLHttpRequest` or `sendBeacon` — including libraries such as axios that default to XHR in the browser — are not annotated and must set the header themselves. Only list origins you control: the header should not leak to third parties. See [Next.js](/docs/sdks/web/nextjs) for the server side of that trace.
 
 Metadata and propagation are best effort for inputs or host APIs the SDK cannot safely inspect.
-Tracking alone leaves method getters to native request conversion, so `_http_method` can be absent.
-Propagation preserves inherited/non-enumerable options and getter receivers without cloning Request
-bodies or replacing abort signals. Receiving handlers must accept requests without the session header.
+Method metadata is captured when the underlying fetch or another wrapper reads `init.method`.
+Ordinary POSTs and other primitive string methods remain reported without extra getter calls or
+coercion. Values requiring coercion, or methods never read by a wrapper, can omit `_http_method`.
+
+Instrumentation uses a distinct `RequestInit` facade, preserving inherited/non-enumerable options,
+getter receivers, Request bodies and abort signals. Tracking alone forwards wrapper writes/deletions
+to the original input; propagation keeps local overrides. Explicitly freezing a propagation facade
+can skip its optional session header. Options-object identity and exotic Proxy reflection are not
+universally transparent; test integrations that depend on them. Receiving handlers must accept
+requests without the session header.
 
 ## Flush and Shutdown
 

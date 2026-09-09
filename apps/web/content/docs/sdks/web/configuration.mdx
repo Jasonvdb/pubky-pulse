@@ -1,18 +1,20 @@
 ---
 title: Configuration
-description: Configure the Web SDK with Pulse.configure() — client key, optional endpoint, tracking toggles, and flush options.
+description: Initialize the Web SDK with Pulse.init() — client key, optional endpoint, tracking toggles, and flush options.
 ---
 
 import EndpointDefault from '../../../_snippets/sdk-endpoint.mdx';
 
-Call `Pulse.configure()` once, as early in the page's life as you can, before logging any events.
+Use `Pulse.init()` early in the page lifecycle. These APIs require a package release containing
+`init`, `captureException`, `ignoreErrors`, the route helper and origin URL mode; Web SDK 0.5.1 does
+not include them. The source examples below target the release containing those changes.
 
 ## Basic Configuration
 
 ```typescript
 import { Pulse } from "@synonymdev/pubky-pulse-web";
 
-Pulse.configure({
+Pulse.init({
   apiKey: "pulse_client_...",
   appVersion: "1.4.0",
 });
@@ -20,12 +22,51 @@ Pulse.configure({
 
 <EndpointDefault />
 
+## Safe Optional Initialization
+
+```typescript
+const result = Pulse.init({
+  apiKey: process.env.NEXT_PUBLIC_PULSE_KEY,
+  enabled: process.env.NODE_ENV !== "test", // Keep deployment/test decisions app-owned.
+});
+```
+
+`init` returns a frozen `{ status, reason }` diagnostic without exposing keys, endpoints or caught
+exceptions. `status` is `enabled`, `disabled` or `error`. Inspect it when setup diagnostics are
+needed; initialization failures do not throw into application startup.
+
+| Reason | Meaning |
+|---|---|
+| `initialized` | A browser client started. |
+| `unchanged` | Equivalent normalized options retain the existing session and collectors; hooks compare by reference. |
+| `configuration-ignored` | A valid changed configuration was ignored: the first successful initialization wins. |
+| `disabled` / `missing-key` | Explicit opt-out, or an absent/null/blank key. |
+| `ssr` | No browser; a later browser initialization can still start. |
+| `invalid-configuration` | Invalid options. A running valid client is preserved. |
+| `initialization-failed` | Setup failed; installed resources were rolled back. |
+
+Disabled or server-side initialization creates no identity or session, reads/writes no storage,
+installs no timers/listeners/fetch wrapper, and makes no requests or offline replay. Missing and
+whitespace-only keys disable tracking even without `enabled: false`. An explicitly invalid endpoint
+never falls back to the hosted service.
+
+`Pulse.init({ enabled: false })` also stops an active client. It discards fresh buffered telemetry
+without flushing or persisting it, stops pending SDK work, and preserves pre-existing browser data.
+Requests already sent cannot be recalled. A later enabled initialization may replay the old queue.
+To change a running configuration while sending pending telemetry first, use `await Pulse.shutdown()`
+then `init` again. To discard pending telemetry, disable before reinitializing.
+
+`Pulse.configure()` remains available for existing consumers: it validates strictly and throws on
+invalid options, including during SSR; valid repeated calls explicitly reconfigure the client.
+`captureException` is a quiet no-op before initialization, when disabled and outside the browser.
+
 ## Options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `endpoint` | `string` | `"https://ingest.pubkypulse.com"` | Pubky Pulse ingest server URL. A trailing slash is stripped. Omit it to use Pubky's hosted instance; self-hosters must set their own. |
-| `apiKey` | `string` | *required* | Client API key for a web-platform app. Must start with `pulse_client_`. |
+| `apiKey` | `string` | — | Client key with `pulse_client_` prefix. Required by `configure`; absent/null/blank disables `init`. |
+| `enabled` | `boolean` | `true` | `init` only: false disables tracking without flushing fresh telemetry. |
 | `bundleId` | `string` | — | Deprecated compatibility option. Not needed: the client key identifies the app. Legacy servers may still require it until upgraded. |
 | `appVersion` | `string` | `undefined` | Version reported with every event. Set it, and make it increase between releases — see [App version](#app-version). |
 | `isDev` | `boolean` | `true` on `localhost`, `127.0.0.1`, or a `file:` URL | Marks events as development traffic. See [Data Mode](/docs/concepts/data-mode). |
@@ -35,7 +76,9 @@ Pulse.configure({
 | `captureUnhandled` | `boolean` | `true` | Capture uncaught errors and unhandled rejections. See [Events](/docs/sdks/web/events#unhandled-errors). |
 | `trackPageViews` | `boolean` | `true` | Emit screen events for History API navigations. See [Screens](/docs/sdks/web/screens). |
 | `screenNameForPath` | `(pathname: string) => string` | `undefined` | Map automatic routes to stable screen names. Must be a synchronous function. See [Mapping route names](/docs/sdks/web/screens#mapping-route-names). |
-| `networkTracking` | `boolean` | `false` | Emit an `sdk:network_request` event per `fetch` call. |
+| `beforeSend` | `(event, hint) => LogEvent \| null` | — | Synchronous application redaction/filter hook; failures drop the event. See [Events](/docs/sdks/web/events#filtering-and-redaction). |
+| `ignoreErrors` | `(string \| RegExp)[]` | `[]` | Filter exception and error logger messages before hooks and output. |
+| `networkTracking` | `boolean \| { urlMode?: "path" \| "origin" }` | `false` | Emit fetch events; true or an empty object preserves sanitized paths. |
 | `propagateSessionTo` | `string[]` | `[]` | URL prefixes whose `fetch` requests receive the `X-Pulse-Session-Id` header. |
 | `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes. |
 | `flushThreshold` | `number` | `20` | Buffered events that trigger an immediate flush. |
@@ -43,9 +86,11 @@ Pulse.configure({
 | `sessionTimeoutMs` | `number` | `1800000` | Idle time (30 minutes) after which a new session starts. |
 | `supportedLanguages` | `string[]` | *not sent* | The locales your app ships. Written through to the app record and used for localization-gap analysis. |
 
-Client-key-only examples in these docs target the forthcoming Web SDK release supporting optional `bundleId`; published Web SDK 0.4.0 still requires it. They also require a server with the client-key-only contract deployed. Upgrade the server before rolling out that SDK configuration; merging the server change alone does not upgrade a running installation. Existing SDKs that still send `bundle_id` remain compatible.
+Client-key-only configuration needs a server that accepts events without `bundle_id`. Upgrade
+self-hosted servers before omitting the existing `bundleId`; older clients that send it remain
+compatible. The new capture/privacy APIs change no ingest schema.
 
-Every numeric option must be a positive integer, and `flushThreshold` must not exceed `maxBufferSize`; invalid values throw at `configure()` time with a `Pubky Pulse: ...` message, so a typo surfaces on the first page load rather than silently dropping your data.
+Every numeric option must be a positive integer, and `flushThreshold` must not exceed `maxBufferSize`; invalid values throw at `configure()` time with a `Pubky Pulse: ...` message. `init()` returns an error diagnostic for invalid configuration.
 
 <Callout>
 Set `supportedLanguages` explicitly to the locales your app ships — `supportedLanguages: ["en", "es", "fr"]`. It is an app-level field, not a per-event label: the server writes the first value it sees in a batch through to the app record with source `sdk`, overriding anything set by hand. Leaving it unset sends nothing at all, so a manually configured list stays as it is. See [Ingest](/docs/api-reference/ingest).
@@ -71,7 +116,7 @@ See [Allowed Origins](/docs/concepts/projects-and-apps#allowed-origins).
 It also has to **increase** between releases. Versions compare segment by segment, numerically where a segment is numeric and as plain strings otherwise, so a git SHA or a content hash sorts alphabetically rather than chronologically and "latest" becomes whichever hash happens to sort highest.
 
 ```typescript
-Pulse.configure({
+Pulse.init({
   // Explicit host: required when you run your own instance.
   endpoint: "https://ingest.yourdomain.com",
   apiKey: "pulse_client_...",
@@ -95,22 +140,22 @@ Pulse.info("checkout_started", {
 
 Reserved keys are underscore-prefixed and interpreted by the server, so use these two rather than inventing `page_url` of your own. Auto-instrumented `fetch` calls use the same mechanism, recording `_http_url`, `_http_method`, `_http_status`, and `_http_duration_ms` (status `"0"` when the request never completed). See [Custom Attributes](/docs/concepts/events#custom-attributes).
 
-## What Happens on Configure
+## What Happens on Enabled Initialization
 
-1. **Validates** the endpoint, the key format, and every option.
-2. **Checks for `window`** — under server rendering there is none, so `configure()` returns without installing anything.
-3. **Loads or creates the anonymous id** (`pulse_anon_<uuid>` in `localStorage`) so the first event already has a user id.
-4. **Starts or resumes a session** — a UUID kept in `sessionStorage`. The stored id is adopted when the last activity is inside `sessionTimeoutMs`, so a reload in the same tab keeps the session and emits no event; `sdk:session_started` is emitted only when a new session actually begins. See [Sessions](/docs/sdks/web/identity#sessions).
-5. **Installs page hooks** — page-visibility flushing, screen tracking when `trackPageViews` is on, unhandled-error capture when `captureUnhandled` is on, and the `fetch` wrapper when `networkTracking` or `propagateSessionTo` needs it.
+1. **Checks opt-in and browser availability** — an absent key, explicit disable, or missing `window` returns a disabled result before browser setup.
+2. **Validates** the endpoint, key format, and options. An existing client keeps its first successful configuration.
+3. **Installs reversible page hooks** — page-visibility flushing, screen tracking when `trackPageViews` is on, unhandled-error capture when `captureUnhandled` is on, and the `fetch` wrapper when `networkTracking` or `propagateSessionTo` needs it. Setup failures roll these back before identity/session creation.
+4. **Loads or creates the anonymous id** (`pulse_anon_<uuid>` in `localStorage`) so the first event already has a user id.
+5. **Starts or resumes a session** — a UUID kept in `sessionStorage`. The stored id is adopted when the last activity is inside `sessionTimeoutMs`, so a reload in the same tab keeps the session and emits no session-start event; `sdk:session_started` is emitted only when a new session actually begins. The initial mapped screen is then recorded. See [Sessions](/docs/sdks/web/identity#sessions).
 
-Calling `configure()` again replaces the pipeline: the old transport is drained and every page hook is removed first.
+Repeated `init()` calls keep the active pipeline. Legacy `configure()` validates before checking for `window` and explicitly replaces the pipeline, draining the old transport and removing its page hooks.
 
 ## Development vs Production Data
 
 `isDev` controls whether events are tagged as development or production data. It defaults to `true` on `localhost`, `127.0.0.1`, and `file:` URLs, so local work stays out of your production numbers without any extra setup. Override it when your staging domain should also count as dev:
 
 ```typescript
-Pulse.configure({
+Pulse.init({
   apiKey: "pulse_client_...",
   isDev: location.hostname.endsWith(".staging.example.com"),
 });
@@ -121,14 +166,25 @@ The [Data Mode](/docs/concepts/data-mode) filter in the dashboard and the `data_
 ## Network Tracking and Session Propagation
 
 ```typescript
-Pulse.configure({
+Pulse.init({
   apiKey: "pulse_client_...",
-  networkTracking: true,
+  networkTracking: { urlMode: "origin" },
   propagateSessionTo: ["https://api.example.com"],
 });
 ```
 
-`networkTracking` wraps `window.fetch` and logs an `sdk:network_request` event per call with the method, the URL (query string stripped), the status, and the duration — debug for 2xx/3xx, warn for anything else, error when the request throws. Requests to your Pulse endpoint are skipped.
+`networkTracking` defaults to false. `true` or `{ urlMode: "path" }` retains paths while stripping
+credentials, query and fragment. `{ urlMode: "origin" }` records only protocol/host/port for HTTP(S)
+URLs, resolving relative URLs against the page; malformed and non-HTTP(S) inputs omit `_http_url`
+rather than sending their raw value. The policy applies before hooks, console, buffering and
+persistence, including failed fetches.
+
+Method, status and duration remain available in `sdk:network_request`: debug for 2xx/3xx, warn for
+other responses, error with status `0` on rejection. SDK endpoint requests remain excluded. Request
+URLs, bodies and response/rejection values are unchanged; headers change only for explicit session
+propagation. Origin hostnames may themselves contain identifiers, so this is not a general PII
+guarantee. App-specific redaction may still be needed. Removing paths also means
+[network issues](/docs/concepts/issues#network-request-errors-split-by-endpoint) group more broadly.
 
 `propagateSessionTo` lists URL prefixes that receive the `X-Pulse-Session-Id` header on `fetch` requests, and works whether or not `networkTracking` is on. Propagation is implemented by wrapping `fetch`, so requests made with `XMLHttpRequest` or `sendBeacon` — including libraries such as axios that default to XHR in the browser — are not annotated and must set the header themselves. Only list origins you control: the header should not leak to third parties. See [Next.js](/docs/sdks/web/nextjs) for the server side of that trace.
 

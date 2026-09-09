@@ -32,36 +32,94 @@ Pulse.info("exported_report", { rows: 940 }, { screenName: "Reports" });
 
 Without `screenName`, events carry whatever screen the [page tracker](/docs/sdks/web/screens) currently holds.
 
-## Reporting an `Error` Value
+## Capturing Exceptions
 
-`Pulse.error` is overloaded — pass a string message (logger-style), or pass the error itself (exception-style) and the SDK extracts the type, the stack, and up to five levels of `cause` into reserved `_error_*` attributes:
+`Pulse.captureException(error)` accepts an `unknown` thrown value. The SDK extracts the type, stack
+and up to five `cause` levels into reserved attributes; arbitrary Error properties and context are
+not automatically serialized. It is a quiet no-op before initialization, while disabled and during
+SSR, so error factories and React boundaries can call it directly:
 
 ```typescript
 try {
   await pay(order);
-} catch (err) {
-  Pulse.error(err, "checkout failed", { order_id: order.id });
+} catch (error) {
+  Pulse.captureException(error);
 }
 ```
 
-The Error overload is chosen only when the first argument is not a string — a string first argument is always the logger-style message — so wrap a caught value that might not be an `Error` before passing anything after it:
+An optional `PulseCaptureExceptionOptions` argument supplies a message and explicit attributes:
 
 ```typescript
-Pulse.error(err instanceof Error ? err : new Error(String(err)), "checkout failed", {
-  order_id: order.id,
+Pulse.captureException(error, {
+  message: "checkout failed",
+  attributes: { checkout_stage: "payment" },
 });
 ```
 
-SDK-reserved `_error_*` keys win over caller-supplied keys of the same name, so the server's issue fingerprinting stays stable.
+The same Error object is attempted once per configured client lifetime, including manual capture
+followed by throw/rejection or a React boundary. Suppression uses weak references, includes errors
+dropped by policy or failed hooks, and resets on a new configuration. Distinct Error objects with
+the same message and repeated primitive throws remain reportable.
+
+`Pulse.error` remains compatible: `Pulse.error("message", attributes?)` logs a message, while
+`Pulse.error(error, "checkout failed", attributes?, options?)` extracts exception metadata when its
+first argument is not a string. Use `captureException` when the thrown value may itself be a string.
+Reserved `_error_*` keys win over caller-supplied keys so issue fingerprinting remains stable.
+
+## Filtering and Redaction
+
+```typescript
+import { IGNORED_BROWSER_ERRORS } from "./observability-policy";
+
+Pulse.init({
+  apiKey: "pulse_client_...",
+  ignoreErrors: IGNORED_BROWSER_ERRORS, // Share your app-owned list with Sentry.
+  beforeSend(event, hint) {
+    const error = hint.originalException;
+    if (error instanceof AppError) {
+      if (shouldDropAppError(error)) return null;
+      event.custom_attributes = {
+        ...event.custom_attributes,
+        app_error_code: error.code, // Explicit metadata allowlist; do not spread Error/context.
+      };
+    }
+    event.message = redact(event.message);
+    event.custom_attributes = redactAttributes(event.custom_attributes);
+    return event;
+  },
+});
+```
+
+`AppError`, redaction, the drop policy and ignore patterns belong to the application. `ignoreErrors`
+uses substring matching for strings and regular-expression matching against both the complete
+message and `Type: message`. Global/sticky expressions match deterministically without reading or
+changing caller `lastIndex`. This is a matching contract, not a promise of full Sentry compatibility.
+Invalid options fail configuration validation.
+
+Error-instance duplicate suppression happens before filtering. Ignored exceptions and error-level log calls
+never reach `beforeSend`, truncation, console, buffers, persistence or attachment uploads. Lower
+levels remain unaffected. Error-level network and metric events are also filtered when their
+messages match, as are automatic uncaught/rejection exceptions.
+
+`beforeSend(event, hint)` receives full enriched strings before length limits and a transient
+`hint.originalException` for manual and automatic exception paths. Plain logger/SDK events receive
+an empty hint. The SDK neither buffers, persists nor uploads hints or retains them for replay;
+do not copy them into the event. Existing one-argument hooks still work.
+
+Return a valid event to keep it or `null` to drop it and its attachment work. Throws, invalid results
+and accidental async hooks fail closed; recursive capture from a hook is ignored. The returned
+event is detached and bounded before output. Queued retries and old offline events are already
+sanitized and do not run through the hook again. Attachment contents, identity/property requests,
+feedback bodies and questionnaire answers have separate privacy boundaries.
 
 ## Unhandled Errors
 
 While `captureUnhandled` is on (the default), the SDK listens for `error` and `unhandledrejection` on `window` and logs each one at error level with an `_unhandled` attribute naming the hook that saw it. Errors are re-thrown as usual — the SDK never swallows one.
 
-To opt out and rely on explicit `Pulse.error(err)` calls only:
+To opt out and rely on explicit `Pulse.captureException(err)` calls only:
 
 ```typescript
-Pulse.configure({
+Pulse.init({
   apiKey: "pulse_client_...",
   captureUnhandled: false,
 });
@@ -81,7 +139,7 @@ The SDK's own lifecycle messages (anything starting with `sdk:`) and metric `sta
 
 Events are not sent immediately. They are buffered and flushed in batches:
 
-1. A log call builds an event and adds it to the buffer, stamped with the session id, the current user id, and the current screen.
+1. Capture applies error filters, enriches the event with its session/user/screen, runs `beforeSend`, then bounds and buffers the accepted snapshot.
 2. The batch is sent when `flushThreshold` events are buffered (default 20) or the flush timer fires (default every 5 seconds).
 3. Bodies over 512 bytes are gzipped where `CompressionStream` exists.
 4. When the page is hidden the SDK flushes with a `keepalive` request; anything left over is parked in an offline queue in `localStorage` and drained on the next page load.

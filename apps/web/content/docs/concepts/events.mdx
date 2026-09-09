@@ -115,7 +115,9 @@ Events can carry arbitrary metadata as `custom_attributes` -- a flat object of s
 }
 ```
 
-The SDKs also auto-capture certain fields as custom attributes. Underscore-prefixed keys (`_*`) are reserved for SDK use — for example, the Swift SDK records `_connection` (wifi, cellular, ethernet, offline) via its network monitor; auto-instrumented network requests carry `_http_url` / `_http_method` / `_http_status` / `_http_duration_ms` (`_http_status` is `"0"` when the request never completed); and `Pulse.error(error)` extracts `_error_type` / `_error_stack` / `_error_code` / `_error_domain` / `_error_cause_<n>_*` from the caught Error so the issue tracker can fingerprint by runtime type. Avoid using your own underscore-prefixed keys to prevent collisions with future SDK additions.
+The SDKs also auto-capture certain fields as custom attributes. Underscore-prefixed keys (`_*`) are reserved for SDK use — for example, the Swift SDK records `_connection` (wifi, cellular, ethernet, offline) via its network monitor; auto-instrumented network requests carry `_http_url` / `_http_method` / `_http_status` / `_http_duration_ms` (`_http_status` is `"0"` when the request never completed); and exception capture (`Pulse.error(error)`, or `Pulse.captureException(error)` in the Web SDK) extracts `_error_type` / `_error_stack` / `_error_code` / `_error_domain` / `_error_cause_<n>_*` from the caught Error so the issue tracker can fingerprint by runtime type. Avoid using your own underscore-prefixed keys to prevent collisions with future SDK additions.
+
+The Web SDK can omit network paths with [origin URL mode](/docs/sdks/web/configuration#network-tracking-and-session-propagation). Its transient exception hints are not wire attributes.
 
 Two reserved keys carry browser page context, and are the place for what a path alone loses:
 

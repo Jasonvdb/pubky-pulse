@@ -35,7 +35,7 @@ No bundler needed; import the module straight from a CDN.
 <script type="module">
   import { Pulse } from "https://esm.sh/@synonymdev/pubky-pulse-web";
 
-  Pulse.configure({
+  Pulse.init({
     apiKey: "pulse_client_...",
   });
 
@@ -55,7 +55,7 @@ import { Pulse } from "@synonymdev/pubky-pulse-web";
 
 export function App() {
   useEffect(() => {
-    Pulse.configure({
+    Pulse.init({
       endpoint: import.meta.env.VITE_PULSE_ENDPOINT,
       apiKey: import.meta.env.VITE_PULSE_KEY,
       appVersion: __APP_VERSION__,
@@ -70,7 +70,7 @@ If your router does not use the History API (some hash routers do not), turn `tr
 
 ## Next.js
 
-`configure()` needs `window`, so it belongs in a client component. See the [Next.js guide](/docs/sdks/web/nextjs) for the full pattern, including propagating the session id into your route handlers.
+`init()` is safe during SSR; start browser tracking from a client effect. See the [Next.js guide](/docs/sdks/web/nextjs) for the full pattern, including propagating the session id into your route handlers.
 
 ## SvelteKit
 
@@ -82,7 +82,7 @@ If your router does not use the History API (some hash routers do not), turn `tr
   import { PUBLIC_PULSE_ENDPOINT, PUBLIC_PULSE_KEY } from "$env/static/public";
 
   onMount(() => {
-    Pulse.configure({
+    Pulse.init({
       endpoint: PUBLIC_PULSE_ENDPOINT,
       apiKey: PUBLIC_PULSE_KEY,
     });
@@ -108,7 +108,7 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       multi: true,
       useFactory: () => () => {
-        Pulse.configure({
+        Pulse.init({
           endpoint: environment.pulseEndpoint,
           apiKey: environment.pulseKey,
           appVersion: environment.version,
@@ -121,7 +121,7 @@ export const appConfig: ApplicationConfig = {
 
 ## Any Other Framework
 
-There is nothing framework-specific in the package: import `Pulse`, call `configure()` once after the page has a `window`, and log from anywhere. That is the whole integration.
+There is nothing framework-specific in the package: import `Pulse`, call `init()` early, and log from anywhere. That is the whole integration.
 
 ## Browser Support and SSR
 
@@ -130,7 +130,11 @@ Any evergreen browser is supported; the build targets ES2020. Two features degra
 - **gzip** needs `CompressionStream`. Where it is missing, bodies are sent as plain JSON. Bodies under 512 bytes and the unload path are never compressed anyway.
 - **Attachments** need `crypto.subtle`, which requires a secure context (HTTPS or `localhost`). Elsewhere uploads are skipped and the event is still sent.
 
-The package is safe to import on the server. `configure()` validates its arguments first, so an invalid configuration — a missing or blank `apiKey`, a blank or malformed `endpoint`, or a key without the `pulse_client_` prefix — throws with or without a `window`. A valid one then checks for `window` and, when there is none, returns without installing anything, so a Next.js or SvelteKit server render does no work. Log calls made before a successful `configure()` are ignored, so shared code that logs on both sides needs no guard of its own.
+The package is safe to import on the server. `init()` returns a disabled SSR result before validation
+or browser work; an absent key or explicit opt-out also disables capture. `captureException()` is a
+quiet no-op there. `configure()` retains its strict validation contract for existing consumers.
+See [safe initialization](/docs/sdks/web/configuration#safe-optional-initialization) for lifecycle,
+error status and reinitialization behavior, and release availability.
 
 ## Next Steps
 

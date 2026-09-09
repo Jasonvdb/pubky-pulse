@@ -9,7 +9,7 @@ Events are stamped with `environment: "web"` and `sdk_name: "pubky-pulse-web"`, 
 
 ## Features
 
-- **[Events](/docs/sdks/web/events)** — four log levels (`info`, `debug`, `warn`, `error`) with custom attributes. `Pulse.error` is overloaded: pass a string, or pass the error itself and the SDK extracts the type, the stack, and up to five levels of `cause`. Uncaught exceptions and unhandled rejections are captured automatically and tagged `_unhandled`
+- **[Events](/docs/sdks/web/events)** — four log levels (`info`, `debug`, `warn`, `error`) with custom attributes. `Pulse.captureException` accepts unknown thrown values; the compatible `Pulse.error` logger remains available. `ignoreErrors` and `beforeSend` centralize filtering and redaction. Uncaught exceptions and unhandled rejections are captured automatically and tagged `_unhandled`
 - **[Screens and route tracking](/docs/sdks/web/screens)** — History API navigations emit `sdk:screen_appeared` / `sdk:screen_disappeared` on their own; `Pulse.trackScreen()` names anything the URL does not describe
 - **[Structured metrics](/docs/sdks/web/metrics)** — `Pulse.startOperation()` measures work with a beginning and an end; `Pulse.recordMetric()` records a measurement you already have
 - **[Funnels](/docs/sdks/web/funnels)** — `Pulse.step()` emits named step completions for conversion tracking
@@ -29,12 +29,14 @@ Events are stamped with `environment: "web"` and `sdk_name: "pubky-pulse-web"`, 
 
 ## Quick Start
 
-These client-key-only examples target the forthcoming compatible SDK release and an upgraded server; Web SDK 0.4.0 still requires `bundleId`. See the [rollout requirements](/docs/sdks/web/configuration#options).
+These examples require the SDK release containing `init`, `captureException` and the privacy helpers;
+0.5.1 does not contain them. See [Configuration](/docs/sdks/web/configuration) for availability and
+server compatibility.
 
 ```typescript
 import { Pulse } from "@synonymdev/pubky-pulse-web";
 
-Pulse.configure({
+Pulse.init({
   apiKey: "pulse_client_...",
   appVersion: "1.4.0",
 });
@@ -42,7 +44,9 @@ Pulse.configure({
 Pulse.info("signed_up", { plan: "pro" });
 ```
 
-Configure as early in the page's life as you can. Calls made before `configure()` are ignored — one console note, then silence — so a stray log during startup can never throw.
+Initialize early. Missing credentials, explicit opt-out and SSR disable tracking without browser
+side effects; initialization failures return a diagnostic status. `captureException` is always a
+quiet no-op while inactive. See [safe initialization](/docs/sdks/web/configuration#safe-optional-initialization).
 
 ## Server Setup
 
@@ -54,5 +58,5 @@ Configure as early in the page's life as you can. Calls made before `configure()
 ## Next Steps
 
 - [Installation](/docs/sdks/web/installation) — install the package and wire it into React, SvelteKit, Angular, or a plain `<script type="module">`
-- [Configuration](/docs/sdks/web/configuration) — every option, its default, and what happens on `configure()`
+- [Configuration](/docs/sdks/web/configuration) — every option, its default, and safe initialization and strict `configure` compatibility
 - [Next.js](/docs/sdks/web/nextjs) — pair the Web SDK in the browser with the [Node.js SDK](/docs/sdks/node) in route handlers so one session spans both

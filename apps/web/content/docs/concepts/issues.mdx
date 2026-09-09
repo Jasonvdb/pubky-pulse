@@ -50,7 +50,7 @@ The property, function, or variable name is **kept** in the canonical form, so `
 
 ### Network request errors split by endpoint
 
-`sdk:network_request` errors (connection failures emitted by the Swift SDK's URLSession instrumentation) discriminate on `${method} ${host}${templated_path}` from the event's `_http_url` and `_http_method` custom attributes. So a connection failure to `api.stripe.com/v1/customers/<id>/subscriptions` becomes a different issue from one to your own backend, instead of all SDK-tracked network errors collapsing onto a single issue per source module.
+`sdk:network_request` errors (connection failures emitted by SDK network instrumentation) discriminate on `${method} ${host}${templated_path}` from the event's `_http_url` and `_http_method` custom attributes. So a connection failure to `api.stripe.com/v1/customers/<id>/subscriptions` becomes a different issue from one to your own backend, instead of all SDK-tracked network errors collapsing onto a single issue per source module.
 
 Path templating runs over each `/`-separated segment to keep per-user IDs from fragmenting the issue:
 - UUIDs become `<uuid>` (e.g. `/v1/sessions/550e8400-...` → `/v1/sessions/<uuid>`)
@@ -58,6 +58,15 @@ Path templating runs over each `/`-separated segment to keep per-user IDs from f
 - 12+ char segments containing at least one digit become `<id>` — generic across Firebase Auth UIDs, Stripe IDs (`cus_*`, `sub_*`, `pi_*`), MongoDB ObjectIds, Cuid/Cuid2, Nanoid, KSUID, ULID, Auth0 sub claims (URL-decoded so `auth0%7C...` works), and `did:plc:*` DIDs. The "must contain a digit" guard prevents real endpoint names like `/metrics-aggregator/` from being templated.
 
 Network issues get a human-readable title `Network error: METHOD host/path` (e.g. `Network error: GET api.stripe.com/v1/customers/<id>/subscriptions`).
+
+The Web SDK's opt-in [origin URL mode](/docs/sdks/web/configuration#network-tracking-and-session-propagation)
+removes paths before ingestion. Those events group at host/method granularity rather than individual
+endpoint paths; invalid/non-HTTP(S) inputs omit `_http_url`. Screen templates likewise appear as the
+literal configured label in dashboard filters. Neither option changes the ingest schema.
+
+Browser exception-object suppression happens before transport and is separate from this server
+fingerprinting: a factory capture followed by a global handler can emit one event, while distinct
+Error objects remain eligible for the usual server grouping. See [Web error capture](/docs/sdks/web/events#capturing-exceptions).
 
 ## Session-burst aliasing
 

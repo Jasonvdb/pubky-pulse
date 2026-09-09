@@ -11,7 +11,10 @@ A Next.js app has two halves, and Pubky Pulse has an SDK for each: the Web SDK i
 
 ## Client Component
 
-`configure()` needs `window`, so it lives in a client component. With a valid configuration it is a no-op on the server, so an accidental import from a server component does no work — though it still validates its arguments first, so a missing endpoint or key throws even during a server render.
+`Pulse.init()` is safe during SSR and with an absent key. Start it in a client effect; repeated
+equivalent initialization keeps the same session. No browser/key/session guards or initialization
+try/catch are needed. Keep test and deployment decisions in `enabled`; inspect the returned
+[diagnostic status](/docs/sdks/web/configuration#safe-optional-initialization) when useful.
 
 ```tsx
 // app/pulse-provider.tsx
@@ -22,9 +25,10 @@ import { Pulse } from "@synonymdev/pubky-pulse-web";
 
 export function PulseProvider({ userId }: { userId?: string }) {
   useEffect(() => {
-    Pulse.configure({
-      endpoint: process.env.NEXT_PUBLIC_PULSE_ENDPOINT!,
-      apiKey: process.env.NEXT_PUBLIC_PULSE_KEY!,
+    Pulse.init({
+      endpoint: process.env.NEXT_PUBLIC_PULSE_ENDPOINT,
+      apiKey: process.env.NEXT_PUBLIC_PULSE_KEY,
+      enabled: process.env.NODE_ENV !== "test",
       propagateSessionTo: ["/api"],
     });
   }, []);
@@ -106,4 +110,7 @@ The App Router navigates with the History API, so the Web SDK's automatic screen
 
 ## Server Components and Server Actions
 
-Server components never run `configure()`, so log from them with the Node.js SDK, not the Web SDK. Importing the Web SDK on the server is harmless — `configure()` returns without installing anything and log calls before a successful configure are ignored — but nothing is recorded, so shared helpers that must log on both sides should take a logger rather than reach for a singleton.
+Use the Node.js SDK for server components and server actions. The Web SDK's `init` returns a
+disabled SSR result and `captureException` quietly does nothing on the server, so a shared browser
+helper is safe to import but records no backend events. Shared helpers that must log on both sides
+should accept a logger appropriate to the environment.

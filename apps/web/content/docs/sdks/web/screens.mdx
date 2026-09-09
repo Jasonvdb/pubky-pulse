@@ -7,21 +7,36 @@ With `trackPageViews` on (the default), the SDK patches `pushState` / `replaceSt
 
 ## Mapping Route Names
 
-Dynamic paths can contain user IDs, post IDs, or invitation codes. Map them to stable screen names at configuration time:
+Dynamic paths can contain user IDs, post IDs, or invite codes. Compile explicit app-owned route
+templates into the existing `screenNameForPath` hook:
 
 ```typescript
-Pulse.configure({
-  apiKey: "pulse_client_...",
-  screenNameForPath: (pathname) => {
-    if (/^\/profile\/[^/]+\/?$/.test(pathname)) return "profile";
-    if (/^\/post\/[^/]+\/[^/]+\/?$/.test(pathname)) return "post";
-    if (/^\/collections\/[^/]+\/[^/]+\/?$/.test(pathname)) return "collections";
-    if (/^\/invite\/[^/]+\/?$/.test(pathname)) return "invite";
-    return "other";
-  },
-});
+import { createScreenNameMapper, Pulse } from "@synonymdev/pubky-pulse-web";
+
+const screenNameForPath = createScreenNameMapper([
+  "/", "/home", "/profile/followers", "/profile/[pubky]", "/invite/[inviteCode]",
+], { fallback: "/unknown" });
+
+Pulse.init({ apiKey: "pulse_client_...", screenNameForPath });
 ```
 
+Reuse safe constants from your app router. The helper emits only a literal configured template or
+fallback (default `/unknown`), never captured values. `/profile/followers` takes precedence over
+`/profile/[pubky]` regardless of definition order. More static segments win; equally specific
+patterns that overlap are rejected. Repeated identical constants are allowed.
+
+Only whole-segment `[name]` placeholders are supported, each matching one nonempty segment.
+Optional, catch-all and partial-segment patterns are unsupported. Query/fragment and trailing
+slashes are ignored. Segments are decoded once, so `/profile/%66ollowers` matches the static route;
+invalid escapes, encoded separators, dot segments, whitespace/control characters, repeated interior
+slashes and absolute URLs use the fallback. Invalid template configuration throws during helper
+creation. The SDK cannot infer safe routes or fallback labels: these remain app-owned.
+
+The [Pubky App before/after example](https://github.com/Jasonvdb/pubky-pulse-web/blob/main/examples/pubky-app.md)
+shows how existing enums and a profile-route generator replace regexes and captured-path logic.
+See [Configuration](/docs/sdks/web/configuration) for release availability.
+
+Custom synchronous `screenNameForPath` callbacks remain supported without this helper.
 The callback receives only the pathname, without the origin, query string, or hash. It runs for the initial page and History API navigation (`pushState`, `replaceState`, and `popstate`). The mapped name is used for screen events, durations, and the default `screen_name` on subsequent events. Navigating between paths mapped to the same name preserves the current duration and emits no screen transition.
 
 The callback must be synchronous and return a non-blank string; invalid callback types are rejected by `configure()`. If it throws or returns a non-string or blank name, the SDK ends the previous screen, clears the default screen name, and emits no new `sdk:screen_appeared` until a valid mapping or manual screen is recorded. It does not fall back to the raw path. Omitting the option retains the default pathname behavior; with `trackPageViews: false`, the mapper is not used.
@@ -52,7 +67,7 @@ Pulse.trackScreen("Checkout / Payment");
 Some hash routers never touch `pushState`, so there is nothing for the SDK to observe. Turn the automatic tracking off and drive it from your own route handler:
 
 ```typescript
-Pulse.configure({
+Pulse.init({
   apiKey: "pulse_client_...",
   trackPageViews: false,
 });

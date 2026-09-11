@@ -27,7 +27,31 @@ Each entry has these fields:
 
 ## How the Upload Runs
 
-The file is hashed and uploaded out of band, so the event itself is never delayed — the event goes out on the normal batch, and the attachment follows on its own queue. `Pulse.flush()` and `Pulse.shutdown()` both wait for that queue.
+The event goes out on its normal batch; hashing and upload run on a separate serial queue. Accepted
+`Uint8Array` bytes are copied synchronously at enqueue, so later mutation cannot change an upload and
+a small subarray does not retain a large backing buffer. Metadata is also snapshotted. Blob sizes are
+checked before reading, and the upload still uses the original Blob as its request body.
+
+## Browser Resource Limits
+
+The hardening release intentionally reduces the browser's previous **2 GiB** per-file ceiling to
+**5 MiB**. Use a smaller diagnostic file when migrating an existing integration. These limits apply
+to the Web SDK; server quotas, attachment wire formats and the other SDKs' limits are unchanged.
+
+| Limit | Behavior |
+|---|---|
+| 5 MiB per file | Larger files are dropped before reading or hashing. |
+| 20 files / 20 MiB combined active and pending payload | New excess files are dropped; budgets are shared across uploader instances in one loaded SDK module. |
+| First 20 entries per enqueue | Later entries are not inspected. |
+| Filename: 1,024 UTF-16 code units; content type: 255 | Longer metadata is rejected without truncation. |
+| 120 seconds per background item and per attachment flush wait | Waiting ends even if a host operation ignores cancellation; PUT requests have an 80-second ceiling. |
+
+`Pulse.flush()` and `Pulse.shutdown()` wait within the attachment deadline. A noncancelable Blob read,
+hash or request can outlive that wait; its reservation stays occupied until the underlying work
+settles, including across disable/reinitialization. Stop discards pending files and aborts requests;
+canceled files cannot start later upload stages. Remaining accepted background work can continue
+after a flush returns. The payload budget is not a total browser heap limit: hashing and browser
+operations need additional working memory.
 
 ## Secure Context Required
 

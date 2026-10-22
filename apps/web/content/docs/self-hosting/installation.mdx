@@ -7,7 +7,7 @@ Step-by-step guide to installing Pubky Pulse on a fresh Ubuntu 24.04 VPS. Estima
 
 ## 1. Run the setup script
 
-SSH into your VPS as root and run the setup script. It installs Node.js 22, PostgreSQL 16, nginx, pm2, pnpm, and creates the database.
+SSH into your VPS as root and run the setup script. It installs Node.js 22 (at least 22.23.4, and upgrades an older 22.x), PostgreSQL 16, nginx, pm2, pnpm, and creates the database.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pubky/pubky-pulse/main/deploy/setup-ubuntu-vps.sh -o setup-ubuntu-vps.sh

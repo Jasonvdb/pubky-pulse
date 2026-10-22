@@ -53,14 +53,29 @@ else
 fi
 
 # --- Node.js 22 LTS (via NodeSource) ---
-if command -v node &>/dev/null; then
-  NODE_VER=$(node --version)
-  log "Node.js already installed: $NODE_VER"
+# 22.23.4 is the first 22.x with the October 2026 security fixes
+# (CVE-2026-111497 and others). An older 22.x is upgraded in place.
+NODE_MIN_VERSION="22.23.4"
+node_version() { node --version 2>/dev/null | sed 's/^v//'; }
+version_at_least() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
+
+NODE_VER=$(node_version || true)
+if [[ -n "$NODE_VER" && "${NODE_VER%%.*}" != "22" ]]; then
+  warn "Node.js v$NODE_VER is not the 22.x line this script manages — leaving it alone"
+elif [[ -n "$NODE_VER" ]] && version_at_least "$NODE_VER" "$NODE_MIN_VERSION"; then
+  log "Node.js already installed: v$NODE_VER"
 else
-  log "Installing Node.js 22 LTS..."
+  if [[ -n "$NODE_VER" ]]; then
+    warn "Node.js v$NODE_VER is older than v$NODE_MIN_VERSION — upgrading..."
+  else
+    log "Installing Node.js 22 LTS..."
+  fi
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y -qq nodejs
-  log "Node.js installed: $(node --version)"
+  NODE_VER=$(node_version)
+  version_at_least "$NODE_VER" "$NODE_MIN_VERSION" \
+    || err "Node.js v$NODE_VER is still older than v$NODE_MIN_VERSION"
+  log "Node.js installed: v$NODE_VER"
 fi
 
 # --- pnpm (pinned to the workspace/CI version) ---

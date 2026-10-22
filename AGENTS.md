@@ -31,7 +31,7 @@ Never infer the owner from the `pubky` name, from a doc placeholder, or from a r
 
 ## Build, Test, and Development Commands
 
-Use Node.js 20+, PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).
+Use Node.js 22.23.4+ (or 24.22.1+), PostgreSQL 15+, and pnpm 10 (CI uses 10.33.0).
 
 - `pnpm install`: install workspace dependencies.
 - `pnpm db:migrate && pnpm dev:seed`: prepare and populate the local database.
